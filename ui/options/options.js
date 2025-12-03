@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settings = await loadSettings();
     populateForm(settings);
     populateColorToggles(settings.enabledColors);
+    loadChannelMappings();
 });
 
 /**
@@ -91,13 +92,6 @@ function populateForm(settings) {
     document.getElementById('extensionEnabled').checked = settings.extensionEnabled;
     document.getElementById('aiCategoryDetection').checked = settings.aiCategoryDetection;
     document.getElementById('autoCleanupEnabled').checked = settings.autoCleanupEnabled;
-
-    // Channel mappings
-    const container = document.getElementById('channelMappings');
-    container.innerHTML = '';
-    Object.entries(settings.channelCategoryMap).forEach(([channel, category]) => {
-        addMappingRow(channel, category, container);
-    });
 }
 
 /**
@@ -123,27 +117,49 @@ function populateColorToggles(enabledColors) {
 }
 
 /**
- * Add a channel→category mapping input row
- * @param {string} [channel=''] - Channel name
- * @param {string} [category=''] - Category name
- * @param {Element} [container=null] - Parent container
+ * Load and display channel mappings
  */
-function addMappingRow(channel = '', category = '', container = null) {
-    container = container || document.getElementById('channelMappings');
-    const row = document.createElement('div');
-    row.className = 'mapping-row';
-    row.innerHTML = `
-        <input type="text" class="channel-input" 
-            placeholder="e.g. MKBHD" value="${channel}">
-        <span class="arrow">→</span>
-        <input type="text" class="category-input" 
-            placeholder="e.g. Tech" value="${category}">
-        <button class="remove-btn" type="button">✕</button>
-    `;
+async function loadChannelMappings() {
+    const settings = await loadSettings();
+    const mappings = settings.channelCategoryMap || {};
+    const container = document.getElementById('channelMappings');
+    
+    container.innerHTML = '';
+    
+    Object.entries(mappings).forEach(([channel, category]) => {
+        const mappingEl = createMappingElement(channel, category);
+        container.appendChild(mappingEl);
+    });
+}
 
-    // Remove button handler
-    row.querySelector('.remove-btn').addEventListener('click', () => row.remove());
-    container.appendChild(row);
+/**
+ * Create a single channel mapping element
+ */
+function createMappingElement(channel, category) {
+    const div = document.createElement('div');
+    div.className = 'mapping-item';
+    div.innerHTML = `
+        <input type="text" class="channel-input" value="${channel}" placeholder="Channel name">
+        <select class="category-select">
+            <option value="Gaming" ${category === 'Gaming' ? 'selected' : ''}>Gaming</option>
+            <option value="Music" ${category === 'Music' ? 'selected' : ''}>Music</option>
+            <option value="Tech" ${category === 'Tech' ? 'selected' : ''}>Tech</option>
+            <option value="Cooking" ${category === 'Cooking' ? 'selected' : ''}>Cooking</option>
+            <option value="Fitness" ${category === 'Fitness' ? 'selected' : ''}>Fitness</option>
+            <option value="Education" ${category === 'Education' ? 'selected' : ''}>Education</option>
+            <option value="News" ${category === 'News' ? 'selected' : ''}>News</option>
+            <option value="Entertainment" ${category === 'Entertainment' ? 'selected' : ''}>Entertainment</option>
+            <option value="Other" ${category === 'Other' ? 'selected' : ''}>Other</option>
+        </select>
+        <button class="btn-delete" title="Delete">🗑️</button>
+    `;
+    
+    // Delete handler
+    div.querySelector('.btn-delete').addEventListener('click', () => {
+        div.remove();
+    });
+    
+    return div;
 }
 
 // ============================================================================
@@ -173,10 +189,10 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     });
 
     // Collect channel mappings
-    document.querySelectorAll('.mapping-row').forEach(row => {
-        const channel = row.querySelector('.channel-input').value.trim();
-        const category = row.querySelector('.category-input').value.trim();
-        if (channel && category) {
+    document.querySelectorAll('.mapping-item').forEach(item => {
+        const channel = item.querySelector('.channel-input').value.trim();
+        const category = item.querySelector('.category-select').value;
+        if (channel) {
             settings.channelCategoryMap[channel] = category;
         }
     });
@@ -193,6 +209,7 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
         await saveSettings(DEFAULT_SETTINGS);
         populateForm(DEFAULT_SETTINGS);
         populateColorToggles(DEFAULT_SETTINGS.enabledColors);
+        loadChannelMappings();
         showStatus('✓ Settings reset to default!', 'success');
     }
 });
@@ -201,7 +218,9 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
  * Add mapping button: Add new channel→category row
  */
 document.getElementById('addMappingBtn').addEventListener('click', () => {
-    addMappingRow();
+    const container = document.getElementById('channelMappings');
+    const mappingEl = createMappingElement('', 'Other');
+    container.appendChild(mappingEl);
 });
 
 /**
@@ -234,6 +253,7 @@ document.getElementById('importBtn').addEventListener('click', () => {
             await saveSettings(settings);
             populateForm(settings);
             populateColorToggles(settings.enabledColors);
+            loadChannelMappings();
             showStatus('✓ Settings imported successfully!', 'success');
         } catch (error) {
             showStatus('✗ Failed to import: ' + error.message, 'error');

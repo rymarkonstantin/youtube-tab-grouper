@@ -483,11 +483,15 @@ async function batchGroupAllTabs() {
         let successCount = 0;
         for (const tab of tabs) {
             try {
-                // ✅ Pass categoryKeywords from settings
+                const metadata = await getVideoMetadata(tab.id);
+                metadata.title = tab.title;
+                
+                // ✅ Pass channel mapping to predictCategory
                 const category = predictCategory(
-                    { title: tab.title }, 
+                    metadata,
                     settings.aiCategoryDetection,
-                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+                    settings.channelCategoryMap || {}  // ← ADD THIS
                 );
                 await groupTab(tab, category, enabledColors);
                 successCount++;
@@ -590,11 +594,15 @@ async function handleGroupTab(msg, sendResponse) {
 
         let category = msg.category || "";
         if (!category.trim()) {
-            // ✅ Pass categoryKeywords from settings
+            const metadata = await getVideoMetadata(tab.id);
+            metadata.title = tab.title;
+            
+            // ✅ Pass channel mapping to predictCategory
             category = predictCategory(
-                { title: tab.title }, 
+                metadata,
                 settings.aiCategoryDetection,
-                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+                settings.channelCategoryMap || {}  // ← ADD THIS
             );
         }
         category = (category || "Other").trim();
@@ -710,11 +718,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         }
 
         if (info.menuItemId === "groupTab" && tab.url.includes("youtube.com")) {
-            // ✅ Pass categoryKeywords from settings
+            const metadata = await getVideoMetadata(tab.id);
+            metadata.title = tab.title;
+            
+            // ✅ Pass channel mapping
             const category = predictCategory(
-                { title: tab.title }, 
+                metadata,
                 settings.aiCategoryDetection,
-                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+                settings.channelCategoryMap || {}  // ← ADD THIS
             );
             await groupTab(tab, category, enabledColors);
         }

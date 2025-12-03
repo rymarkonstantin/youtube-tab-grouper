@@ -51,21 +51,20 @@
     /**
      * Extract metadata from current YouTube video
      * 
-     * Attempts to get:
-     * - Title (from H1 element or page title)
-     * - Channel (from channel name link)
-     * - Description (from meta tag)
-     * - Keywords (from meta keywords)
-     * 
-     * @returns {Object} Video metadata
+     * @returns {Object} Video metadata with channel
      */
     function getVideoData() {
+        // Better title extraction
         const title =
             document.querySelector("h1.title yt-formatted-string")?.innerText ||
             document.title.replace("- YouTube", "").trim();
 
+        // ✅ FIX: Better channel extraction
         const channel = 
-            document.querySelector("ytd-channel-name a")?.innerText || "";
+            document.querySelector("ytd-channel-name a")?.innerText ||
+            document.querySelector("a.yt-simple-endpoint[href*='/channel/']")?.innerText ||
+            document.querySelector("a.yt-simple-endpoint[href*='/@']")?.innerText ||
+            "";
 
         const description = 
             document.querySelector("meta[name='description']")?.content || "";
@@ -75,24 +74,27 @@
                 .split(',')
                 .map(k => k.trim());
 
-        return { title, channel, description, keywords };
+        return { 
+            title, 
+            channel: channel.trim(), 
+            description, 
+            keywords 
+        };
     }
 
     /**
-     * Extract video metadata including YouTube's official category
+     * Extract full metadata including YouTube category
      * 
-     * YouTube stores category in multiple places:
-     * 1. JSON-LD structured data
-     * 2. Meta tags
-     * 3. Page HTML attributes
-     * 
-     * @returns {Object} Video metadata
+     * @returns {Object} Complete video metadata
      */
     function extractVideoMetadata() {
+        const videoData = getVideoData();
+        
         const metadata = {
-            title: document.title,
-            description: "",
-            keywords: [],
+            title: videoData.title,
+            channel: videoData.channel,
+            description: videoData.description,
+            keywords: videoData.keywords,
             youtubeCategory: null
         };
 
@@ -110,17 +112,7 @@
             }
         }
 
-        // Method 2: Extract from meta tags
-        const descMeta = document.querySelector('meta[name="description"]');
-        if (descMeta) metadata.description = descMeta.content;
-
-        const keywordsMeta = document.querySelector('meta[name="keywords"]');
-        if (keywordsMeta) {
-            metadata.keywords = keywordsMeta.content.split(',').map(k => k.trim());
-        }
-
-        // Method 3: Extract YouTube category from page HTML
-        // YouTube stores this in ytInitialData JavaScript object
+        // Method 2: Extract YouTube category from page HTML
         const ytInitialDataScript = Array.from(document.querySelectorAll('script')).find(
             script => script.textContent.includes('var ytInitialData = ')
         );
@@ -138,12 +130,7 @@
             }
         }
 
-        // Method 4: Check meta property tags
-        const ogType = document.querySelector('meta[property="og:type"]');
-        if (ogType && ogType.content === 'video.other') {
-            // This is definitely a video
-        }
-
+        console.log("📊 Extracted metadata:", metadata);
         return metadata;
     }
 
