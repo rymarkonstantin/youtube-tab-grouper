@@ -112,21 +112,39 @@
             }
         }
 
-        // Method 2: Extract YouTube category from page HTML
-        const ytInitialDataScript = Array.from(document.querySelectorAll('script')).find(
-            script => script.textContent.includes('var ytInitialData = ')
-        );
-        
-        if (ytInitialDataScript) {
+        // Method 2: Extract YouTube category from ytInitialData
+        try {
+            // Access YouTube's global data object
+            if (window.ytInitialData) {
+                const data = window.ytInitialData;
+                
+                // Navigate through YouTube's complex structure
+                const contents = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
+                if (contents && Array.isArray(contents)) {
+                    for (const item of contents) {
+                        // Look for videoPrimaryInfoRenderer which contains metadata
+                        if (item.videoPrimaryInfoRenderer?.categoryId) {
+                            metadata.youtubeCategory = item.videoPrimaryInfoRenderer.categoryId;
+                            console.log(`📺 Found YouTube category: ${metadata.youtubeCategory}`);
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to extract YouTube category from ytInitialData:", e);
+        }
+
+        // Method 3: Fallback - Extract from meta tags
+        if (!metadata.youtubeCategory) {
             try {
-                const content = ytInitialDataScript.textContent;
-                const match = content.match(/"category":"([^"]+)"/);
-                if (match && match[1]) {
-                    metadata.youtubeCategory = match[1];
-                    console.log(`📺 Found YouTube category: ${metadata.youtubeCategory}`);
+                const genreMeta = document.querySelector("meta[itemprop='genre']");
+                if (genreMeta?.content) {
+                    metadata.youtubeCategory = genreMeta.content.trim();
+                    console.log(`📺 Found YouTube category via meta tag: ${metadata.youtubeCategory}`);
                 }
             } catch (e) {
-                console.warn("Failed to extract YouTube category:", e);
+                console.warn("Failed to extract from meta tag:", e);
             }
         }
 
@@ -234,8 +252,14 @@
 
         // Click handler
         button.addEventListener('click', () => {
+            // ✅ FIX: Send metadata to background script
+            const metadata = extractVideoMetadata();
             chrome.runtime.sendMessage(
-                { action: "groupTab", category: "" },
+                { 
+                    action: "groupTab", 
+                    category: "",
+                    metadata: metadata  // 👈 ADD THIS
+                },
                 (response) => {
                     if (response?.success) {
                         button.remove();
@@ -282,10 +306,15 @@
             // Step 4: Schedule auto-grouping (if enabled)
             if (config.autoGroupDelay > 0) {
                 setTimeout(() => {
-                    const video = getVideoData();
+                    // ✅ FIX: Extract full metadata including YouTube category
+                    const metadata = extractVideoMetadata();
                     
                     chrome.runtime.sendMessage(
-                        { action: "groupTab", category: "" },
+                        { 
+                            action: "groupTab", 
+                            category: "",
+                            metadata: metadata  // 👈 ADD THIS
+                        },
                         (response) => {
                             if (response?.success) {
                                 const btn = document.getElementById('yt-grouper-btn');

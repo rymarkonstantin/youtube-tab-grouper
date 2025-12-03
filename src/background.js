@@ -347,48 +347,70 @@ async function getColorForGroup(groupName, tabId, windowId, enabledColors) {
  * Predict video category using keyword matching + YouTube metadata
  * 
  * Priority order:
- * 1. Keyword matching against title/description
- * 2. YouTube category metadata (if available)
- * 3. Default to "Other"
+ * 1. Channel mapping (HIGHEST PRIORITY)
+ * 2. Keyword matching against title/description
+ * 3. YouTube category metadata
+ * 4. Default to "Other"
  * 
  * @param {Object} metadata - Video metadata
- * @param {string} metadata.title - Video title
- * @param {string} metadata.description - Video description
- * @param {Array<string>} metadata.keywords - Meta keywords
- * @param {string} metadata.youtubeCategory - YouTube category (new!)
  * @param {boolean} aiEnabled - Whether AI detection is enabled
  * @param {Object} categoryKeywords - Keywords for each category
+ * @param {Object} channelMap - User's channel → category mappings
  * @returns {string} Predicted category name
  */
-function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords) {
-    if (!aiEnabled) return "Other";
+function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords, channelMap = {}) {
+    // Debug logging
+    console.log("🔍 predictCategory called with:", { 
+        metadata, 
+        aiEnabled, 
+        hasKeywords: !!categoryKeywords,
+        hasChannelMap: !!channelMap 
+    });
+
+    // Step 1: Check channel mapping (HIGHEST PRIORITY)
+    if (metadata.channel && channelMap[metadata.channel]) {
+        console.log(`🎯 Channel mapping: "${metadata.channel}" → "${channelMap[metadata.channel]}"`);
+        return channelMap[metadata.channel];
+    }
+
+    // Step 2: AI keyword matching
+    if (!aiEnabled) {
+        console.log("⏸️ AI detection disabled, using fallback");
+        return "Other";
+    }
 
     const scores = {};
     const text = `${metadata.title} ${metadata.description} ${(metadata.keywords || []).join(' ')}`.toLowerCase();
 
-    // Step 1: Score each category based on keyword matches
+    console.log(`📝 Analyzing text: ${text.substring(0, 100)}...`);
+
+    // Score each category based on keyword matches
     Object.entries(categoryKeywords).forEach(([category, keywords]) => {
         const score = keywords.reduce((sum, keyword) => {
             const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
             return sum + (text.match(regex) || []).length;
         }, 0);
-        if (score > 0) scores[category] = score;
+        if (score > 0) {
+            scores[category] = score;
+            console.log(`  📊 ${category}: ${score} matches`);
+        }
     });
 
-    // Step 2: If keywords found a match, return it
     const topCategory = Object.entries(scores).sort(([, a], [, b]) => b - a)[0];
     if (topCategory && topCategory[1] > 0) {
+        console.log(`✅ AI prediction: "${metadata.title}" → "${topCategory[0]}" (score: ${topCategory[1]})`);
         return topCategory[0];
     }
 
-    // Step 3: Fallback to YouTube category metadata if available
+    // Step 3: YouTube category metadata
     if (metadata.youtubeCategory) {
         const category = mapYouTubeCategory(metadata.youtubeCategory);
-        console.log(`📊 Using YouTube category: ${metadata.youtubeCategory} → ${category}`);
+        console.log(`📺 YouTube category: ${metadata.youtubeCategory} → ${category}`);
         return category;
     }
 
-    // Step 4: Final fallback to "Other"
+    // Step 4: Fallback
+    console.log(`❓ No match found, using "Other"`);
     return "Other";
 }
 
@@ -520,12 +542,12 @@ async function batchGroupAllTabs() {
                 const metadata = await getVideoMetadata(tab.id);
                 metadata.title = tab.title;
                 
-                // ✅ Pass channel mapping to predictCategory
+                // ✅ FIX: Pass ALL required parameters
                 const category = predictCategory(
                     metadata,
                     settings.aiCategoryDetection,
                     settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
-                    settings.channelCategoryMap || {}  // ← ADD THIS
+                    settings.channelCategoryMap || {}
                 );
                 await groupTab(tab, category, enabledColors);
                 successCount++;
@@ -628,18 +650,29 @@ async function handleGroupTab(msg, sendResponse) {
 
         let category = msg.category || "";
         if (!category.trim()) {
-            const metadata = await getVideoMetadata(tab.id);
+            // ✅ FIX: Use metadata from content script if available
+            let metadata = msg.metadata || {};
+            if (!metadata.title) {
+                metadata = await getVideoMetadata(tab.id);
+            }
             metadata.title = tab.title;
             
-            // ✅ Pass channel mapping to predictCategory
+            console.log("📥 Got metadata:", metadata);
+            console.log("🔧 Settings:", {
+                aiEnabled: settings.aiCategoryDetection,
+                keywordsCount: Object.keys(settings.categoryKeywords || {}).length,
+                channelMapCount: Object.keys(settings.channelCategoryMap || {}).length
+            });
+
             category = predictCategory(
                 metadata,
                 settings.aiCategoryDetection,
-                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
-                settings.channelCategoryMap || {}  // ← ADD THIS
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
             );
         }
         category = (category || "Other").trim();
+
+        console.log(`✅ Final category: ${category}`);
 
         const result = await groupTab(tab, category, enabledColors);
         sendResponse({ success: true, category, color: result.color });
@@ -755,12 +788,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             const metadata = await getVideoMetadata(tab.id);
             metadata.title = tab.title;
             
-            // ✅ Pass channel mapping
+            // ✅ FIX: Pass ALL required parameters
             const category = predictCategory(
                 metadata,
                 settings.aiCategoryDetection,
                 settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
-                settings.channelCategoryMap || {}  // ← ADD THIS
+                settings.channelCategoryMap || {}
             );
             await groupTab(tab, category, enabledColors);
         }
@@ -790,18 +823,21 @@ chrome.commands.onCommand.addListener(async (command) => {
             .map(([color]) => color);
 
         if (enabledColors.length === 0) {
-            console.warn("No colors enabled, using defaults");
             enabledColors.push(...AVAILABLE_COLORS);
         }
 
         if (command === "group-current-tab") {
             const [tab] = await queryTabs({ active: true, currentWindow: true });
-            if (tab?.url.includes("youtube.com")) {
-                // ✅ Pass categoryKeywords from settings
+            if (tab?.url?.includes("youtube.com")) {
+                const metadata = await getVideoMetadata(tab.id);
+                metadata.title = tab.title;
+                
+                // ✅ FIX: Pass ALL required parameters
                 const category = predictCategory(
-                    { title: tab.title }, 
+                    metadata,
                     settings.aiCategoryDetection,
-                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+                    settings.channelCategoryMap || {}
                 );
                 await groupTab(tab, category, enabledColors);
             }
