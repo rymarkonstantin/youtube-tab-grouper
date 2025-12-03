@@ -310,9 +310,18 @@ async function getColorForGroup(groupName, tabId, windowId, enabledColors) {
 // ============================================================================
 
 /**
- * Predict video category using keyword matching
+ * Predict video category using keyword matching + YouTube metadata
+ * 
+ * Priority order:
+ * 1. Keyword matching against title/description
+ * 2. YouTube category metadata (if available)
+ * 3. Default to "Other"
  * 
  * @param {Object} metadata - Video metadata
+ * @param {string} metadata.title - Video title
+ * @param {string} metadata.description - Video description
+ * @param {Array<string>} metadata.keywords - Meta keywords
+ * @param {string} metadata.youtubeCategory - YouTube category (new!)
  * @param {boolean} aiEnabled - Whether AI detection is enabled
  * @param {Object} categoryKeywords - Keywords for each category
  * @returns {string} Predicted category name
@@ -323,7 +332,7 @@ function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTING
     const scores = {};
     const text = `${metadata.title} ${metadata.description} ${(metadata.keywords || []).join(' ')}`.toLowerCase();
 
-    // Score each category based on keyword matches
+    // Step 1: Score each category based on keyword matches
     Object.entries(categoryKeywords).forEach(([category, keywords]) => {
         const score = keywords.reduce((sum, keyword) => {
             const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
@@ -332,9 +341,56 @@ function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTING
         if (score > 0) scores[category] = score;
     });
 
-    // Return highest-scoring category
+    // Step 2: If keywords found a match, return it
     const topCategory = Object.entries(scores).sort(([, a], [, b]) => b - a)[0];
-    return topCategory ? topCategory[0] : "Other";
+    if (topCategory && topCategory[1] > 0) {
+        return topCategory[0];
+    }
+
+    // Step 3: Fallback to YouTube category metadata if available
+    if (metadata.youtubeCategory) {
+        const category = mapYouTubeCategory(metadata.youtubeCategory);
+        console.log(`📊 Using YouTube category: ${metadata.youtubeCategory} → ${category}`);
+        return category;
+    }
+
+    // Step 4: Final fallback to "Other"
+    return "Other";
+}
+
+/**
+ * Map YouTube's official categories to our custom categories
+ * 
+ * YouTube categories: Music, Gaming, Entertainment, Sports, News, etc.
+ * Our categories: Gaming, Music, Tech, Cooking, Fitness, Education, News, Entertainment
+ * 
+ * @param {string} youtubeCategory - YouTube's category name
+ * @returns {string} Mapped category name
+ */
+function mapYouTubeCategory(youtubeCategory) {
+    if (!youtubeCategory) return "Other";
+
+    const categoryMap = {
+        // YouTube → Our Categories
+        "Music": "Music",
+        "Gaming": "Gaming",
+        "Entertainment": "Entertainment",
+        "Sports": "Fitness",
+        "News & Politics": "News",
+        "Education": "Education",
+        "Tech": "Tech",
+        "Cooking": "Cooking",
+        "Howto & Style": "Education",
+        "Travel & Events": "Entertainment",
+        "People & Blogs": "Entertainment",
+        "Comedy": "Entertainment",
+        "Film & Animation": "Entertainment",
+        "Autos": "Tech",
+        "Pets & Animals": "Entertainment",
+        "Nonprofits & Activism": "News"
+    };
+
+    return categoryMap[youtubeCategory] || "Other";
 }
 
 // ============================================================================

@@ -78,6 +78,75 @@
         return { title, channel, description, keywords };
     }
 
+    /**
+     * Extract video metadata including YouTube's official category
+     * 
+     * YouTube stores category in multiple places:
+     * 1. JSON-LD structured data
+     * 2. Meta tags
+     * 3. Page HTML attributes
+     * 
+     * @returns {Object} Video metadata
+     */
+    function extractVideoMetadata() {
+        const metadata = {
+            title: document.title,
+            description: "",
+            keywords: [],
+            youtubeCategory: null
+        };
+
+        // Method 1: Extract from JSON-LD (most reliable)
+        const jsonLdScript = document.querySelector('script[type="application/ld+json"]');
+        if (jsonLdScript) {
+            try {
+                const jsonLd = JSON.parse(jsonLdScript.textContent);
+                if (jsonLd.description) metadata.description = jsonLd.description;
+                if (jsonLd.keywords) {
+                    metadata.keywords = jsonLd.keywords.split(',').map(k => k.trim());
+                }
+            } catch (e) {
+                console.warn("Failed to parse JSON-LD:", e);
+            }
+        }
+
+        // Method 2: Extract from meta tags
+        const descMeta = document.querySelector('meta[name="description"]');
+        if (descMeta) metadata.description = descMeta.content;
+
+        const keywordsMeta = document.querySelector('meta[name="keywords"]');
+        if (keywordsMeta) {
+            metadata.keywords = keywordsMeta.content.split(',').map(k => k.trim());
+        }
+
+        // Method 3: Extract YouTube category from page HTML
+        // YouTube stores this in ytInitialData JavaScript object
+        const ytInitialDataScript = Array.from(document.querySelectorAll('script')).find(
+            script => script.textContent.includes('var ytInitialData = ')
+        );
+        
+        if (ytInitialDataScript) {
+            try {
+                const content = ytInitialDataScript.textContent;
+                const match = content.match(/"category":"([^"]+)"/);
+                if (match && match[1]) {
+                    metadata.youtubeCategory = match[1];
+                    console.log(`📺 Found YouTube category: ${metadata.youtubeCategory}`);
+                }
+            } catch (e) {
+                console.warn("Failed to extract YouTube category:", e);
+            }
+        }
+
+        // Method 4: Check meta property tags
+        const ogType = document.querySelector('meta[property="og:type"]');
+        if (ogType && ogType.content === 'video.other') {
+            // This is definitely a video
+        }
+
+        return metadata;
+    }
+
     // ====================================================================
     // CATEGORY DETECTION
     // ====================================================================
@@ -257,4 +326,136 @@
         initialize();
     }
 
+    /**
+     * Send metadata to background script when requested
+     */
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "getVideoMetadata") {
+            const metadata = extractVideoMetadata();
+            sendResponse(metadata);
+        }
+    });
+
 })();
+
+/**
+ * Get metadata from content script
+ * @async
+ * @param {number} tabId - Tab ID to query
+ * @returns {Promise<Object>} Video metadata with YouTube category
+ */
+async function getVideoMetadata(tabId) {
+    return new Promise((resolve) => {
+        chrome.tabs.sendMessage(tabId, { action: "getVideoMetadata" }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.warn("Failed to get metadata:", chrome.runtime.lastError);
+                resolve({ title: "", description: "", keywords: [], youtubeCategory: null });
+            } else {
+                resolve(response || {});
+            }
+        });
+    });
+}
+
+/**
+ * Handle "groupTab" message from popup/content script
+ */
+async function handleGroupTab(msg, sendResponse) {
+    try {
+        const [tab] = await queryTabs({ active: true, currentWindow: true });
+        if (!tab) {
+            sendResponse({ success: false, error: "No active tab found" });
+            return;
+        }
+
+        const settings = await loadSettings();
+        if (!settings.extensionEnabled) {
+            sendResponse({ success: false, error: "Extension is disabled" });
+            return;
+        }
+
+        let enabledColors = [];
+        if (settings.enabledColors && typeof settings.enabledColors === 'object') {
+            enabledColors = Object.entries(settings.enabledColors)
+                .filter(([, enabled]) => enabled)
+                .map(([color]) => color);
+        }
+
+        if (enabledColors.length === 0) {
+            enabledColors = [...AVAILABLE_COLORS];
+        }
+
+        let category = msg.category || "";
+        if (!category.trim()) {
+            // ✅ FIX: Get YouTube metadata from content script
+            const metadata = await getVideoMetadata(tab.id);
+            metadata.title = tab.title; // Ensure title is set
+            
+            category = predictCategory(
+                metadata,
+                settings.aiCategoryDetection,
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+            );
+        }
+        category = (category || "Other").trim();
+
+        const result = await groupTab(tab, category, enabledColors);
+        sendResponse({ success: true, category, color: result.color });
+
+    } catch (error) {
+        console.error("❌ Error grouping tab:", error);
+        sendResponse({ success: false, error: error.message });
+    }
+}
+
+/**
+ * Update batchGroupAllTabs to use YouTube metadata
+ */
+async function batchGroupAllTabs() {
+    try {
+        const tabs = await queryTabs({
+            url: "https://www.youtube.com/*",
+            currentWindow: true
+        });
+
+        const settings = await loadSettings();
+        
+        let enabledColors = [];
+        if (settings.enabledColors && typeof settings.enabledColors === 'object') {
+            enabledColors = Object.entries(settings.enabledColors)
+                .filter(([, enabled]) => enabled)
+                .map(([color]) => color);
+        }
+
+        if (enabledColors.length === 0) {
+            enabledColors = [...AVAILABLE_COLORS];
+        }
+
+        console.log(`📊 Batch grouping ${tabs.length} YouTube tabs...`);
+
+        let successCount = 0;
+        for (const tab of tabs) {
+            try {
+                // ✅ FIX: Get YouTube metadata from content script
+                const metadata = await getVideoMetadata(tab.id);
+                metadata.title = tab.title;
+                
+                const category = predictCategory(
+                    metadata,
+                    settings.aiCategoryDetection,
+                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                );
+                await groupTab(tab, category, enabledColors);
+                successCount++;
+            } catch (error) {
+                console.error(`❌ Failed to group tab ${tab.id}:`, error);
+            }
+        }
+
+        console.log(`✅ Successfully grouped ${successCount}/${tabs.length} tabs`);
+        return { success: true, count: successCount };
+    } catch (error) {
+        console.error("❌ Batch grouping error:", error);
+        return { success: false, error: error.message };
+    }
+}
