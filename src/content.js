@@ -320,6 +320,7 @@
         if (request.action === "getVideoMetadata") {
             const metadata = extractVideoMetadata();
             sendResponse(metadata);
+            return true; // ✅ Keep channel open for async response
         }
     });
 

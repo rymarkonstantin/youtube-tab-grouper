@@ -214,6 +214,40 @@ function updateTabGroup(groupId, props) {
     return new Promise(resolve => chrome.tabGroups.update(groupId, props, resolve));
 }
 
+/**
+ * Get metadata from content script
+ * 
+ * Requests video metadata (title, channel, description, YouTube category)
+ * from the content script running on the current tab
+ * 
+ * @async
+ * @param {number} tabId - Tab ID to query
+ * @returns {Promise<Object>} Video metadata with YouTube category
+ */
+async function getVideoMetadata(tabId) {
+    return new Promise((resolve) => {
+        chrome.tabs.sendMessage(
+            tabId, 
+            { action: "getVideoMetadata" }, 
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("⚠️ Failed to get metadata from tab:", chrome.runtime.lastError);
+                    // Return minimal metadata on error
+                    resolve({ 
+                        title: "", 
+                        channel: "",
+                        description: "", 
+                        keywords: [], 
+                        youtubeCategory: null 
+                    });
+                } else {
+                    resolve(response || {});
+                }
+            }
+        );
+    });
+}
+
 // ============================================================================
 // COLOR ASSIGNMENT ENGINE
 // ============================================================================
@@ -456,7 +490,7 @@ async function groupTab(tab, category, enabledColors) {
  * Useful for organizing multiple tabs at once
  * 
  * @async
- * @returns {Promise<Object>} {success: boolean, count: number}
+ * @returns {Promise<Object>}
  */
 async function batchGroupAllTabs() {
     try {
