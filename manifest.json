@@ -17,6 +17,10 @@
     "https://www.youtube.com/*"
   ],
   
+  "content_security_policy": {
+    "script-src": ["'self'", "https://cdn.jsdelivr.net"]
+  },
+  
   "background": {
     "service_worker": "src/background.js"
   },

@@ -1,86 +1,140 @@
-let chart = null;
+/**
+ * YouTube Tab Grouper - Statistics Page
+ * 
+ * Displays grouping analytics and usage statistics
+ */
 
-document.addEventListener('DOMContentLoaded', loadStats);
+// ============================================================================
+// DOM ELEMENTS
+// ============================================================================
 
-document.getElementById('backBtn').addEventListener('click', () => {
+const totalTabsEl = document.getElementById('totalTabs');
+const totalCategoriesEl = document.getElementById('totalCategories');
+const topCategoryEl = document.getElementById('topCategory');
+const topCountEl = document.getElementById('topCount');
+const chartContainerEl = document.getElementById('categoryChart');
+const resetStatsBtn = document.getElementById('resetStats');
+const backBtn = document.getElementById('backBtn');
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+/**
+ * Load and display statistics on page load
+ */
+document.addEventListener('DOMContentLoaded', loadAndDisplayStats);
+
+/**
+ * Reset statistics when button clicked
+ */
+resetStatsBtn.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to reset all statistics?')) {
+        await chrome.storage.local.set({ groupingStats: {
+            totalTabs: 0,
+            categoryCount: {},
+            sessionsToday: 0,
+            lastReset: new Date().toDateString()
+        }});
+        await loadAndDisplayStats();
+        alert('✅ Statistics reset');
+    }
+});
+
+/**
+ * Go back to popup
+ */
+backBtn.addEventListener('click', () => {
     window.close();
 });
 
-document.getElementById('resetStats').addEventListener('click', () => {
-    if (confirm('⚠️ Reset all statistics? This cannot be undone.')) {
-        chrome.storage.local.set({ groupingStats: {} }, () => {
-            location.reload();
-        });
+// ============================================================================
+// STATISTICS LOADING & DISPLAY
+// ============================================================================
+
+/**
+ * Load and display all statistics
+ * @async
+ */
+async function loadAndDisplayStats() {
+    try {
+        const stats = await loadStats();
+
+        // Display total tabs
+        totalTabsEl.textContent = stats.totalTabs || 0;
+
+        // Display category count
+        const categoryCount = Object.keys(stats.categoryCount || {}).length;
+        totalCategoriesEl.textContent = categoryCount;
+
+        // Display top category
+        const topEntry = Object.entries(stats.categoryCount || {})
+            .sort(([, a], [, b]) => b - a)[0];
+
+        if (topEntry) {
+            topCategoryEl.textContent = topEntry[0];
+            topCountEl.textContent = `${topEntry[1]} tabs`;
+        } else {
+            topCategoryEl.textContent = '-';
+            topCountEl.textContent = '0 tabs';
+        }
+
+        // Display chart
+        displayChart(stats.categoryCount || {});
+
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        alert('❌ Failed to load statistics');
     }
-});
-
-async function loadStats() {
-    const stats = await new Promise(resolve => {
-        chrome.storage.local.get('groupingStats', (result) => {
-            resolve(result.groupingStats || {
-                totalTabs: 0,
-                categoryCount: {},
-                sessionsToday: 0
-            });
-        });
-    });
-
-    // Update stat cards
-    document.getElementById('totalTabs').textContent = stats.totalTabs || 0;
-    document.getElementById('totalCategories').textContent = Object.keys(stats.categoryCount).length;
-
-    // Find top category
-    if (Object.keys(stats.categoryCount).length > 0) {
-        const topCat = Object.entries(stats.categoryCount).sort(([, a], [, b]) => b - a)[0];
-        document.getElementById('topCategory').textContent = topCat[0];
-        document.getElementById('topCount').textContent = `${topCat[1]} tabs`;
-    }
-
-    // Draw chart
-    drawChart(stats.categoryCount);
 }
 
-function drawChart(categoryCount) {
-    const ctx = document.getElementById('categoryChart').getContext('2d');
+/**
+ * Load statistics from storage
+ * @async
+ * @returns {Promise<Object>} Statistics object
+ */
+async function loadStats() {
+    return new Promise(resolve => {
+        chrome.storage.local.get('groupingStats', (result) => {
+            const stats = result.groupingStats || {
+                totalTabs: 0,
+                categoryCount: {},
+                sessionsToday: 0,
+                lastReset: new Date().toDateString()
+            };
+            resolve(stats);
+        });
+    });
+}
 
-    if (Object.keys(categoryCount).length === 0) {
-        ctx.font = '16px Arial';
-        ctx.fillStyle = '#5f6368';
-        ctx.textAlign = 'center';
-        ctx.fillText('No data yet. Start grouping tabs!', ctx.canvas.width / 2, ctx.canvas.height / 2);
+/**
+ * Display simple bar chart using HTML/CSS
+ * @param {Object} categoryCount - Category → count mapping
+ */
+function displayChart(categoryCount) {
+    // ✅ FIX: Handle undefined or null categoryCount
+    if (!categoryCount || typeof categoryCount !== 'object' || Object.keys(categoryCount).length === 0) {
+        chartContainerEl.innerHTML = '<p style="text-align: center; color: #999;">No data to display</p>';
         return;
     }
 
-    if (chart) {
-        chart.destroy();
-    }
+    const maxCount = Math.max(...Object.values(categoryCount));
+    const chartHTML = Object.entries(categoryCount)
+        .sort(([, a], [, b]) => b - a)
+        .map(([category, count]) => {
+            const percentage = (count / maxCount) * 100;
+            return `
+                <div class="chart-bar">
+                    <div class="bar-label">${category}</div>
+                    <div class="bar-container">
+                        <div class="bar" style="width: ${percentage}%">
+                            <span class="bar-value">${count}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .join('');
 
-    const colors = ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#A142F4', '#24C6EB', '#F538A0', '#9AA0A6'];
-
-    chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(categoryCount),
-            datasets: [{
-                data: Object.values(categoryCount),
-                backgroundColor: colors.slice(0, Object.keys(categoryCount).length),
-                borderColor: 'white',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: { size: 14 },
-                        padding: 15,
-                        color: '#202124'
-                    }
-                }
-            }
-        }
-    });
+    chartContainerEl.innerHTML = chartHTML;
 }

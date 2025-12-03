@@ -91,7 +91,13 @@ async function saveState() {
  */
 async function loadSettings() {
     return new Promise(resolve => {
-        chrome.storage.sync.get(DEFAULT_SETTINGS, resolve);
+        chrome.storage.sync.get(DEFAULT_SETTINGS, (result) => {
+            const settings = result || {};
+            if (!settings.enabledColors || typeof settings.enabledColors !== 'object') {
+                settings.enabledColors = DEFAULT_SETTINGS.enabledColors;
+            }
+            resolve(settings);
+        });
     });
 }
 
@@ -590,18 +596,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
  * Handle context menu clicks
  */
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    const settings = await loadSettings();
-    const enabledColors = Object.entries(settings.enabledColors)
-        .filter(([, enabled]) => enabled)
-        .map(([color]) => color);
+    try {
+        const settings = await loadSettings();
+        
+        if (!settings.enabledColors || typeof settings.enabledColors !== 'object') {
+            console.error("Invalid enabledColors settings");
+            return;
+        }
+        
+        const enabledColors = Object.entries(settings.enabledColors)
+            .filter(([, enabled]) => enabled)
+            .map(([color]) => color);
 
-    if (info.menuItemId === "groupTab" && tab.url.includes("youtube.com")) {
-        const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
-        await groupTab(tab, category, enabledColors);
-    }
+        if (enabledColors.length === 0) {
+            console.warn("No colors enabled, using defaults");
+            enabledColors.push(...AVAILABLE_COLORS);
+        }
 
-    if (info.menuItemId === "groupAllYT") {
-        await batchGroupAllTabs();
+        if (info.menuItemId === "groupTab" && tab.url.includes("youtube.com")) {
+            const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
+            await groupTab(tab, category, enabledColors);
+        }
+
+        if (info.menuItemId === "groupAllYT") {
+            await batchGroupAllTabs();
+        }
+    } catch (error) {
+        console.error("Context menu error:", error);
     }
 });
 
@@ -609,27 +630,42 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
  * Handle keyboard shortcuts
  */
 chrome.commands.onCommand.addListener(async (command) => {
-    const settings = await loadSettings();
-    const enabledColors = Object.entries(settings.enabledColors)
-        .filter(([, enabled]) => enabled)
-        .map(([color]) => color);
-
-    if (command === "group-current-tab") {
-        const [tab] = await queryTabs({ active: true, currentWindow: true });
-        if (tab?.url.includes("youtube.com")) {
-            const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
-            await groupTab(tab, category, enabledColors);
+    try {
+        const settings = await loadSettings();
+        
+        if (!settings.enabledColors || typeof settings.enabledColors !== 'object') {
+            console.error("Invalid enabledColors settings");
+            return;
         }
-    }
+        
+        const enabledColors = Object.entries(settings.enabledColors)
+            .filter(([, enabled]) => enabled)
+            .map(([color]) => color);
 
-    if (command === "batch-group-all") {
-        await batchGroupAllTabs();
-    }
+        if (enabledColors.length === 0) {
+            console.warn("No colors enabled, using defaults");
+            enabledColors.push(...AVAILABLE_COLORS);
+        }
 
-    if (command === "toggle-extension") {
-        settings.extensionEnabled = !settings.extensionEnabled;
-        await saveSettings(settings);
-        console.log(`Extension ${settings.extensionEnabled ? '✅ enabled' : '❌ disabled'}`);
+        if (command === "group-current-tab") {
+            const [tab] = await queryTabs({ active: true, currentWindow: true });
+            if (tab?.url.includes("youtube.com")) {
+                const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
+                await groupTab(tab, category, enabledColors);
+            }
+        }
+
+        if (command === "batch-group-all") {
+            await batchGroupAllTabs();
+        }
+
+        if (command === "toggle-extension") {
+            settings.extensionEnabled = !settings.extensionEnabled;
+            await saveSettings(settings);
+            console.log(`Extension ${settings.extensionEnabled ? '✅ enabled' : '❌ disabled'}`);
+        }
+    } catch (error) {
+        console.error("Command error:", error);
     }
 });
 
@@ -650,15 +686,24 @@ chrome.tabGroups.onRemoved.addListener(async (groupId) => {
  * Sync cache when a group is renamed or color changed
  */
 chrome.tabGroups.onUpdated.addListener(async (group) => {
-    for (const [name, id] of Object.entries(groupIdMap)) {
-        if (id === group.id && group.title && group.title !== name) {
-            delete groupIdMap[name];
-            delete groupColorMap[name];
-            groupIdMap[group.title] = group.id;
-            if (group.color) groupColorMap[group.title] = group.color;
+    try {
+        if (!group || typeof group !== 'object') {
+            console.warn("Invalid group object in onUpdated");
+            return;
         }
+
+        for (const [name, id] of Object.entries(groupIdMap)) {
+            if (id === group.id && group.title && group.title !== name) {
+                delete groupIdMap[name];
+                delete groupColorMap[name];
+                groupIdMap[group.title] = group.id;
+                if (group.color) groupColorMap[group.title] = group.color;
+            }
+        }
+        await saveState();
+    } catch (error) {
+        console.error("Tab group update error:", error);
     }
-    await saveState();
 });
 
 /**
