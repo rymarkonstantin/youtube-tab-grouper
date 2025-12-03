@@ -7,90 +7,72 @@
     <link rel="stylesheet" href="options.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <div class="settings-container">
+        <header class="settings-header">
             <h1>⚙️ YouTube Tab Grouper Settings</h1>
-            <p class="version">v2.0</p>
-        </div>
+        </header>
 
         <!-- General Settings -->
         <section class="settings-section">
             <h2>🔧 General Settings</h2>
+            
+            <label class="setting-item">
+                <input type="checkbox" id="extensionEnabled">
+                <span>Enable Extension</span>
+            </label>
 
-            <div class="setting-item">
-                <label>
-                    <input type="checkbox" id="extensionEnabled" checked>
-                    <span>Extension Enabled</span>
-                </label>
-            </div>
+            <label class="setting-item">
+                <input type="checkbox" id="aiCategoryDetection">
+                <span>AI Category Detection</span>
+            </label>
 
-            <div class="setting-item">
-                <label>
-                    <input type="checkbox" id="aiCategoryDetection" checked>
-                    <span>AI Category Detection</span>
-                </label>
-                <p class="hint">Automatically detect video category using keywords</p>
-            </div>
+            <label class="setting-item">
+                <input type="checkbox" id="autoCleanupEnabled">
+                <span>Auto Cleanup Empty Groups</span>
+            </label>
 
-            <div class="setting-item">
-                <label>
-                    <input type="checkbox" id="autoCleanupEnabled" checked>
-                    <span>Auto Cleanup Empty Groups</span>
-                </label>
-                <p class="hint">Remove empty groups after 5 minutes</p>
-            </div>
-
-            <div class="setting-item">
-                <label for="autoGroupDelay">Auto-Group Delay (ms):</label>
-                <input type="number" id="autoGroupDelay" min="0" max="10000" step="500" value="2500">
-                <p class="hint">0 = disable auto-group, 2500 = 2.5 seconds</p>
-            </div>
-        </section>
-
-        <!-- Color Settings -->
-        <section class="settings-section">
-            <h2>🎨 Available Colors</h2>
-            <div id="colorToggles" class="color-grid"></div>
-            <p class="hint">Select which colors to use for tab groups</p>
+            <label class="setting-item">
+                <span>Auto Group Delay (ms)</span>
+                <input type="number" id="autoGroupDelay" min="100" max="10000">
+            </label>
         </section>
 
         <!-- Allowed Hashtags -->
         <section class="settings-section">
             <h2>#️⃣ Allowed Hashtags</h2>
-            <textarea id="allowedHashtags" rows="4" placeholder="tech, music, gaming, cooking, sports"></textarea>
-            <p class="hint">Comma-separated list. Videos with these hashtags will be auto-grouped</p>
+            <textarea id="allowedHashtags" placeholder="Enter hashtags separated by commas"></textarea>
         </section>
 
-        <!-- Category Keywords -->
+        <!-- Color Preferences -->
+        <section class="settings-section">
+            <h2>🎨 Group Colors</h2>
+            <div id="colorToggles" class="color-toggles"></div>
+        </section>
+
+        <!-- ✅ NEW: Category Keywords -->
         <section class="settings-section">
             <h2>🔑 Category Keywords</h2>
-            <p class="hint">Customize keywords for each category to improve detection</p>
-            
-            <div id="keywordsEditor" class="keywords-editor">
-                <!-- Will be populated by JavaScript -->
-            </div>
+            <p class="hint">Customize keywords for each category to improve AI detection</p>
+            <div id="keywordsEditor" class="keywords-editor"></div>
         </section>
 
-        <!-- Channel Mapping Section -->
+        <!-- Channel Mapping -->
         <section class="settings-section">
             <h2>📍 Channel → Category Mapping</h2>
             <p class="hint">Assign specific categories to channels (takes priority over AI detection)</p>
-            
-            <div id="channelMappings" class="mappings-list">
-                <!-- Populated by JavaScript -->
-            </div>
-            
+            <div id="channelMappings" class="mappings-list"></div>
             <button id="addMappingBtn" class="btn btn-secondary">+ Add Channel Mapping</button>
         </section>
 
         <!-- Action Buttons -->
-        <section class="settings-section actions-section">
-            <button id="saveBtn" class="btn btn-primary">✓ Save Settings</button>
-            <button id="resetBtn" class="btn btn-secondary">↻ Reset to Default</button>
-            <button id="exportBtn" class="btn btn-secondary">⬇️ Export Settings</button>
-            <button id="importBtn" class="btn btn-secondary">⬆️ Import Settings</button>
+        <section class="settings-section settings-actions">
+            <button id="saveBtn" class="btn btn-primary">💾 Save Settings</button>
+            <button id="resetBtn" class="btn btn-warning">🔄 Reset to Default</button>
+            <button id="exportBtn" class="btn btn-secondary">📥 Export Settings</button>
+            <button id="importBtn" class="btn btn-secondary">📤 Import Settings</button>
         </section>
 
+        <!-- Status Message -->
         <div id="status" class="status"></div>
     </div>
 
