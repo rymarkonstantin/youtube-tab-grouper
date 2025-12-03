@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="../styles/common.css">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+            <h2>📺 Tab Grouper</h2>
+            <a href="../options/options.html" class="settings-icon" title="Settings">⚙️</a>
+        </div>
+
+        <div class="button-group">
+            <button id="groupButton" class="btn btn-primary">
+                <span class="icon">📌</span> Group Current Tab
+            </button>
+            <button id="batchButton" class="btn btn-secondary">
+                <span class="icon">📚</span> Group All YouTube
+            </button>
+        </div>
+
+        <div class="category-section">
+            <label for="categoryInput">Custom Category:</label>
+            <input type="text" id="categoryInput" placeholder="e.g., Gaming, Music...">
+        </div>
+
+        <div class="quick-links">
+            <a href="../stats/stats.html" target="_blank" title="View Statistics">📊 Stats</a>
+            <a href="../options/options.html" target="_blank" title="Settings">⚙️ Settings</a>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

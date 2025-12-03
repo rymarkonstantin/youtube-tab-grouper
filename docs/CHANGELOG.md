@@ -1,0 +1,110 @@
+# Changelog
+
+All notable changes to YouTube Tab Grouper will be documented in this file.
+
+---
+
+## [2.0] - 2024-01-15
+
+### ✨ Added
+- AI-powered category detection with keyword matching
+- 8 predefined categories (Gaming, Music, Tech, Cooking, Fitness, Education, News, Entertainment)
+- Smart color assignment algorithm (avoids neighbor colors)
+- Keyboard shortcuts (Ctrl+Shift+G, B, T)
+- Batch grouping for all YouTube tabs
+- Context menu integration
+- Channel-to-category mapping
+- Statistics dashboard with Chart.js
+- Settings import/export functionality
+- Auto-cleanup for empty groups
+- Extension enable/disable toggle
+
+### 🎨 UI Improvements
+- Redesigned popup interface with custom category input
+- Settings page with color toggles and channel mappings
+- Statistics dashboard with visual chart
+- Hover effects and smooth animations
+- Icon updates and better styling
+
+### 🔧 Technical
+- Reorganized file structure with `src/`, `ui/`, `images/`, `docs/` folders
+- Comprehensive JSDoc documentation for all functions
+- Improved error handling and logging
+- Race condition prevention with color assignment locking
+- Optimized performance with parallel API calls
+
+### 📚 Documentation
+- Complete README.md with features and troubleshooting
+- CONTRIBUTING.md for developers
+- ARCHITECTURE.md explaining system design
+- Inline code comments explaining complex logic
+
+---
+
+## [1.0] - 2024-01-01
+
+### ✨ Added
+- Initial release
+- Basic tab grouping functionality
+- Manual grouping via popup button
+- Auto-grouping after configurable delay
+- Color assignment for groups
+- Storage of settings
+
+### 🔧 Technical
+- Service worker for tab management
+- Content script for page injection
+- Popup UI
+- Basic settings page
+
+---
+
+## [Unreleased]
+
+### 🚀 Planned Features
+- [ ] Cross-device sync for groups
+- [ ] Custom category creation
+- [ ] Time-based auto-grouping (group at specific times)
+- [ ] Integration with other video platforms (Vimeo, Dailymotion)
+- [ ] Dark theme support
+- [ ] Browser sync integration
+- [ ] Machine learning for category detection
+- [ ] Group templates
+- [ ] Keyboard shortcut customization
+
+### 🔄 Improvements
+- [ ] Multi-language support
+- [ ] Performance optimization for 100+ tabs
+- [ ] Unit tests and CI/CD pipeline
+- [ ] Better error recovery
+- [ ] Accessibility improvements
+
+---
+
+## Version History
+
+| Version | Date | Status |
+|---------|------|--------|
+| 2.0 | 2024-01-15 | Current |
+| 1.0 | 2024-01-01 | Archived |
+
+---
+
+## How to Update
+
+### Auto-Update
+Extension updates automatically from Chrome Web Store
+
+### Manual Update
+1. Download latest version
+2. Go to `chrome://extensions/`
+3. Enable Developer mode
+4. Click "Update" or reload the extension
+
+---
+
+## Support
+
+- Found a bug? [Report an issue](../../issues)
+- Have a feature request? [Create a discussion](../../discussions)
+- Want to contribute? Check [CONTRIBUTING.md](CONTRIBUTING.md)

@@ -1,35 +1,67 @@
 {
   "manifest_version": 3,
   "name": "YouTube Tab Grouper",
-  "version": "1.1",
-  "description": "Intelligently group YouTube tabs by category with smart color assignment",
+  "version": "2.0",
+  "description": "Intelligently group YouTube tabs by category with AI detection, keyboard shortcuts & analytics",
+  
   "permissions": [
     "tabs",
     "tabGroups",
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "contextMenus"
   ],
+  
   "host_permissions": [
     "https://www.youtube.com/*"
   ],
+  
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
+  
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "YouTube Tab Grouper"
+    "default_popup": "ui/popup/popup.html",
+    "default_title": "YouTube Tab Grouper",
+    "default_icons": {
+      "16": "images/icon-16.png",
+      "48": "images/icon-48.png",
+      "128": "images/icon-128.png"
+    }
   },
-  "options_page": "options.html",
+  
+  "options_page": "ui/options/options.html",
+  
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"]
+      "js": ["src/content.js"],
+      "css": ["ui/styles/common.css"]
     }
   ],
-  "icons": {
-    "16": "images/icon-16.png",
-    "48": "images/icon-48.png",
-    "128": "images/icon-128.png"
+  
+  "commands": {
+    "group-current-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "Command+Shift+G"
+      },
+      "description": "Group current YouTube tab"
+    },
+    "batch-group-all": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "Batch group all YouTube tabs"
+    },
+    "toggle-extension": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+T",
+        "mac": "Command+Shift+T"
+      },
+      "description": "Toggle extension on/off"
+    }
   }
 }
