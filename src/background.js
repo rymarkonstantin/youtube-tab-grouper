@@ -51,7 +51,18 @@ const DEFAULT_SETTINGS = {
         return obj;
     }, {}),
     autoCleanupEnabled: true,
-    aiCategoryDetection: true
+    aiCategoryDetection: true,
+    
+    categoryKeywords: {
+        "Gaming": ["gameplay", "gaming", "twitch", "esports", "fps", "rpg", "speedrun", "fortnite", "minecraft"],
+        "Music": ["music", "song", "album", "artist", "concert", "cover", "remix", "lyrics"],
+        "Tech": ["tech", "gadget", "review", "iphone", "laptop", "cpu", "gpu", "software", "coding"],
+        "Cooking": ["recipe", "cooking", "food", "kitchen", "chef", "baking", "meal", "cuisine"],
+        "Fitness": ["workout", "gym", "exercise", "fitness", "yoga", "training", "diet", "health"],
+        "Education": ["tutorial", "course", "learn", "how to", "guide", "lesson", "education"],
+        "News": ["news", "breaking", "current events", "politics", "world", "daily"],
+        "Entertainment": ["movie", "series", "trailer", "reaction", "comedy", "funny", "meme"]
+    }
 };
 
 // ============================================================================
@@ -87,15 +98,24 @@ async function saveState() {
 /**
  * Load user settings from sync storage
  * @async
- * @returns {Promise<Object>} User settings
+ * @returns {Promise<Object>} User settings with fallbacks
  */
 async function loadSettings() {
     return new Promise(resolve => {
         chrome.storage.sync.get(DEFAULT_SETTINGS, (result) => {
             const settings = result || {};
-            if (!settings.enabledColors || typeof settings.enabledColors !== 'object') {
+            
+            if (!settings.autoGroupDelay) settings.autoGroupDelay = DEFAULT_SETTINGS.autoGroupDelay;
+            if (!settings.allowedHashtags) settings.allowedHashtags = DEFAULT_SETTINGS.allowedHashtags;
+            if (!settings.channelCategoryMap) settings.channelCategoryMap = DEFAULT_SETTINGS.channelCategoryMap;
+            if (settings.extensionEnabled === undefined) settings.extensionEnabled = DEFAULT_SETTINGS.extensionEnabled;
+            if (settings.aiCategoryDetection === undefined) settings.aiCategoryDetection = DEFAULT_SETTINGS.aiCategoryDetection;
+            if (settings.autoCleanupEnabled === undefined) settings.autoCleanupEnabled = DEFAULT_SETTINGS.autoCleanupEnabled;
+            
+            if (!settings.enabledColors || typeof settings.enabledColors !== 'object' || Object.keys(settings.enabledColors).length === 0) {
                 settings.enabledColors = DEFAULT_SETTINGS.enabledColors;
             }
+            
             resolve(settings);
         });
     });
@@ -292,26 +312,19 @@ async function getColorForGroup(groupName, tabId, windowId, enabledColors) {
 /**
  * Predict video category using keyword matching
  * 
- * Algorithm:
- * 1. Extract text from title, description, keywords
- * 2. Count keyword matches for each category
- * 3. Return highest-scoring category
- * 
  * @param {Object} metadata - Video metadata
- * @param {string} metadata.title - Video title
- * @param {string} metadata.description - Video description
- * @param {Array<string>} metadata.keywords - Meta keywords
  * @param {boolean} aiEnabled - Whether AI detection is enabled
+ * @param {Object} categoryKeywords - Keywords for each category
  * @returns {string} Predicted category name
  */
-function predictCategory(metadata, aiEnabled) {
+function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords) {
     if (!aiEnabled) return "Other";
 
     const scores = {};
     const text = `${metadata.title} ${metadata.description} ${(metadata.keywords || []).join(' ')}`.toLowerCase();
 
     // Score each category based on keyword matches
-    Object.entries(CATEGORY_KEYWORDS).forEach(([category, keywords]) => {
+    Object.entries(categoryKeywords).forEach(([category, keywords]) => {
         const score = keywords.reduce((sum, keyword) => {
             const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
             return sum + (text.match(regex) || []).length;
@@ -390,28 +403,49 @@ async function groupTab(tab, category, enabledColors) {
  * @returns {Promise<Object>} {success: boolean, count: number}
  */
 async function batchGroupAllTabs() {
-    const tabs = await queryTabs({
-        url: "https://www.youtube.com/*",
-        currentWindow: true
-    });
+    try {
+        const tabs = await queryTabs({
+            url: "https://www.youtube.com/*",
+            currentWindow: true
+        });
 
-    const settings = await loadSettings();
-    const enabledColors = Object.entries(settings.enabledColors)
-        .filter(([, enabled]) => enabled)
-        .map(([color]) => color);
-
-    console.log(`Batch grouping ${tabs.length} YouTube tabs...`);
-
-    for (const tab of tabs) {
-        try {
-            const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
-            await groupTab(tab, category, enabledColors);
-        } catch (error) {
-            console.error(`Failed to group tab ${tab.id}:`, error);
+        const settings = await loadSettings();
+        
+        let enabledColors = [];
+        if (settings.enabledColors && typeof settings.enabledColors === 'object') {
+            enabledColors = Object.entries(settings.enabledColors)
+                .filter(([, enabled]) => enabled)
+                .map(([color]) => color);
         }
-    }
 
-    return { success: true, count: tabs.length };
+        if (enabledColors.length === 0) {
+            enabledColors = [...AVAILABLE_COLORS];
+        }
+
+        console.log(`📊 Batch grouping ${tabs.length} YouTube tabs...`);
+
+        let successCount = 0;
+        for (const tab of tabs) {
+            try {
+                // ✅ Pass categoryKeywords from settings
+                const category = predictCategory(
+                    { title: tab.title }, 
+                    settings.aiCategoryDetection,
+                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                );
+                await groupTab(tab, category, enabledColors);
+                successCount++;
+            } catch (error) {
+                console.error(`❌ Failed to group tab ${tab.id}:`, error);
+            }
+        }
+
+        console.log(`✅ Successfully grouped ${successCount}/${tabs.length} tabs`);
+        return { success: true, count: successCount };
+    } catch (error) {
+        console.error("❌ Batch grouping error:", error);
+        return { success: false, error: error.message };
+    }
 }
 
 // ============================================================================
@@ -475,38 +509,45 @@ async function autoCleanupEmptyGroups() {
  */
 async function handleGroupTab(msg, sendResponse) {
     try {
-        // Get active tab
         const [tab] = await queryTabs({ active: true, currentWindow: true });
         if (!tab) {
             sendResponse({ success: false, error: "No active tab found" });
             return;
         }
 
-        // Check if extension is enabled
         const settings = await loadSettings();
         if (!settings.extensionEnabled) {
             sendResponse({ success: false, error: "Extension is disabled" });
             return;
         }
 
-        // Get enabled colors
-        const enabledColors = Object.entries(settings.enabledColors)
-            .filter(([, enabled]) => enabled)
-            .map(([color]) => color);
+        let enabledColors = [];
+        if (settings.enabledColors && typeof settings.enabledColors === 'object') {
+            enabledColors = Object.entries(settings.enabledColors)
+                .filter(([, enabled]) => enabled)
+                .map(([color]) => color);
+        }
 
-        // Determine category (custom or predicted)
+        if (enabledColors.length === 0) {
+            enabledColors = [...AVAILABLE_COLORS];
+        }
+
         let category = msg.category || "";
         if (!category.trim()) {
-            category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
+            // ✅ Pass categoryKeywords from settings
+            category = predictCategory(
+                { title: tab.title }, 
+                settings.aiCategoryDetection,
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+            );
         }
         category = (category || "Other").trim();
 
-        // Perform grouping
         const result = await groupTab(tab, category, enabledColors);
         sendResponse({ success: true, category, color: result.color });
 
     } catch (error) {
-        console.error("Error grouping tab:", error);
+        console.error("❌ Error grouping tab:", error);
         sendResponse({ success: false, error: error.message });
     }
 }
@@ -609,12 +650,16 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             .map(([color]) => color);
 
         if (enabledColors.length === 0) {
-            console.warn("No colors enabled, using defaults");
             enabledColors.push(...AVAILABLE_COLORS);
         }
 
         if (info.menuItemId === "groupTab" && tab.url.includes("youtube.com")) {
-            const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
+            // ✅ Pass categoryKeywords from settings
+            const category = predictCategory(
+                { title: tab.title }, 
+                settings.aiCategoryDetection,
+                settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+            );
             await groupTab(tab, category, enabledColors);
         }
 
@@ -650,7 +695,12 @@ chrome.commands.onCommand.addListener(async (command) => {
         if (command === "group-current-tab") {
             const [tab] = await queryTabs({ active: true, currentWindow: true });
             if (tab?.url.includes("youtube.com")) {
-                const category = predictCategory({ title: tab.title }, settings.aiCategoryDetection);
+                // ✅ Pass categoryKeywords from settings
+                const category = predictCategory(
+                    { title: tab.title }, 
+                    settings.aiCategoryDetection,
+                    settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords
+                );
                 await groupTab(tab, category, enabledColors);
             }
         }
