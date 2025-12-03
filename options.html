@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube Tab Grouper - Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ YouTube Tab Grouper Settings</h1>
+
+        <!-- Auto-Group Delay -->
+        <section>
+            <label for="autoGroupDelay">Auto-Group Delay (ms):</label>
+            <input type="number" id="autoGroupDelay" min="0" max="10000" step="500" value="2500">
+            <p class="hint">0 = disable auto-group, 2500 = 2.5 seconds</p>
+        </section>
+
+        <!-- Allowed Hashtags -->
+        <section>
+            <label for="allowedHashtags">Allowed Hashtags (comma-separated):</label>
+            <textarea id="allowedHashtags" rows="4" placeholder="tech, music, gaming, cooking, sports, education, news"></textarea>
+            <p class="hint">Videos with these hashtags will be auto-grouped</p>
+        </section>
+
+        <!-- Channel Mapping -->
+        <section>
+            <label>Channel → Category Mapping:</label>
+            <div id="channelMappings"></div>
+            <button id="addMappingBtn">+ Add Mapping</button>
+        </section>
+
+        <!-- Enabled/Disabled -->
+        <section>
+            <label>
+                <input type="checkbox" id="extensionEnabled" checked>
+                Extension Enabled
+            </label>
+        </section>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button id="saveBtn" class="primary">✓ Save Settings</button>
+            <button id="resetBtn" class="secondary">↻ Reset to Default</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Tab Grouper",
-  "version": "1.0",
-  "description": "Automatically group YouTube tabs by theme using hashtags, category, channel, and title keywords",
+  "version": "1.1",
+  "description": "Intelligently group YouTube tabs by category with smart color assignment",
   "permissions": [
     "tabs",
     "tabGroups",
@@ -17,12 +17,19 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "YouTube Tab Grouper"
   },
+  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "icons": {
+    "16": "images/icon-16.png",
+    "48": "images/icon-48.png",
+    "128": "images/icon-128.png"
+  }
 }

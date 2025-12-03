@@ -2,29 +2,84 @@
     'use strict';
 
     const FALLBACK_GROUP = "Other";
+    let config = null;  // Will load from storage
 
-    const ALLOWED_HASHTAGS = [
-        "tech",
-        "music",
-        "gaming",
-        "cooking",
-        "sports",
-        "education",
-        "news"
-        // add more allowed hashtags here
-    ];
-    const ALLOWED_HASHTAGS_LOWER = ALLOWED_HASHTAGS.map(h => h.toLowerCase());
+    /**
+     * Load settings from chrome.storage.sync
+     */
+    async function loadConfig() {
+        return new Promise(resolve => {
+            chrome.storage.sync.get({
+                autoGroupDelay: 2500,
+                allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
+                channelCategoryMap: {},
+                extensionEnabled: true
+            }, (settings) => {
+                config = settings;
+                console.log("Config loaded:", config);
+                resolve();
+            });
+        });
+    }
 
-    // Predefined mapping: category -> array of channels
-    const CHANNEL_CATEGORY_MAP = {
-        "Fishing": ["Chanel1", "Chanel2"],
-        "Gaming": ["Chanel3", "Chanel4"]
-        // add more categories and channels here
-    };
+    // -------- EXTRACT VIDEO DATA --------
+    function getVideoData() {
+        const title =
+            document.querySelector("h1.title")?.innerText ||
+            document.title.replace("- YouTube", "").trim();
 
-    //----------------------------------------------------
-    //  SMALL FLOATING UI BUTTONS
-    //----------------------------------------------------
+        const hashtags = [...document.querySelectorAll("a[href^='/hashtag/']")]
+            .map(a => a.innerText.trim());
+
+        const channelName = document.querySelector("ytd-channel-name a")?.innerText?.trim() || "";
+
+        const categoryMeta = document.querySelector("meta[itemprop='genre']")?.content?.trim() || "";
+
+        return { title, hashtags, channelName, categoryMeta };
+    }
+
+    // -------- HYBRID CATEGORY DETECTION --------
+    async function getCategory(video) {
+        // Check if extension is enabled
+        if (!config?.extensionEnabled) return null;
+
+        // 1. Channel Mapping (highest priority)
+        if (config.channelCategoryMap[video.channel]) {
+            return { name: config.channelCategoryMap[video.channel], source: "channel" };
+        }
+
+        // 2. Hashtags (dynamic whitelist from config)
+        if (video.hashtags?.length > 0) {
+            const validHashtag = video.hashtags.find(h =>
+                config.allowedHashtags.includes(h.toLowerCase())
+            );
+            if (validHashtag) {
+                return { name: validHashtag, source: "hashtag" };
+            }
+        }
+
+        // 3. Genre metadata
+        if (video.genre) {
+            return { name: video.genre, source: "genre" };
+        }
+
+        // 4. Channel name
+        if (video.channel) {
+            return { name: video.channel, source: "channel_name" };
+        }
+
+        // 5. Title keywords
+        if (video.title) {
+            const firstWord = video.title.split(/[\s-]/)[0];
+            if (firstWord && firstWord.length > 2) {
+                return { name: firstWord, source: "title" };
+            }
+        }
+
+        return { name: FALLBACK_GROUP, source: "fallback" };
+    }
+
+    // -------- CREATE UI --------
     function createUI() {
         const container = document.createElement("div");
         container.style = `
@@ -80,101 +135,26 @@
         };
     }
 
-    //----------------------------------------------------
-    //  EXTRACT VIDEO DATA
-    //----------------------------------------------------
-    function getVideoData() {
-        const title =
-            document.querySelector("h1.title")?.innerText ||
-            document.title.replace("- YouTube", "").trim();
+    // -------- MAIN EXECUTION --------
+    (async () => {
+        await loadConfig();
+        createUI();
 
-        const hashtags = [...document.querySelectorAll("a[href^='/hashtag/']")]
-            .map(a => a.innerText.trim());
-
-        const channelName = document.querySelector("ytd-channel-name a")?.innerText?.trim() || "";
-
-        const categoryMeta = document.querySelector("meta[itemprop='genre']")?.content?.trim() || "";
-
-        return { title, hashtags, channelName, categoryMeta };
-    }
-
-    //----------------------------------------------------
-    //  NORMALIZE / FORMAT GROUP NAME
-    //----------------------------------------------------
-    function normalizeGroupName(name) {
-        if (!name || typeof name !== "string") return FALLBACK_GROUP;
-        const trimmed = name.trim().replace(/\s+/g, ' ');
-        const words = trimmed.split(' ');
-        const titled = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        return titled || FALLBACK_GROUP;
-    }
-
-    //----------------------------------------------------
-    //  HYBRID CATEGORY DETECTION
-    //----------------------------------------------------
-    function getCategory(video) {
-        console.log("[getCategory] video.raw:", video);
-
-        // 0️⃣ Check channel map first
-        const channelLower = (video.channelName || "").toLowerCase();
-        for (const [category, channels] of Object.entries(CHANNEL_CATEGORY_MAP)) {
-            if (channels.some(ch => ch.toLowerCase() === channelLower)) {
-                console.log("[getCategory] channel map hit:", category);
-                return { name: category, source: "channel-map" };
-            }
+        // Auto-group with configurable delay
+        if (config.autoGroupDelay > 0) {
+            setTimeout(async () => {
+                const video = getVideoData();
+                if (video) {
+                    const category = await getCategory(video);
+                    if (category) {
+                        chrome.runtime.sendMessage({
+                            action: "groupTab",
+                            category: category.name
+                        });
+                    }
+                }
+            }, config.autoGroupDelay);
         }
-
-        // 1️⃣ Check hashtags
-        const normalizedHashtags = (video.hashtags || []).map(ht =>
-            ht.toLowerCase().replace(/^#+/, '').trim()
-        ).filter(Boolean);
-        console.log("[getCategory] normalizedHashtags:", normalizedHashtags);
-
-        const validHashtag = normalizedHashtags.find(ht =>
-            /^[a-z0-9]+$/.test(ht) && ALLOWED_HASHTAGS_LOWER.includes(ht)
-        );
-        if (validHashtag) {
-            console.log("[getCategory] validHashtag:", validHashtag);
-            return { name: validHashtag, source: "hashtag" };
-        }
-
-        // 2️⃣ YouTube category meta
-        if (video.categoryMeta && video.categoryMeta.trim()) {
-            console.log("[getCategory] using categoryMeta:", video.categoryMeta);
-            return { name: video.categoryMeta.trim(), source: "category" };
-        }
-
-        // 3️⃣ Channel name
-        if (video.channelName && video.channelName.trim()) {
-            console.log("[getCategory] using channelName:", video.channelName);
-            return { name: video.channelName.trim(), source: "channel" };
-        }
-
-        // 4️⃣ Fallback to title keyword
-        if (video.title && video.title.trim()) {
-            const words = video.title.split(/\s+/)
-                .map(w => w.replace(/[^a-z0-9]/gi,''))
-                .filter(w => /^[a-z0-9]{3,}$/i.test(w));
-            if (words.length > 0) return { name: words[0].toLowerCase(), source: "title" };
-        }
-
-        // 5️⃣ Final fallback
-        return { name: FALLBACK_GROUP, source: "fallback" };
-    }
-
-    //----------------------------------------------------
-    //  MAIN EXECUTION
-    //----------------------------------------------------
-    createUI();
-
-    // Auto-group after 2.5s
-    setTimeout(() => {
-        const video = getVideoData();
-        if (!video.title) return;
-        const categoryMeta = getCategory(video);
-        const groupName = normalizeGroupName(categoryMeta.name);
-        console.log("[auto-group] categoryMeta:", categoryMeta, "groupName:", groupName);
-        chrome.runtime.sendMessage({ action: "groupTab", category: groupName });
-    }, 2500);
+    })();
 
 })();
