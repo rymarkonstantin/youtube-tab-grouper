@@ -11,6 +11,16 @@ import {
 } from './grouping.js';
 import { queryTabs } from './chromeApi.js';
 import { getVideoMetadata } from './metadata.js';
+import {
+    MESSAGE_ACTIONS,
+    validateRequest,
+    buildBatchGroupResponse,
+    buildErrorResponse,
+    buildGroupTabResponse,
+    buildIsGroupedResponse,
+    buildSettingsResponse,
+    buildValidationErrorResponse
+} from '../shared/messages.js';
 
 bootstrap();
 
@@ -25,22 +35,34 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.action === "groupTab") {
+    const action = msg?.action;
+
+    if (action === MESSAGE_ACTIONS.GROUP_TAB) {
+        const { valid, errors } = validateRequest(action, msg || {});
+        if (!valid) {
+            sendResponse(buildValidationErrorResponse(action, errors));
+            return true;
+        }
         handleGroupTabMessage(msg, sendResponse);
         return true;
     }
 
-    if (msg.action === "isTabGrouped") {
+    if (action === MESSAGE_ACTIONS.IS_TAB_GROUPED) {
         handleIsTabGroupedMessage(sendResponse);
         return true;
     }
 
-    if (msg.action === "batchGroup") {
+    if (action === MESSAGE_ACTIONS.BATCH_GROUP) {
+        const { valid, errors } = validateRequest(action, msg || {});
+        if (!valid) {
+            sendResponse(buildValidationErrorResponse(action, errors));
+            return true;
+        }
         handleBatchGroupMessage(sendResponse);
         return true;
     }
 
-    if (msg.action === "getSettings") {
+    if (action === MESSAGE_ACTIONS.GET_SETTINGS) {
         handleGetSettingsMessage(sendResponse);
         return true;
     }
@@ -115,13 +137,13 @@ async function handleGroupTabMessage(msg, sendResponse) {
     try {
         const [tab] = await queryTabs({ active: true, currentWindow: true });
         if (!tab) {
-            sendResponse({ success: false, error: "No active tab found" });
+            sendResponse(buildErrorResponse("No active tab found"));
             return;
         }
 
         const settings = await loadSettings();
         if (!settings.extensionEnabled) {
-            sendResponse({ success: false, error: "Extension is disabled" });
+            sendResponse(buildErrorResponse("Extension is disabled"));
             return;
         }
 
@@ -129,18 +151,18 @@ async function handleGroupTabMessage(msg, sendResponse) {
         const category = await resolveCategory(tab, settings, msg.metadata, msg.category);
         const result = await groupTab(tab, category, enabledColors);
 
-        sendResponse({ success: true, category, color: result.color });
+        sendResponse(buildGroupTabResponse({ category, color: result.color }));
     } catch (error) {
-        sendResponse({ success: false, error: error.message });
+        sendResponse(buildErrorResponse(error.message));
     }
 }
 
 async function handleIsTabGroupedMessage(sendResponse) {
     try {
         const [tab] = await queryTabs({ active: true, currentWindow: true });
-        sendResponse({ grouped: tab?.groupId >= 0 });
+        sendResponse(buildIsGroupedResponse(tab?.groupId >= 0));
     } catch (error) {
-        sendResponse({ grouped: false, error: error.message });
+        sendResponse(buildIsGroupedResponse(false, error.message));
     }
 }
 
@@ -149,16 +171,16 @@ async function handleBatchGroupMessage(sendResponse) {
         const result = await batchGroupAllTabs();
         sendResponse(result);
     } catch (error) {
-        sendResponse({ success: false, error: error.message });
+        sendResponse(buildErrorResponse(error.message));
     }
 }
 
 async function handleGetSettingsMessage(sendResponse) {
     try {
         const settings = await loadSettings();
-        sendResponse({ success: true, settings });
+        sendResponse(buildSettingsResponse(settings));
     } catch (error) {
-        sendResponse({ success: false, error: error.message });
+        sendResponse(buildErrorResponse(error.message));
     }
 }
 
@@ -223,7 +245,7 @@ async function batchGroupAllTabs(settingsOverride, enabledColorsOverride) {
 
         const settings = settingsOverride || await loadSettings();
         if (!settings.extensionEnabled) {
-            return { success: false, error: "Extension is disabled" };
+            return buildErrorResponse("Extension is disabled");
         }
 
         const enabledColors = enabledColorsOverride || getEnabledColors(settings, AVAILABLE_COLORS);
@@ -239,9 +261,9 @@ async function batchGroupAllTabs(settingsOverride, enabledColorsOverride) {
             }
         }
 
-        return { success: true, count: successCount };
+        return buildBatchGroupResponse(successCount);
     } catch (error) {
-        return { success: false, error: error.message };
+        return buildErrorResponse(error.message);
     }
 }
 

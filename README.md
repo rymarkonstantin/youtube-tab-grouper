@@ -343,6 +343,7 @@ MIT License - Feel free to use, modify, and distribute
 - [Contributing Guide](docs/CONTRIBUTING.md) - How to contribute
 - [Architecture](docs/ARCHITECTURE.md) - System design
 - [Changelog](docs/CHANGELOG.md) - Version history
+- [Message Catalog](docs/MESSAGES.md) - Runtime message contracts and helpers
 
 ---
 
