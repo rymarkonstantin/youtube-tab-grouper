@@ -1,6 +1,7 @@
 import { MESSAGE_ACTIONS, normalizeVideoMetadata } from './shared/messages.js';
 import { handleMessage, sendMessageSafe } from './shared/messaging.js';
-import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './content/constants.js';
+import { BUTTON, FALLBACK_GROUP, SELECTORS } from './content/constants.js';
+import { isEnabled, loadConfig } from './content/config.js';
 
 /**
  * YouTube Tab Grouper - Content Script
@@ -22,12 +23,10 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
     let config = null; // User configuration (loaded from storage)
     const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled" };
 
-    const isExtensionEnabled = () => config?.extensionEnabled !== false;
-
     const getNormalizedMetadata = () => normalizeVideoMetadata(extractVideoMetadata());
 
     async function requestGroupTab(category, metadata) {
-        if (!isExtensionEnabled()) {
+        if (!isEnabled(config)) {
             return DISABLED_GROUP_RESPONSE;
         }
 
@@ -41,29 +40,6 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
     // ====================================================================
     // CONFIGURATION LOADER
     // ====================================================================
-
-    /**
-     * Load user settings via background bridge (sync storage)
-     * 
-     * @async
-     * @returns {Promise<void>}
-     */
-    async function loadConfig() {
-        try {
-            const response = await sendMessageSafe(MESSAGE_ACTIONS.GET_SETTINGS, {});
-            if (response?.success && response.settings) {
-                config = {
-                    ...CONTENT_SETTINGS_DEFAULTS,
-                    ...response.settings
-                };
-            } else {
-                config = { ...CONTENT_SETTINGS_DEFAULTS };
-            }
-        } catch (error) {
-            config = { ...CONTENT_SETTINGS_DEFAULTS };
-            console.warn("Config load failed, using defaults:", error?.message || error);
-        }
-    }
 
     // ====================================================================
     // VIDEO DATA EXTRACTION
@@ -191,7 +167,7 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
      */
     async function getCategory(video) {
         // Check if extension is enabled
-        if (!config?.extensionEnabled) return null;
+        if (!isEnabled(config)) return null;
 
         // 1. Check channel mapping (highest priority)
         if (config.channelCategoryMap[video.channel]) {
@@ -231,7 +207,7 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
      * @returns {void}
      */
     function createUI() {
-        if (!isExtensionEnabled()) {
+        if (!isEnabled(config)) {
             return;
         }
 
@@ -310,10 +286,10 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
     async function initialize() {
         try {
             // Step 1: Load configuration
-            await loadConfig();
+            config = await loadConfig();
 
             // Step 2: Check if enabled
-            if (!config.extensionEnabled) {
+            if (!isEnabled(config)) {
                 console.log("YouTube Tab Grouper is disabled");
                 return;
             }
@@ -322,7 +298,7 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
             createUI();
 
             // Step 4: Schedule auto-grouping (if enabled)
-            if (config.autoGroupDelay > 0 && isExtensionEnabled()) {
+            if (config.autoGroupDelay > 0 && isEnabled(config)) {
                 setTimeout(() => {
                     // Extract full metadata including YouTube category
                     const metadata = extractVideoMetadata();
@@ -357,7 +333,7 @@ import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './
 
     chrome.runtime.onMessage.addListener(handleMessage({
         [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: async () => {
-            if (!isExtensionEnabled()) {
+            if (!isEnabled(config)) {
                 return normalizeVideoMetadata();
             }
             return getNormalizedMetadata();
