@@ -1,3 +1,5 @@
+export const STATS_VERSION = 1;
+
 export const DEFAULT_STATS = {
     totalTabs: 0,
     categoryCount: {},
@@ -50,6 +52,17 @@ export function isStats(value) {
         && typeof normalized.sessionsToday === 'number'
         && typeof normalized.lastReset === 'string'
         && isObject(normalized.categoryCount);
+}
+
+export function migrateStatsV0ToV1(value = {}) {
+    const source = isObject(value) ? value : {};
+    // Accept both raw stats and nested { groupingStats }
+    const candidate = isObject(source.groupingStats) ? source.groupingStats : source;
+    const migrated = withStatsDefaults(candidate);
+    return {
+        ...migrated,
+        version: STATS_VERSION
+    };
 }
 
 export async function getStats(defaults = DEFAULT_STATS) {

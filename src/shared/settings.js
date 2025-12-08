@@ -1,3 +1,5 @@
+export const SETTINGS_VERSION = 1;
+
 export const AVAILABLE_COLORS = [
     "grey", "blue", "red", "yellow",
     "green", "pink", "purple", "cyan"
@@ -16,6 +18,7 @@ export const CATEGORY_KEYWORDS = {
 
 export const DEFAULT_SETTINGS = {
     autoGroupDelay: 2500,
+    autoGroupDelayMs: 2500, // legacy alias support
     allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
     channelCategoryMap: {},
     extensionEnabled: true,
@@ -103,14 +106,19 @@ const normalizeChannelCategoryMap = (value) => {
 export function withSettingsDefaults(value = {}) {
     const source = isObject(value) ? value : {};
 
-    const autoGroupDelay = Number.isFinite(Number(source.autoGroupDelay))
-        ? Math.max(0, Number(source.autoGroupDelay))
+    const rawDelay = Number.isFinite(Number(source.autoGroupDelayMs))
+        ? Number(source.autoGroupDelayMs)
+        : Number(source.autoGroupDelay);
+
+    const autoGroupDelay = Number.isFinite(rawDelay)
+        ? Math.max(0, rawDelay)
         : DEFAULT_SETTINGS.autoGroupDelay;
 
     return {
         ...DEFAULT_SETTINGS,
         ...source,
         autoGroupDelay,
+        autoGroupDelayMs: autoGroupDelay,
         extensionEnabled: source.extensionEnabled !== false,
         aiCategoryDetection: source.aiCategoryDetection !== false,
         autoCleanupEnabled: source.autoCleanupEnabled !== false,
@@ -131,6 +139,21 @@ export function isSettings(value) {
         && isObject(normalized.enabledColors)
         && isObject(normalized.categoryKeywords)
         && isObject(normalized.channelCategoryMap);
+}
+
+export function migrateSettingsV0ToV1(value = {}) {
+    const source = isObject(value) ? value : {};
+
+    const migrated = withSettingsDefaults({
+        ...source,
+        autoGroupDelay: source.autoGroupDelay ?? source.autoGroupDelayMs,
+        autoGroupDelayMs: source.autoGroupDelayMs ?? source.autoGroupDelay
+    });
+
+    return {
+        ...migrated,
+        version: SETTINGS_VERSION
+    };
 }
 
 export async function getSettings(defaults = DEFAULT_SETTINGS) {

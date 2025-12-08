@@ -2,7 +2,9 @@ import {
     DEFAULT_SETTINGS,
     DEFAULT_STATS,
     withSettingsDefaults,
-    withStatsDefaults
+    withStatsDefaults,
+    migrateSettingsV0ToV1,
+    migrateStatsV0ToV1
 } from './constants.js';
 import {
     getSettings,
@@ -77,7 +79,8 @@ export async function saveState(groupColorMap, groupIdMap) {
 }
 
 export async function loadSettings(defaults = DEFAULT_SETTINGS) {
-    return getSettings(withSettingsDefaults(defaults));
+    const settings = await getSettings(withSettingsDefaults(defaults));
+    return migrateSettingsV0ToV1(settings);
 }
 
 export async function saveSettings(settings) {
@@ -85,7 +88,8 @@ export async function saveSettings(settings) {
 }
 
 export async function loadStats(defaultStats = DEFAULT_STATS) {
-    return getStats(withStatsDefaults(defaultStats));
+    const stats = await getStats(withStatsDefaults(defaultStats));
+    return migrateStatsV0ToV1(stats);
 }
 
 export async function saveStats(stats) {
