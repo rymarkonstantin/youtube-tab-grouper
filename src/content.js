@@ -1,7 +1,7 @@
 import { normalizeVideoMetadata } from './shared/messages.js';
-import { BUTTON } from './content/constants.js';
 import { isEnabled, loadConfig } from './content/config.js';
 import { resolveCategory } from './content/category.js';
+import { removeGroupButton, renderGroupButton } from './content/dom.js';
 import { extractVideoMetadata } from './content/metadata.js';
 import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
 
@@ -77,56 +77,20 @@ import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
         const activeTab = document.activeElement;
         if (activeTab?.groupId >= 0) return;
 
-        // Create button element
-        const button = document.createElement('button');
-        button.id = BUTTON.id;
-        button.textContent = BUTTON.label;
-        button.setAttribute('title', BUTTON.title);
-
-        // Apply styling
-        button.style.cssText = `
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 9999;
-            padding: 8px 12px;
-            background: #4285F4;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        `;
-
-        // Hover effects
-        button.addEventListener('mouseover', () => {
-            button.style.background = '#3367d6';
-            button.style.boxShadow = '0 4px 12px rgba(66, 133, 244, 0.5)';
-        });
-
-        button.addEventListener('mouseout', () => {
-            button.style.background = '#4285F4';
-            button.style.boxShadow = '0 2px 8px rgba(66, 133, 244, 0.3)';
-        });
-
-        // Click handler
-        button.addEventListener('click', async () => {
+        const button = renderGroupButton({
+            onClick: async () => {
             const metadata = extractVideoMetadata();
             const response = await requestGroupTab("", metadata);
             if (response?.success) {
-                button.remove();
+                    removeGroupButton();
                 console.log(`Tab grouped as "${response.category}"`);
             } else if (response?.error) {
                 console.warn("Manual grouping failed:", response.error);
             }
+            }
         });
 
-        // Add button to page
-        document.body.appendChild(button);
+        return button;
     }
 
     // ====================================================================
@@ -167,8 +131,7 @@ import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
 
                     requestGroupTab("", metadata).then((response) => {
                         if (response?.success) {
-                            const btn = document.getElementById(BUTTON.id);
-                            if (btn) btn.remove();
+                            removeGroupButton();
                             console.log(`Auto-grouped as "${response.category}"`);
                         } else if (response?.error) {
                             console.warn("Auto-group failed:", response.error);
