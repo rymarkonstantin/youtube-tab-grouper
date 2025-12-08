@@ -26,26 +26,44 @@ function withEnvelope(payload = {}, requestId) {
     };
 }
 
+export function envelopeResponse(payload = {}, requestId) {
+    return withEnvelope(payload, requestId || generateRequestId("resp"));
+}
+
 function buildVersionError(expected, received, requestId) {
     const message = received === undefined
         ? "Message version is required"
         : `Unsupported message version ${received}; expected ${expected}`;
-    return withEnvelope(buildErrorResponse(message, { expectedVersion: expected }), requestId);
+    return withEnvelope(buildErrorResponse(message, { expectedVersion: expected }), requestId || generateRequestId("resp"));
 }
 
 export function handleMessage(handlers = {}, options = {}) {
     const {
         requireVersion = true,
-        validateResponses = true
+        validateResponses = true,
+        onUnknown
     } = options;
 
     return (msg, sender, sendResponse) => {
         const action = msg?.action;
+        const requestId = msg?.requestId || generateRequestId("resp");
+
         if (!action || !handlers[action]) {
+            if (isFunction(onUnknown)) {
+                Promise.resolve(onUnknown(action, msg, sender))
+                    .then((result) => {
+                        if (result === false) return;
+                        const payload = result ?? buildErrorResponse(`Unknown action "${action}"`);
+                        sendResponse(envelopeResponse(payload, requestId));
+                    })
+                    .catch((error) => {
+                        sendResponse(envelopeResponse(buildErrorResponse(error?.message || "Unknown error"), requestId));
+                    });
+                return true;
+            }
             return false;
         }
 
-        const requestId = msg?.requestId || generateRequestId("resp");
         const incomingVersion = msg?.version;
 
         if (requireVersion && incomingVersion !== MESSAGE_VERSION) {
@@ -55,7 +73,7 @@ export function handleMessage(handlers = {}, options = {}) {
 
         const requestValidation = validateRequest(action, msg || {});
         if (!requestValidation.valid) {
-            sendResponse(withEnvelope(buildValidationErrorResponse(action, requestValidation.errors), requestId));
+            sendResponse(envelopeResponse(buildValidationErrorResponse(action, requestValidation.errors), requestId));
             return true;
         }
 
@@ -69,7 +87,7 @@ export function handleMessage(handlers = {}, options = {}) {
                 if (validateResponses) {
                     const responseValidation = validateResponse(action, payload);
                     if (!responseValidation.valid) {
-                        sendResponse(withEnvelope(
+                        sendResponse(envelopeResponse(
                             buildValidationErrorResponse(action, responseValidation.errors),
                             requestId
                         ));
@@ -77,10 +95,10 @@ export function handleMessage(handlers = {}, options = {}) {
                     }
                 }
 
-                sendResponse(withEnvelope(payload, requestId));
+                sendResponse(envelopeResponse(payload, requestId));
             })
             .catch((error) => {
-                sendResponse(withEnvelope(buildErrorResponse(error?.message || "Unknown error"), requestId));
+                sendResponse(envelopeResponse(buildErrorResponse(error?.message || "Unknown error"), requestId));
             });
 
         return true;
