@@ -1,6 +1,7 @@
 import { AVAILABLE_COLORS, DEFAULT_STATS } from './constants.js';
 import { loadState, saveState, loadStats, saveStats } from './storage.js';
 import { queryTabs, queryGroups, getTabGroup, groupTabs, updateTabGroup } from './chromeApi.js';
+import { logError, logWarn, toErrorEnvelope } from './logger.js';
 
 const groupColorMap = {};
 const groupIdMap = {};
@@ -56,67 +57,85 @@ async function getColorForGroup(groupName, tabId, windowId, enabledColors) {
 }
 
 export async function groupTab(tab, category, enabledColors) {
-    const color = await getColorForGroup(category, tab.id, tab.windowId, enabledColors);
-    const groups = await queryGroups({ title: category });
-    const groupInWindow = groups.find(g => g.windowId === tab.windowId);
+    try {
+        const color = await getColorForGroup(category, tab.id, tab.windowId, enabledColors);
+        const groups = await queryGroups({ title: category });
+        const groupInWindow = groups.find(g => g.windowId === tab.windowId);
 
-    let groupId;
-    if (groupInWindow) {
-        groupId = groupInWindow.id;
-        await groupTabs(tab.id, groupId);
-    } else {
-        groupId = await groupTabs(tab.id);
+        let groupId;
+        if (groupInWindow) {
+            groupId = groupInWindow.id;
+            await groupTabs(tab.id, groupId);
+        } else {
+            groupId = await groupTabs(tab.id);
+        }
+
+        await updateTabGroup(groupId, { title: category, color });
+
+        groupIdMap[category] = groupId;
+        groupColorMap[category] = color;
+        await saveState(groupColorMap, groupIdMap);
+
+        const stats = await loadStats(DEFAULT_STATS);
+        stats.totalTabs = (stats.totalTabs || 0) + 1;
+        stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
+        await saveStats(stats);
+
+        return { groupId, color };
+    } catch (error) {
+        const wrapped = toErrorEnvelope(error, "Failed to group tab");
+        logError("grouping:groupTab failed", wrapped.message);
+        throw wrapped;
     }
-
-    await updateTabGroup(groupId, { title: category, color });
-
-    groupIdMap[category] = groupId;
-    groupColorMap[category] = color;
-    await saveState(groupColorMap, groupIdMap);
-
-    const stats = await loadStats(DEFAULT_STATS);
-    stats.totalTabs = (stats.totalTabs || 0) + 1;
-    stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
-    await saveStats(stats);
-
-    return { groupId, color };
 }
 
 export async function autoCleanupEmptyGroups() {
-    const groups = await queryGroups({});
+    try {
+        const groups = await queryGroups({});
 
-    for (const group of groups) {
-        const tabs = await queryTabs({ groupId: group.id });
+        for (const group of groups) {
+            const tabs = await queryTabs({ groupId: group.id });
 
-        if (tabs.length === 0) {
-            if (!groupTabCounts[group.id]) {
-                groupTabCounts[group.id] = Date.now();
-            }
-            else if (Date.now() - groupTabCounts[group.id] > 300000) {
-                chrome.tabGroups.remove(group.id, () => {
-                    for (const [name, id] of Object.entries(groupIdMap)) {
-                        if (id === group.id) {
-                            delete groupIdMap[name];
-                            delete groupColorMap[name];
+            if (tabs.length === 0) {
+                if (!groupTabCounts[group.id]) {
+                    groupTabCounts[group.id] = Date.now();
+                }
+                else if (Date.now() - groupTabCounts[group.id] > 300000) {
+                    chrome.tabGroups.remove(group.id, () => {
+                        if (chrome.runtime.lastError) {
+                            logWarn("grouping:autoCleanupEmptyGroups remove failed", chrome.runtime.lastError.message);
+                            return;
                         }
-                    }
-                    saveState(groupColorMap, groupIdMap);
-                });
+                        for (const [name, id] of Object.entries(groupIdMap)) {
+                            if (id === group.id) {
+                                delete groupIdMap[name];
+                                delete groupColorMap[name];
+                            }
+                        }
+                        saveState(groupColorMap, groupIdMap);
+                    });
+                }
+            } else {
+                delete groupTabCounts[group.id];
             }
-        } else {
-            delete groupTabCounts[group.id];
         }
+    } catch (error) {
+        logWarn("grouping:autoCleanupEmptyGroups skipped due to error", error?.message || error);
     }
 }
 
 export async function handleGroupRemoved(groupId) {
-    for (const [name, id] of Object.entries(groupIdMap)) {
-        if (id === groupId) {
-            delete groupIdMap[name];
-            delete groupColorMap[name];
+    try {
+        for (const [name, id] of Object.entries(groupIdMap)) {
+            if (id === groupId) {
+                delete groupIdMap[name];
+                delete groupColorMap[name];
+            }
         }
+        await saveState(groupColorMap, groupIdMap);
+    } catch (error) {
+        logWarn("grouping:handleGroupRemoved failed to persist cleanup", error?.message || error);
     }
-    await saveState(groupColorMap, groupIdMap);
 }
 
 export async function handleGroupUpdated(group) {
@@ -124,15 +143,19 @@ export async function handleGroupUpdated(group) {
         return;
     }
 
-    for (const [name, id] of Object.entries(groupIdMap)) {
-        if (id === group.id && group.title && group.title !== name) {
-            delete groupIdMap[name];
-            delete groupColorMap[name];
-            groupIdMap[group.title] = group.id;
-            if (group.color) groupColorMap[group.title] = group.color;
+    try {
+        for (const [name, id] of Object.entries(groupIdMap)) {
+            if (id === group.id && group.title && group.title !== name) {
+                delete groupIdMap[name];
+                delete groupColorMap[name];
+                groupIdMap[group.title] = group.id;
+                if (group.color) groupColorMap[group.title] = group.color;
+            }
         }
+        await saveState(groupColorMap, groupIdMap);
+    } catch (error) {
+        logWarn("grouping:handleGroupUpdated failed to persist update", error?.message || error);
     }
-    await saveState(groupColorMap, groupIdMap);
 }
 
 export function getEnabledColors(settings, fallbackColors = AVAILABLE_COLORS) {
