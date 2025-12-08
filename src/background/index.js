@@ -33,12 +33,32 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
 });
 
-chrome.runtime.onMessage.addListener(handleMessage({
-    [MESSAGE_ACTIONS.GROUP_TAB]: handleGroupTabMessage,
-    [MESSAGE_ACTIONS.IS_TAB_GROUPED]: handleIsTabGroupedMessage,
-    [MESSAGE_ACTIONS.BATCH_GROUP]: handleBatchGroupMessage,
-    [MESSAGE_ACTIONS.GET_SETTINGS]: handleGetSettingsMessage
-}, { requireVersion: true }));
+const MESSAGE_ROUTES = {
+    [MESSAGE_ACTIONS.GROUP_TAB]: {
+        requiresEnabled: true,
+        handler: handleGroupTabMessage
+    },
+    [MESSAGE_ACTIONS.BATCH_GROUP]: {
+        requiresEnabled: true,
+        handler: handleBatchGroupMessage
+    },
+    [MESSAGE_ACTIONS.GET_SETTINGS]: {
+        requiresEnabled: false,
+        handler: handleGetSettingsMessage
+    },
+    [MESSAGE_ACTIONS.IS_TAB_GROUPED]: {
+        requiresEnabled: false,
+        handler: handleIsTabGroupedMessage
+    }
+};
+
+chrome.runtime.onMessage.addListener(handleMessage(
+    buildRouteHandlers(MESSAGE_ROUTES),
+    {
+        requireVersion: true,
+        onUnknown: (action) => buildErrorResponse(`Unknown action "${action || "undefined"}"`)
+    }
+));
 
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 chrome.commands.onCommand.addListener(handleCommand);
@@ -75,6 +95,24 @@ async function bootstrap() {
     }
 }
 
+function buildRouteHandlers(routes) {
+    return Object.entries(routes).reduce((acc, [action, route]) => {
+        acc[action] = async (msg, sender) => {
+            let settings = null;
+
+            if (route.requiresEnabled) {
+                settings = await loadSettings();
+                if (!settings.extensionEnabled) {
+                    return buildErrorResponse("Extension is disabled");
+                }
+            }
+
+            return route.handler(msg, sender, settings);
+        };
+        return acc;
+    }, {});
+}
+
 async function registerContextMenus() {
     await clearContextMenus();
 
@@ -103,13 +141,13 @@ async function clearContextMenus() {
     });
 }
 
-async function handleGroupTabMessage(msg) {
+async function handleGroupTabMessage(msg, sender, preloadedSettings) {
     const [tab] = await queryTabs({ active: true, currentWindow: true });
     if (!tab) {
         return buildErrorResponse("No active tab found");
     }
 
-    const settings = await loadSettings();
+    const settings = preloadedSettings || await loadSettings();
     if (!settings.extensionEnabled) {
         return buildErrorResponse("Extension is disabled");
     }
@@ -130,9 +168,9 @@ async function handleIsTabGroupedMessage() {
     }
 }
 
-async function handleBatchGroupMessage() {
+async function handleBatchGroupMessage(msg, sender, preloadedSettings) {
     try {
-        const result = await batchGroupAllTabs();
+        const result = await batchGroupAllTabs(preloadedSettings);
         return result;
     } catch (error) {
         return buildErrorResponse(error.message);
