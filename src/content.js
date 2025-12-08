@@ -1,5 +1,6 @@
 import { MESSAGE_ACTIONS, normalizeVideoMetadata } from './shared/messages.js';
 import { handleMessage, sendMessageSafe } from './shared/messaging.js';
+import { BUTTON, CONTENT_SETTINGS_DEFAULTS, FALLBACK_GROUP, SELECTORS } from './content/constants.js';
 
 /**
  * YouTube Tab Grouper - Content Script
@@ -18,14 +19,6 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
     // STATE & CONSTANTS
     // ====================================================================
 
-    const FALLBACK_GROUP = "Other";
-    const CONTENT_SETTINGS_DEFAULTS = {
-        autoGroupDelay: 2500,
-        allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
-        channelCategoryMap: {},
-        extensionEnabled: true,
-        aiCategoryDetection: true
-    };
     let config = null; // User configuration (loaded from storage)
     const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled" };
 
@@ -84,21 +77,21 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
     function getVideoData() {
         // Better title extraction
         const title =
-            document.querySelector("h1.title yt-formatted-string")?.innerText ||
+            document.querySelector(SELECTORS.title)?.innerText ||
             document.title.replace("- YouTube", "").trim();
 
         // FIX: Better channel extraction
         const channel = 
-            document.querySelector("ytd-channel-name a")?.innerText ||
-            document.querySelector("a.yt-simple-endpoint[href*='/channel/']")?.innerText ||
-            document.querySelector("a.yt-simple-endpoint[href*='/@']")?.innerText ||
+            document.querySelector(SELECTORS.channelName)?.innerText ||
+            document.querySelector(SELECTORS.channelLink)?.innerText ||
+            document.querySelector(SELECTORS.channelHandleLink)?.innerText ||
             "";
 
         const description = 
-            document.querySelector("meta[name='description']")?.content || "";
+            document.querySelector(SELECTORS.descriptionMeta)?.content || "";
 
         const keywords = 
-            (document.querySelector("meta[name='keywords']")?.content || "")
+            (document.querySelector(SELECTORS.keywordsMeta)?.content || "")
                 .split(',')
                 .map(k => k.trim());
 
@@ -127,7 +120,7 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
         };
 
         // Method 1: Extract from JSON-LD (most reliable)
-        const jsonLdScript = document.querySelector('script[type="application/ld+json"]');
+        const jsonLdScript = document.querySelector(SELECTORS.jsonLdScript);
         if (jsonLdScript) {
             try {
                 const jsonLd = JSON.parse(jsonLdScript.textContent);
@@ -166,7 +159,7 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
         // Method 3: Fallback - Extract from meta tags
         if (!metadata.youtubeCategory) {
             try {
-                const genreMeta = document.querySelector("meta[itemprop='genre']");
+                const genreMeta = document.querySelector(SELECTORS.genreMeta);
                 if (genreMeta?.content) {
                     metadata.youtubeCategory = genreMeta.content.trim();
                     console.log(`Found YouTube category via meta tag: ${metadata.youtubeCategory}`);
@@ -248,9 +241,9 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
 
         // Create button element
         const button = document.createElement('button');
-        button.id = 'yt-grouper-btn';
-        button.textContent = 'Group tab';
-        button.setAttribute('title', 'Group this tab (Ctrl+Shift+G)');
+        button.id = BUTTON.id;
+        button.textContent = BUTTON.label;
+        button.setAttribute('title', BUTTON.title);
 
         // Apply styling
         button.style.cssText = `
@@ -336,7 +329,7 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
 
                     requestGroupTab("", metadata).then((response) => {
                         if (response?.success) {
-                            const btn = document.getElementById('yt-grouper-btn');
+                            const btn = document.getElementById(BUTTON.id);
                             if (btn) btn.remove();
                             console.log(`Auto-grouped as "${response.category}"`);
                         } else if (response?.error) {
