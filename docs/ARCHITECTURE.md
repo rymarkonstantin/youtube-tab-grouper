@@ -79,36 +79,40 @@ This document explains the system design and how components interact.
 
 ## Storage Schema
 
-### `chrome.storage.sync` (user settings)
-```javascript
-{
-  autoGroupDelay: 2500,
-  allowedHashtags: ["tech", "music", ...],
-  channelCategoryMap: { "MKBHD": "Tech", "Gordon Ramsay": "Cooking" },
-  extensionEnabled: true,
-  aiCategoryDetection: true,
-  autoCleanupEnabled: true,
-  enabledColors: { grey: true, blue: true, red: true, ... },
-  categoryKeywords: { Tech: ["tech", "gadget", ...], ... }
-}
-```
+### SettingsV1 (`chrome.storage.sync`)
+- Purpose: user preferences shared across devices.
+- Defaults: `src/background/constants.js#DEFAULT_SETTINGS` (mirrored in `src/content.js` and `ui/options/options.js`).
+- Persisted fields:
+  - `autoGroupDelay` (number, ms) default `2500`.
+  - `allowedHashtags` (string[]) default `['tech','music','gaming','cooking','sports','education','news']`.
+  - `channelCategoryMap` (record<channel, category>) default `{}`.
+  - `extensionEnabled` (boolean) default `true`.
+  - `aiCategoryDetection` (boolean) default `true`.
+  - `autoCleanupEnabled` (boolean) default `true`.
+  - `enabledColors` (record<color, boolean>) default all `AVAILABLE_COLORS` set to `true`.
+  - `categoryKeywords` (record<category, string[]>) default `CATEGORY_KEYWORDS`.
+- Derived/non-persisted: the enabled color list is derived per request via `getEnabledColors`; UI-only text states and timers are not stored.
+- Versioning rules:
+  - V1 has no explicit version field; shape is defined by `DEFAULT_SETTINGS`.
+  - Additive changes must include defaults in `DEFAULT_SETTINGS`, inline content defaults, and options UI fallbacks.
+  - Breaking changes require a new version key (e.g., `settingsVersion`) and a migration path in `runMigrations`.
 
-### `chrome.storage.local` (runtime data)
-```javascript
-// Category -> color
-{ "Tech": "blue", "Music": "red", "Gaming": "green" }
+### StatsV1 (`chrome.storage.local`)
+- Purpose: usage counters; stays local to the profile.
+- Defaults: `src/background/constants.js#DEFAULT_STATS`.
+- Persisted fields:
+  - `totalTabs` (number) default `0`.
+  - `categoryCount` (record<category, number>) default `{}`.
+  - `sessionsToday` (number) default `0` (reserved for future use).
+  - `lastReset` (string, `Date#toDateString`) default `new Date().toDateString()`.
+- Derived/non-persisted: top category and chart percentages are computed in `ui/stats/stats.js` from the stored counts.
+- Versioning rules:
+  - V1 has no explicit version field; shape is defined by `DEFAULT_STATS`.
+  - Additive counters or metadata must ship with defaults in `DEFAULT_STATS` and be handled by `ui/stats` reset logic.
+  - Breaking changes should introduce a new version key (e.g., `statsVersion`) plus a migration/reset strategy.
 
-// Category -> group ID
-{ "Tech": 42, "Music": 43, "Gaming": 44 }
-
-// Usage statistics
-{
-  totalTabs: 150,
-  categoryCount: { "Tech": 45, "Music": 30, "Gaming": 25, "Other": 50 },
-  sessionsToday: 8,
-  lastReset: "2024-01-15"
-}
-```
+### Local runtime maps (`chrome.storage.local`)
+- `groupColorMap` and `groupIdMap` store category -> color/id mappings for tab groups. Loaded via `loadState` and saved via `saveState`; pruned by cleanup handlers. These are legacy, stored alongside StatsV1 but not part of that schema.
 
 ---
 
