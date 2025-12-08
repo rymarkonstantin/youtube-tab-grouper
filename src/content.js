@@ -1,3 +1,6 @@
+import { MESSAGE_ACTIONS, normalizeVideoMetadata } from './shared/messages.js';
+import { handleMessage, sendMessageSafe } from './shared/messaging.js';
+
 /**
  * YouTube Tab Grouper - Content Script
  * 
@@ -36,23 +39,20 @@
      * @returns {Promise<void>}
      */
     async function loadConfig() {
-        return new Promise((resolve) => {
-            chrome.runtime.sendMessage(
-                { action: "getSettings" },
-                (response) => {
-                    if (response?.success && response.settings) {
-                        config = {
-                            ...CONTENT_SETTINGS_DEFAULTS,
-                            ...response.settings
-                        };
-                    } else {
-                        config = { ...CONTENT_SETTINGS_DEFAULTS };
-                    }
-                    console.log("Config loaded:", config);
-                    resolve();
-                }
-            );
-        });
+        try {
+            const response = await sendMessageSafe(MESSAGE_ACTIONS.GET_SETTINGS, {});
+            if (response?.success && response.settings) {
+                config = {
+                    ...CONTENT_SETTINGS_DEFAULTS,
+                    ...response.settings
+                };
+            } else {
+                config = { ...CONTENT_SETTINGS_DEFAULTS };
+            }
+        } catch (error) {
+            config = { ...CONTENT_SETTINGS_DEFAULTS };
+            console.warn("Config load failed, using defaults:", error?.message || error);
+        }
     }
 
     // ====================================================================
@@ -262,22 +262,20 @@
         });
 
         // Click handler
-        button.addEventListener('click', () => {
-            // Send metadata to background script
+        button.addEventListener('click', async () => {
             const metadata = extractVideoMetadata();
-            chrome.runtime.sendMessage(
-                { 
-                    action: "groupTab", 
+            try {
+                const response = await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, {
                     category: "",
-                    metadata: metadata  // Include metadata for background categorization
-                },
-                (response) => {
-                    if (response?.success) {
-                        button.remove();
-                        console.log(`Tab grouped as "${response.category}"`);
-                    }
+                    metadata
+                });
+                if (response?.success) {
+                    button.remove();
+                    console.log(`Tab grouped as "${response.category}"`);
                 }
-            );
+            } catch (error) {
+                console.warn("Manual grouping failed:", error?.message || error);
+            }
         });
 
         // Add button to page
@@ -319,21 +317,19 @@
                 setTimeout(() => {
                     // Extract full metadata including YouTube category
                     const metadata = extractVideoMetadata();
-                    
-                    chrome.runtime.sendMessage(
-                        { 
-                            action: "groupTab", 
-                            category: "",
-                            metadata: metadata  // Include metadata for background categorization
-                        },
-                        (response) => {
-                            if (response?.success) {
-                                const btn = document.getElementById('yt-grouper-btn');
-                                if (btn) btn.remove();
-                                console.log(`Auto-grouped as "${response.category}"`);
-                            }
+
+                    sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, {
+                        category: "",
+                        metadata
+                    }).then((response) => {
+                        if (response?.success) {
+                            const btn = document.getElementById('yt-grouper-btn');
+                            if (btn) btn.remove();
+                            console.log(`Auto-grouped as "${response.category}"`);
                         }
-                    );
+                    }).catch((error) => {
+                        console.warn("Auto-group failed:", error?.message || error);
+                    });
                 }, config.autoGroupDelay);
             }
 
@@ -353,16 +349,9 @@
         initialize();
     }
 
-    /**
-     * Send metadata to background script when requested
-     */
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.action === "getVideoMetadata") {
-            const metadata = extractVideoMetadata();
-            sendResponse(metadata);
-            return true; // Keep channel open for async response
-        }
-    });
+    chrome.runtime.onMessage.addListener(handleMessage({
+        [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: async () => normalizeVideoMetadata(extractVideoMetadata())
+    }, { requireVersion: true }));
 
 })();
 
