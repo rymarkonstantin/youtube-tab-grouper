@@ -181,35 +181,77 @@ export async function updateSettings(update) {
         : { ...current, ...update };
 
     const normalized = withSettingsDefaults(next);
-
-    return new Promise((resolve, reject) => {
-        try {
-            chrome.storage.sync.set(normalized, () => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
-                } else {
-                    resolve(normalized);
-                }
-            });
-        } catch (error) {
-            reject(error);
-        }
-    });
+    await scheduleSyncWrite(normalized);
+    return normalized;
 }
 
 export async function resetSettings(defaults = DEFAULT_SETTINGS) {
     const normalized = withSettingsDefaults(defaults);
+    await scheduleSyncWrite(normalized);
+    return normalized;
+}
+
+// -----------------------------------------------------------------------------
+// Internal sync write discipline (debounced + merged to reduce quota usage)
+// -----------------------------------------------------------------------------
+const SYNC_WRITE_DEBOUNCE_MS = 150;
+let pendingSyncPayload = null;
+let pendingSyncResolvers = [];
+let pendingSyncTimer = null;
+
+function sanitizeSettingsPayload(settings) {
+    const payload = {
+        version: settings.version ?? SETTINGS_VERSION,
+        autoGroupDelay: settings.autoGroupDelay,
+        autoGroupDelayMs: settings.autoGroupDelay,
+        allowedHashtags: settings.allowedHashtags || [],
+        channelCategoryMap: settings.channelCategoryMap || {},
+        extensionEnabled: settings.extensionEnabled !== false,
+        aiCategoryDetection: settings.aiCategoryDetection !== false,
+        autoCleanupEnabled: settings.autoCleanupEnabled !== false,
+        enabledColors: settings.enabledColors || {},
+        categoryKeywords: settings.categoryKeywords || {}
+    };
+
+    return Object.entries(payload).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+            acc[key] = value;
+        }
+        return acc;
+    }, {});
+}
+
+function scheduleSyncWrite(settings) {
+    const payload = sanitizeSettingsPayload(settings);
+
     return new Promise((resolve, reject) => {
-        try {
-            chrome.storage.sync.set(normalized, () => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
-                } else {
-                    resolve(normalized);
-                }
-            });
-        } catch (error) {
-            reject(error);
+        pendingSyncPayload = { ...(pendingSyncPayload || {}), ...payload };
+        pendingSyncResolvers.push({ resolve, reject });
+
+        clearTimeout(pendingSyncTimer);
+        pendingSyncTimer = setTimeout(flushSyncWrite, SYNC_WRITE_DEBOUNCE_MS);
+    });
+}
+
+function flushSyncWrite() {
+    const payload = pendingSyncPayload;
+    const resolvers = pendingSyncResolvers;
+
+    pendingSyncPayload = null;
+    pendingSyncResolvers = [];
+    pendingSyncTimer = null;
+
+    if (!payload || Object.keys(payload).length === 0) {
+        resolvers.forEach(({ resolve }) => resolve({}));
+        return;
+    }
+
+    chrome.storage.sync.set(payload, () => {
+        if (chrome.runtime.lastError) {
+            const error = new Error(chrome.runtime.lastError.message);
+            resolvers.forEach(({ reject }) => reject(error));
+        } else {
+            resolvers.forEach(({ resolve }) => resolve(payload));
         }
     });
 }
