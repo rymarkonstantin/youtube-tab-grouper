@@ -1,3 +1,12 @@
+import {
+    AVAILABLE_COLORS,
+    DEFAULT_SETTINGS,
+    withSettingsDefaults,
+    getSettings,
+    updateSettings,
+    resetSettings
+} from '../../src/shared/settings.js';
+
 /**
  * YouTube Tab Grouper - Settings Page
  * 
@@ -9,40 +18,6 @@
  * - Channel-to-category mappings
  * - Import/export functionality
  */
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Default application settings
- * Used as fallback if storage is empty
- */
-const DEFAULT_SETTINGS = {
-    autoGroupDelay: 2500,
-    allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
-    channelCategoryMap: {},
-    extensionEnabled: true,
-    aiCategoryDetection: true,
-    autoCleanupEnabled: true,
-    enabledColors: {
-        grey: true, blue: true, red: true, yellow: true,
-        green: true, pink: true, purple: true, cyan: true
-    },
-    categoryKeywords: {
-        "Gaming": ["gameplay", "gaming", "twitch", "esports", "fps", "rpg", "speedrun", "fortnite", "minecraft"],
-        "Music": ["music", "song", "album", "artist", "concert", "cover", "remix", "lyrics"],
-        "Tech": ["tech", "gadget", "review", "iphone", "laptop", "cpu", "gpu", "software", "coding"],
-        "Cooking": ["recipe", "cooking", "food", "kitchen", "chef", "baking", "meal", "cuisine"],
-        "Fitness": ["workout", "gym", "exercise", "fitness", "yoga", "training", "diet", "health"],
-        "Education": ["tutorial", "course", "learn", "how to", "guide", "lesson", "education"],
-        "News": ["news", "breaking", "current events", "politics", "world", "daily"],
-        "Entertainment": ["movie", "series", "trailer", "reaction", "comedy", "funny", "meme"]
-    }
-};
-
-/** Available colors for tab groups */
-const AVAILABLE_COLORS = ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan"];
 
 /** Hex color codes for display */
 const COLOR_HEX = {
@@ -77,18 +52,15 @@ const statusEl = document.getElementById('status');
  * Load settings from Chrome sync storage
  */
 async function loadSettings() {
-    return new Promise(resolve => {
-        chrome.storage.sync.get(DEFAULT_SETTINGS, resolve);
-    });
+    const settings = await getSettings(DEFAULT_SETTINGS);
+    return withSettingsDefaults(settings);
 }
 
 /**
  * Save settings to Chrome sync storage
  */
 async function saveSettings(settings) {
-    return new Promise(resolve => {
-        chrome.storage.sync.set(settings, resolve);
-    });
+    return updateSettings(settings);
 }
 
 // ============================================================================
@@ -365,19 +337,7 @@ async function handleResetSettings() {
     try {
         resetBtn.disabled = true;
 
-        // ✅ Include ALL default settings
-        const defaultSettings = {
-            extensionEnabled: DEFAULT_SETTINGS.extensionEnabled,
-            aiCategoryDetection: DEFAULT_SETTINGS.aiCategoryDetection,
-            autoCleanupEnabled: DEFAULT_SETTINGS.autoCleanupEnabled,
-            autoGroupDelay: DEFAULT_SETTINGS.autoGroupDelay,
-            allowedHashtags: DEFAULT_SETTINGS.allowedHashtags,
-            enabledColors: DEFAULT_SETTINGS.enabledColors,
-            categoryKeywords: DEFAULT_SETTINGS.categoryKeywords,
-            channelCategoryMap: DEFAULT_SETTINGS.channelCategoryMap
-        };
-
-        await saveSettings(defaultSettings);
+        await resetSettings(DEFAULT_SETTINGS);
 
         // Reload UI with defaults
         await initializeSettings();
@@ -444,10 +404,10 @@ async function handleImportSettings() {
             }
 
             // Merge with defaults to ensure all fields exist
-            const settings = {
+            const settings = withSettingsDefaults({
                 ...DEFAULT_SETTINGS,
                 ...importedSettings
-            };
+            });
 
             await saveSettings(settings);
             await initializeSettings();

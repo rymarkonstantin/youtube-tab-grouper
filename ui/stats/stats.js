@@ -1,3 +1,10 @@
+import {
+    DEFAULT_STATS,
+    withStatsDefaults,
+    getStats,
+    resetStats
+} from '../../src/shared/stats.js';
+
 /**
  * YouTube Tab Grouper - Statistics Page
  * 
@@ -23,12 +30,10 @@ const backBtn = document.getElementById('backBtn');
 /**
  * Load and display statistics on page load
  */
-document.addEventListener('DOMContentLoaded', loadAndDisplayStats);
-
-/**
- * Reset statistics when button clicked
- */
-resetStatsBtn.addEventListener('click', async () => {
+        await resetStats({
+            ...DEFAULT_STATS,
+            lastReset: new Date().toDateString()
+        });
     if (confirm('Are you sure you want to reset all statistics?')) {
         await chrome.storage.local.set({ groupingStats: {
             totalTabs: 0,
@@ -94,17 +99,10 @@ async function loadAndDisplayStats() {
  * @returns {Promise<Object>} Statistics object
  */
 async function loadStats() {
-    return new Promise(resolve => {
-        chrome.storage.local.get('groupingStats', (result) => {
-            const stats = result.groupingStats || {
-                totalTabs: 0,
-                categoryCount: {},
-                sessionsToday: 0,
-                lastReset: new Date().toDateString()
-            };
-            resolve(stats);
-        });
-    });
+    const stats = await getStats(DEFAULT_STATS);
+    return withStatsDefaults(stats);
+}
+
 }
 
 /**
