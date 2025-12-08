@@ -1,450 +1,174 @@
-﻿# YouTube Tab Grouper - Architecture
+# YouTube Tab Grouper - Architecture
 
 This document explains the system design and how components interact.
 
 ---
 
-## ðŸ—ï¸ System Overview
+## System Overview
 
-```
-â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-â”‚              CHROME BROWSER                          â”‚
-â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-â”‚                                                      â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ background/index.js    â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”¤ CONTENT.JS       â”‚  â”‚
-â”‚  â”‚ (Service Worker) â”‚         â”‚ (Page Injection) â”‚  â”‚
-â”‚  â”‚                  â”‚         â”‚                  â”‚  â”‚
-â”‚  â”‚ â€¢ Tab grouping   â”‚         â”‚ â€¢ UI button      â”‚  â”‚
-â”‚  â”‚ â€¢ Color assign   â”‚         â”‚ â€¢ Auto-group     â”‚  â”‚
-â”‚  â”‚ â€¢ Messaging      â”‚         â”‚ â€¢ Data extract   â”‚  â”‚
-â”‚  â”‚ â€¢ Statistics     â”‚         â”‚                  â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚           â”‚                                          â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
-â”‚  â”‚ STORAGE (chrome.storage.*)                    â”‚  â”‚
-â”‚  â”‚ â€¢ sync: Settings (user config)                â”‚  â”‚
-â”‚  â”‚ â€¢ local: Groups, Colors, Stats                â”‚  â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
-â”‚                                                      â”‚
-â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
-â”‚  â”‚ UI PAGES (popup, options, stats)             â”‚   â”‚
-â”‚  â”‚ â€¢ popup/popup.html - Extension popup         â”‚   â”‚
-â”‚  â”‚ â€¢ options/options.html - Settings page       â”‚   â”‚
-â”‚  â”‚ â€¢ stats/stats.html - Statistics dashboard    â”‚   â”‚
-â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
-â”‚                                                      â”‚
-â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-```
+- **Service worker** (`src/background/index.js`): coordinates grouping, color assignment, messaging, and cleanup jobs.
+- **Content script** (`src/content.js`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
+- **UI pages** (`ui/popup`, `ui/options`, `ui/stats`): popup controls, settings, and stats dashboard.
+- **Storage**: `chrome.storage.sync` for user settings, `chrome.storage.local` for runtime data such as groups, colors, and statistics.
+- **Chrome features**: uses `tabs`, `tabGroups`, `storage`, `contextMenus`, and keyboard `commands`.
 
 ---
 
-## ðŸ“Š Component Breakdown
+## Component Breakdown
 
-### 1. **Service Worker (background/index.js)**
+### 1. Service Worker (`background/index.js`)
+- **Purpose**: core orchestration.
+- **Responsibilities**: handle grouping requests, assign colors, predict categories, manage storage, process context menu clicks, and commands.
+- **Key functions**: `groupTab`, `batchGroupAllTabs`, `getColorForGroup`, `predictCategory`, `autoCleanupEmptyGroups`.
+- **Storage**: reads/writes settings, group color map, group IDs, and statistics.
 
-**Purpose**: Core extension logic
+### 2. Content Script (`content.js`)
+- **Purpose**: page integration on YouTube.
+- **Responsibilities**: build the floating "Group" button, extract video metadata (title, channel, description, keywords), trigger auto-group after delay, and communicate with the service worker.
+- **Key functions**: `getVideoData`, `extractVideoMetadata`, `createUI`, `initialize`.
 
-**Responsibilities**:
-- Handle tab grouping requests
-- Assign colors intelligently
-- Predict categories using AI keywords
-- Manage storage and state
-- Process messages from content script
-- Handle context menu clicks
-- Execute keyboard shortcuts
+### 3. Popup (`ui/popup/popup.js`)
+- **Purpose**: quick actions from the toolbar.
+- **Responsibilities**: group current tab, batch group all YouTube tabs, display status messages, and link to settings/stats.
 
-**Key Functions**:
-- `groupTab()` - Group single tab
-- `batchGroupAllTabs()` - Group all YouTube tabs
-- `getColorForGroup()` - Assign color
-- `predictCategory()` - AI category detection
-- `autoCleanupEmptyGroups()` - Remove empty groups
+### 4. Options Page (`ui/options/options.js`)
+- **Purpose**: manage configuration.
+- **Responsibilities**: load/save settings, manage hashtag whitelist, color preferences, category keywords, channel mappings, and import/export.
 
-**Storage Used**:
-- `chrome.storage.sync`: User settings
-- `chrome.storage.local`: Group mappings, colors, stats
-
----
-
-### 2. **Content Script (content.js)**
-
-**Purpose**: Inject functionality into YouTube pages
-
-**Responsibilities**:
-- Create floating "Group" button
-- Extract video metadata
-- Auto-group after delay
-- Communicate with background script
-
-**Key Functions**:
-- `getVideoData()` - Extract title, channel, description
-- `createUI()` - Create floating button
-- `initialize()` - Setup on page load
-
-**Triggers**:
-- Page load â†’ Load config â†’ Create UI
-- Button click â†’ Send grouping request
-- Auto-delay timeout â†’ Auto-group
+### 5. Statistics (`ui/stats/stats.js`)
+- **Purpose**: show usage analytics.
+- **Responsibilities**: read stored stats, render simple charts, and support reset.
 
 ---
 
-### 3. **Popup (ui/popup/popup.js)**
+## Message Flow
 
-**Purpose**: Quick access from extension icon
+### Manual Grouping
+1. User clicks "Group Current Tab" in the popup.
+2. Popup sends `{ action: "groupTab", category }` to the service worker.
+3. Service worker gets the active tab, resolves category (channel map -> AI -> fallback), assigns a color, and groups the tab.
+4. Result `{ success, category, color }` is returned to the popup for display.
 
-**Responsibilities**:
-- Provide quick grouping buttons
-- Show status messages
-- Link to settings/stats
-
-**Interactions**:
-- Click "Group" button â†’ Send message to background
-- Click "Batch" button â†’ Send batch message
-- Click settings icon â†’ Open options page
-
----
-
-### 4. **Options Page (ui/options/options.js)**
-
-**Purpose**: Settings management
-
-**Responsibilities**:
-- Load/save settings
-- Provide UI for configuration
-- Handle import/export
-- Manage channel mappings
-
-**Settings Stored**:
-- Extension enabled/disabled
-- Auto-group delay
-- Enabled colors
-- Channel mappings
-- Hashtag whitelist
-- AI detection toggle
+### Auto Grouping
+1. Content script loads on a YouTube video and reads settings.
+2. It renders the floating button and schedules an auto-group timer (respecting `autoGroupDelay`).
+3. When triggered, it sends `{ action: "groupTab", category: "", metadata }` to the service worker.
+4. Service worker groups the tab and responds; the button is removed after success.
 
 ---
 
-### 5. **Statistics (ui/stats/stats.js)**
+## Color Assignment Algorithm
 
-**Purpose**: Analytics dashboard
-
-**Responsibilities**:
-- Load and display stats
-- Render chart visualization
-- Allow stats reset
-
-**Data Tracked**:
-- Total grouped tabs
-- Count by category
-- Category breakdown
+1. Check cache: if category already has a color, return it.
+2. If assignment is locked, wait until the lock clears.
+3. Collect neighbor colors from existing tab groups in the window.
+4. Filter enabled colors that are not used by neighbors.
+5. Choose a random available color (fallback to any enabled color if empty).
+6. Cache the assignment and return the color.
 
 ---
 
-## ðŸ”„ Message Flow
+## Category Detection Algorithm
 
-### Manual Grouping Flow
-
-```
-User clicks "Group" button (popup.html)
-        â”‚
-        â–¼
-popup.js sends message to background
-    { action: "groupTab", category: "" }
-        â”‚
-        â–¼
-background/index.js receives message
-        â”‚
-        â”œâ”€â–º Get active tab
-        â”œâ”€â–º Predict category (if empty)
-        â”œâ”€â–º Assign color
-        â”œâ”€â–º Find/create group
-        â”œâ”€â–º Add tab to group
-        â”œâ”€â–º Save state
-        â””â”€â–º Update stats
-        â”‚
-        â–¼
-Send response back to popup
-    { success: true, category: "Tech", color: "blue" }
-        â”‚
-        â–¼
-popup.js displays success message
-```
+1. If AI detection is disabled, return `Other`.
+2. Combine text sources: title, description, keywords, and optional YouTube category metadata.
+3. Score each category by counting keyword matches.
+4. Pick the highest score (ties broken by order) and return that category, otherwise `Other`.
 
 ---
 
-### Auto-Grouping Flow
+## Storage Schema
 
-```
-User opens YouTube video
-        â”‚
-        â–¼
-content.js loads on page
-        â”‚
-        â”œâ”€â–º Load user config
-        â”œâ”€â–º Create "Group" button
-        â””â”€â–º Schedule auto-group timer
-        â”‚
-        â–¼
-Timer fires after delay (default 2.5s)
-        â”‚
-        â–¼
-Send grouping message to background
-        â”‚
-        â–¼
-background/index.js processes grouping
-        â”‚
-        â–¼
-Tab is grouped automatically
-```
-
----
-
-## ðŸŽ¨ Color Assignment Algorithm
-
-```
-1. getColorForGroup(categoryName)
-       â”‚
-       â”œâ”€â–º Check if color cached
-       â”‚   YES â†’ Return cached color
-       â”‚   NO â†’ Continue
-       â”‚
-       â”œâ”€â–º Check if assignment locked
-       â”‚   YES â†’ Wait for lock
-       â”‚   NO â†’ Continue
-       â”‚
-       â””â”€â–º Start assignment process
-           â”‚
-           â”œâ”€â–º Get neighbor colors
-           â”‚   (fetch all groups in window)
-           â”‚
-           â”œâ”€â–º Filter available colors
-           â”‚   (enabled colors NOT used by neighbors)
-           â”‚
-           â”œâ”€â–º Select random from available
-           â”‚   (or fallback to any color)
-           â”‚
-           â”œâ”€â–º Cache assignment
-           â”‚   (save to groupColorMap)
-           â”‚
-           â””â”€â–º Return color
-```
-
----
-
-## ðŸ¤– Category Detection Algorithm
-
-```
-1. predictCategory(metadata, aiEnabled)
-       â”‚
-       â”œâ”€â–º Check if AI enabled
-       â”‚   NO â†’ Return "Other"
-       â”‚   YES â†’ Continue
-       â”‚
-       â”œâ”€â–º Combine text sources
-       â”‚   title + description + keywords
-       â”‚
-       â”œâ”€â–º Score each category
-       â”‚   Count keyword matches
-       â”‚
-       â”œâ”€â–º Find highest score
-       â”‚   Sort by match count
-       â”‚
-       â””â”€â–º Return top category
-           (or "Other" if no matches)
-```
-
----
-
-## ðŸ’¾ Storage Schema
-
-### chrome.storage.sync (User Settings)
-
+### `chrome.storage.sync` (user settings)
 ```javascript
 {
   autoGroupDelay: 2500,
-  allowedHashtags: ['tech', 'music', ...],
-  channelCategoryMap: {
-    'MKBHD': 'Tech',
-    'Gordon Ramsay': 'Cooking'
-  },
+  allowedHashtags: ["tech", "music", ...],
+  channelCategoryMap: { "MKBHD": "Tech", "Gordon Ramsay": "Cooking" },
   extensionEnabled: true,
   aiCategoryDetection: true,
   autoCleanupEnabled: true,
-  enabledColors: {
-    'grey': true,
-    'blue': true,
-    // ... more colors
-  }
+  enabledColors: { grey: true, blue: true, red: true, ... },
+  categoryKeywords: { Tech: ["tech", "gadget", ...], ... }
 }
 ```
 
-### chrome.storage.local (Runtime Data)
-
+### `chrome.storage.local` (runtime data)
 ```javascript
-// groupColorMap: Category â†’ Color assignments
-{
-  'Tech': 'blue',
-  'Music': 'red',
-  'Gaming': 'green'
-}
+// Category -> color
+{ "Tech": "blue", "Music": "red", "Gaming": "green" }
 
-// groupIdMap: Category â†’ Group ID
-{
-  'Tech': 42,
-  'Music': 43,
-  'Gaming': 44
-}
+// Category -> group ID
+{ "Tech": 42, "Music": 43, "Gaming": 44 }
 
-// groupingStats: Usage statistics
+// Usage statistics
 {
   totalTabs: 150,
-  categoryCount: {
-    'Tech': 45,
-    'Music': 30,
-    'Gaming': 25,
-    'Other': 50
-  },
+  categoryCount: { "Tech": 45, "Music": 30, "Gaming": 25, "Other": 50 },
   sessionsToday: 8,
-  lastReset: '2024-01-15'
+  lastReset: "2024-01-15"
 }
 ```
 
 ---
 
-## ðŸ”Œ API Interfaces
+## API Interfaces
 
-### Background â†’ Content Script Messages
-
+### Background responses sent to content script
 ```javascript
-// Sent TO content script (from popup)
 chrome.tabs.sendMessage(tabId, {
   action: "groupTab",
-  category: "Tech" // optional
-})
-
-// Response FROM background
-{
-  success: true,
-  category: "Tech",
-  color: "blue"
-}
+  category: "Tech" // optional override
+});
+// Response: { success: true, category: "Tech", color: "blue" }
 ```
 
-### Content Script â†’ Background Messages
-
+### Content script requests sent to background
 ```javascript
-// Sent TO background (from content script)
 chrome.runtime.sendMessage({
   action: "groupTab",
-  category: ""  // AI will detect
-})
-
-// Response FROM background
-{
-  success: true,
-  category: "Gaming",
-  color: "green"
-}
+  category: "" // allow AI detection
+});
+// Response: { success: true, category: "Gaming", color: "green" }
 ```
 
 ---
 
-## âš¡ Performance Considerations
+## Performance Considerations
 
-### Optimization Strategies
-
-1. **Parallel Requests**
-   - Fetch all group details in parallel
-   - Use `Promise.all()` for concurrent operations
-
-2. **Caching**
-   - Cache color assignments (avoid recalculation)
-   - Cache group IDs (faster lookups)
-
-3. **Lazy Loading**
-   - Don't load stats unless requested
-   - Load settings only when needed
-
-4. **Debouncing**
-   - Auto-cleanup runs once per minute
-   - Group updates batched when possible
-
-### Memory Usage
-
-- **Cache maps**: < 1MB (even with 100+ groups)
-- **Settings**: < 100KB
-- **Statistics**: < 500KB
-- **Total**: < 5MB per extension instance
+- Run grouping/color lookups in parallel where possible.
+- Cache colors and group IDs to avoid recomputing.
+- Lazy load statistics only when the stats page is opened.
+- Auto-cleanup runs on an interval; avoid extra timers.
+- Keep storage payloads small (<5MB total).
 
 ---
 
-## ðŸ” Security Considerations
+## Security Considerations
 
-### Permissions Justification
-
-- `tabs`: Needed to read tab URLs and group them
-- `tabGroups`: Required for grouping functionality
-- `storage`: Save user settings and mappings
-- `contextMenus`: Provide right-click options
-- `scripting`: Inject button on YouTube pages
-
-### Privacy
-
-- No external API calls
-- All processing local
-- No data collection or tracking
-- Settings stored in user's browser only
+- Permissions: `tabs`, `tabGroups`, `storage`, `contextMenus`, and `scripting` are required for grouping and UI injection.
+- No external network calls; all processing stays local.
+- User data is stored only in Chrome storage (sync and local).
 
 ---
 
-## ðŸ§ª Testing Strategy
+## Testing Strategy
 
-### Unit Tests (Future)
-
-```
-src/
-â”œâ”€â”€ background.test.js
-â”‚   â”œâ”€â”€ groupTab()
-â”‚   â”œâ”€â”€ predictCategory()
-â”‚   â””â”€â”€ getColorForGroup()
-â””â”€â”€ content.test.js
-    â”œâ”€â”€ getVideoData()
-    â””â”€â”€ createUI()
-```
-
-### Integration Tests (Future)
-
-```
-- Full grouping flow
-- Settings persistence
-- Statistics tracking
-- Color assignment conflicts
-```
+- Future unit tests: `groupTab`, `predictCategory`, `getColorForGroup`, `getVideoData`, `createUI`.
+- Future integration tests: full grouping flow, settings persistence, stats tracking, and color assignment conflicts.
 
 ---
 
-## ðŸš€ Scalability Roadmap
+## Scalability Roadmap
 
-### Phase 1 (Current)
-- Single extension instance
-- YouTube only
-- 8 predefined categories
-
-### Phase 2 (Planned)
-- Multiple platforms (Vimeo, Dailymotion)
-- Custom categories
-- Sync across devices
-
-### Phase 3 (Future)
-- Cross-browser support
-- Community category sharing
-- Machine learning improvements
+- Phase 1: YouTube-only, predefined categories, single browser profile.
+- Phase 2: Add other platforms, custom categories, multi-device sync.
+- Phase 3: Cross-browser support and smarter ML-driven categorization.
 
 ---
 
-## ðŸ“š Related Files
+## Related Files
 
-- [README.md](../README.md) - User documentation
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide
-- [CHANGELOG.md](CHANGELOG.md) - Version history
+- README.md — user documentation
+- CONTRIBUTING.md — development guide
+- CHANGELOG.md — version history
