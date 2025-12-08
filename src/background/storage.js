@@ -120,7 +120,7 @@ export async function runMigrations(defaults = DEFAULT_SETTINGS) {
                 ...defaults,
                 ...syncData
             });
-            await setSync(migratedSettings);
+            await resetSettings(migratedSettings);
             results.settingsMigrated = true;
         } else {
             migratedSettings = withSettingsDefaults(syncData);
@@ -132,7 +132,7 @@ export async function runMigrations(defaults = DEFAULT_SETTINGS) {
         let migratedStats;
         if (needsStatsMigration) {
             migratedStats = migrateStatsV0ToV1(rawStats);
-            await setLocal({ groupingStats: migratedStats });
+            await resetStats(migratedStats);
             results.statsMigrated = true;
         } else {
             migratedStats = withStatsDefaults(rawStats);
