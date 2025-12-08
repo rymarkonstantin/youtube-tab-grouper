@@ -3,84 +3,87 @@ import { sendMessageSafe } from '../../src/shared/messaging.js';
 
 /**
  * YouTube Tab Grouper - Popup Script
- * 
- * Handles user interactions in the extension popup:
- * - Group current tab
- * - Batch group all tabs
- * - Display status messages
+ *
+ * Uses typed messaging helpers with version/envelope support and guard-aware UI handling.
  */
-
-// ============================================================================
-// DOM ELEMENTS
-// ============================================================================
 
 const groupButton = document.getElementById("groupButton");
 const batchButton = document.getElementById("batchButton");
 const categoryInput = document.getElementById("categoryInput");
 const statusEl = document.getElementById("status");
+const buttons = [groupButton, batchButton];
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
+const isGuardDisabled = (error) => typeof error === "string" && /disabled/i.test(error);
 
-/**
- * Group current tab when button is clicked
- */
-groupButton.addEventListener("click", async () => {
+async function sendPopupMessage(action, payload = {}) {
+    try {
+        // Allow error envelopes (success:false) to flow through for guard-aware handling.
+        return await sendMessageSafe(action, payload, { validateResponsePayload: false });
+    } catch (error) {
+        return { success: false, error: error?.message || "Unknown error" };
+    }
+}
+
+function handleGuard(response) {
+    if (response?.success === false && isGuardDisabled(response.error)) {
+        buttons.forEach((btn) => { if (btn) btn.disabled = true; });
+        showNotification(`’'?O ${response.error}`, "error");
+        return true;
+    }
+    return false;
+}
+
+function formatError(response) {
+    if (!response) return "Unknown error";
+    const base = response.error || "Unknown error";
+    if (Array.isArray(response.errors) && response.errors.length > 0) {
+        return `${base} (${response.errors.join("; ")})`;
+    }
+    return base;
+}
+
+groupButton?.addEventListener("click", async () => {
     groupButton.disabled = true;
-    
+
     try {
         const category = categoryInput.value.trim();
-        const response = await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, { category });
+        const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
 
         if (response?.success) {
-            showNotification(`ƒo. Grouped as "${response.category}"`, "success");
+            showNotification(`’'o. Grouped as "${response.category}"`, "success");
             categoryInput.value = "";
-        } else {
-            showNotification(`ƒ?O ${response?.error || "Failed to group"}`, "error");
+        } else if (!handleGuard(response)) {
+            showNotification(`’'?O ${formatError(response)}`, "error");
         }
     } catch (error) {
-        showNotification(`ƒ?O Error: ${error.message}`, "error");
+        showNotification(`’'?O Error: ${error.message}`, "error");
     } finally {
         groupButton.disabled = false;
     }
 });
 
-/**
- * Batch group all YouTube tabs when button is clicked
- */
-batchButton.addEventListener("click", async () => {
+batchButton?.addEventListener("click", async () => {
     batchButton.disabled = true;
-    
+
     try {
-        const response = await sendMessageSafe(MESSAGE_ACTIONS.BATCH_GROUP, {});
+        const response = await sendPopupMessage(MESSAGE_ACTIONS.BATCH_GROUP);
 
         if (response?.success) {
-            showNotification(`ƒo. Grouped ${response.count} tabs`, "success");
-        } else {
-            showNotification(`ƒ?O ${response?.error || "Failed"}`, "error");
+            showNotification(`’'o. Grouped ${response.count} tabs`, "success");
+        } else if (!handleGuard(response)) {
+            showNotification(`’'?O ${formatError(response)}`, "error");
         }
     } catch (error) {
-        showNotification(`ƒ?O Error: ${error.message}`, "error");
+        showNotification(`’'?O Error: ${error.message}`, "error");
     } finally {
         batchButton.disabled = false;
     }
 });
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Show notification message
- * @param {string} message - Message to display
- * @param {string} type - Type: success, error, info
- */
 function showNotification(message, type = "info") {
     statusEl.textContent = message;
     statusEl.className = `status ${type}`;
-    
-    // Auto-hide after 4 seconds
+
     setTimeout(() => {
         statusEl.textContent = "";
         statusEl.className = "status";
