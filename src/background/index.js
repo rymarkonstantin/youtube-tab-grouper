@@ -19,7 +19,7 @@ import {
     buildIsGroupedResponse,
     buildSettingsResponse
 } from '../shared/messages.js';
-import { handleMessage } from '../shared/messaging.js';
+import { handleMessage, generateRequestId, MESSAGE_VERSION } from '../shared/messaging.js';
 
 bootstrap();
 
@@ -52,13 +52,28 @@ const MESSAGE_ROUTES = {
     }
 };
 
-chrome.runtime.onMessage.addListener(handleMessage(
+const backgroundDispatcher = handleMessage(
     buildRouteHandlers(MESSAGE_ROUTES),
     {
         requireVersion: true,
         onUnknown: (action) => buildErrorResponse(`Unknown action "${action || "undefined"}"`)
     }
-));
+);
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (isLegacyGroupTab(msg)) {
+        const translated = {
+            ...msg,
+            action: MESSAGE_ACTIONS.GROUP_TAB,
+            version: MESSAGE_VERSION,
+            requestId: msg?.requestId || generateRequestId("legacy")
+        };
+        console.warn("[compat] Received legacy groupTab message; translating to v1 envelope (will be removed in next release).");
+        return backgroundDispatcher(translated, sender, sendResponse);
+    }
+
+    return backgroundDispatcher(msg, sender, sendResponse);
+});
 
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 chrome.commands.onCommand.addListener(handleCommand);
@@ -111,6 +126,13 @@ function buildRouteHandlers(routes) {
         };
         return acc;
     }, {});
+}
+
+function isLegacyGroupTab(msg) {
+    return msg
+        && typeof msg === 'object'
+        && msg.action === "groupTab"
+        && (msg.version === undefined || msg.requestId === undefined);
 }
 
 async function registerContextMenus() {
