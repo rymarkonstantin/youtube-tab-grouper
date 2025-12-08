@@ -1,4 +1,19 @@
-import { DEFAULT_SETTINGS, DEFAULT_STATS } from './constants.js';
+import {
+    DEFAULT_SETTINGS,
+    DEFAULT_STATS,
+    withSettingsDefaults,
+    withStatsDefaults
+} from './constants.js';
+import {
+    getSettings,
+    updateSettings,
+    resetSettings
+} from '../shared/settings.js';
+import {
+    getStats,
+    updateStats,
+    resetStats
+} from '../shared/stats.js';
 
 function handleCallback(resolve, reject, transform = (value) => value) {
     if (chrome.runtime.lastError) {
@@ -62,32 +77,19 @@ export async function saveState(groupColorMap, groupIdMap) {
 }
 
 export async function loadSettings(defaults = DEFAULT_SETTINGS) {
-    const settings = await getSync(defaults);
-    return {
-        ...defaults,
-        ...settings,
-        enabledColors: normalizeEnabledColors(settings.enabledColors, defaults),
-        categoryKeywords: settings.categoryKeywords || defaults.categoryKeywords,
-        channelCategoryMap: settings.channelCategoryMap || defaults.channelCategoryMap,
-        allowedHashtags: settings.allowedHashtags || defaults.allowedHashtags
-    };
+    return getSettings(withSettingsDefaults(defaults));
 }
 
 export async function saveSettings(settings) {
-    await setSync(settings);
+    return updateSettings(settings);
 }
 
 export async function loadStats(defaultStats = DEFAULT_STATS) {
-    const { groupingStats = defaultStats } = await getLocal({ groupingStats: defaultStats });
-    return {
-        ...defaultStats,
-        ...groupingStats,
-        categoryCount: groupingStats.categoryCount || {}
-    };
+    return getStats(withStatsDefaults(defaultStats));
 }
 
 export async function saveStats(stats) {
-    await setLocal({ groupingStats: stats });
+    return updateStats(stats);
 }
 
 export async function runMigrations(defaults = DEFAULT_SETTINGS) {
@@ -109,11 +111,4 @@ export async function runMigrations(defaults = DEFAULT_SETTINGS) {
     }
 
     return settings;
-}
-
-function normalizeEnabledColors(enabledColors, defaults) {
-    if (!enabledColors || typeof enabledColors !== 'object' || Object.keys(enabledColors).length === 0) {
-        return defaults.enabledColors;
-    }
-    return enabledColors;
 }
