@@ -276,7 +276,7 @@ youtube-tab-grouper/
 ├── README.md                  # Main documentation
 │
 ├── src/                       # Core extension logic
-│   ├── background.js          # Service worker
+│   ├── background/index.js    # Service worker entry
 │   └── content.js             # Content script
 │
 ├── ui/                        # User interface
