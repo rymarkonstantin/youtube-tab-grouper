@@ -7,13 +7,8 @@ import {
 
 /**
  * YouTube Tab Grouper - Statistics Page
- * 
- * Displays grouping analytics and usage statistics
+ * Displays grouping analytics and usage statistics.
  */
-
-// ============================================================================
-// DOM ELEMENTS
-// ============================================================================
 
 const totalTabsEl = document.getElementById('totalTabs');
 const totalCategoriesEl = document.getElementById('totalCategories');
@@ -23,56 +18,29 @@ const chartContainerEl = document.getElementById('categoryChart');
 const resetStatsBtn = document.getElementById('resetStats');
 const backBtn = document.getElementById('backBtn');
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
+document.addEventListener('DOMContentLoaded', loadAndDisplayStats);
 
-/**
- * Load and display statistics on page load
- */
-        await resetStats({
-            ...DEFAULT_STATS,
-            lastReset: new Date().toDateString()
-        });
-    if (confirm('Are you sure you want to reset all statistics?')) {
-        await chrome.storage.local.set({ groupingStats: {
-            totalTabs: 0,
-            categoryCount: {},
-            sessionsToday: 0,
-            lastReset: new Date().toDateString()
-        }});
-        await loadAndDisplayStats();
-        alert('✅ Statistics reset');
-    }
+resetStatsBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to reset all statistics?')) return;
+
+    await resetStats({
+        ...DEFAULT_STATS,
+        lastReset: new Date().toDateString()
+    });
+    await loadAndDisplayStats();
+    alert('ƒo. Statistics reset');
 });
 
-/**
- * Go back to popup
- */
-backBtn.addEventListener('click', () => {
-    window.close();
-});
+backBtn.addEventListener('click', () => window.close());
 
-// ============================================================================
-// STATISTICS LOADING & DISPLAY
-// ============================================================================
-
-/**
- * Load and display all statistics
- * @async
- */
 async function loadAndDisplayStats() {
     try {
         const stats = await loadStats();
 
-        // Display total tabs
         totalTabsEl.textContent = stats.totalTabs || 0;
-
-        // Display category count
         const categoryCount = Object.keys(stats.categoryCount || {}).length;
         totalCategoriesEl.textContent = categoryCount;
 
-        // Display top category
         const topEntry = Object.entries(stats.categoryCount || {})
             .sort(([, a], [, b]) => b - a)[0];
 
@@ -84,33 +52,19 @@ async function loadAndDisplayStats() {
             topCountEl.textContent = '0 tabs';
         }
 
-        // Display chart
         displayChart(stats.categoryCount || {});
-
     } catch (error) {
         console.error('Error loading stats:', error);
-        alert('❌ Failed to load statistics');
+        alert('ƒ?O Failed to load statistics');
     }
 }
 
-/**
- * Load statistics from storage
- * @async
- * @returns {Promise<Object>} Statistics object
- */
 async function loadStats() {
     const stats = await getStats(DEFAULT_STATS);
     return withStatsDefaults(stats);
 }
 
-}
-
-/**
- * Display simple bar chart using HTML/CSS
- * @param {Object} categoryCount - Category → count mapping
- */
 function displayChart(categoryCount) {
-    // ✅ FIX: Handle undefined or null categoryCount
     if (!categoryCount || typeof categoryCount !== 'object' || Object.keys(categoryCount).length === 0) {
         chartContainerEl.innerHTML = '<p style="text-align: center; color: #999;">No data to display</p>';
         return;

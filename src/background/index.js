@@ -40,6 +40,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return true;
     }
 
+    if (msg.action === "getSettings") {
+        handleGetSettingsMessage(sendResponse);
+        return true;
+    }
+
     return false;
 });
 
@@ -143,6 +148,15 @@ async function handleBatchGroupMessage(sendResponse) {
     try {
         const result = await batchGroupAllTabs();
         sendResponse(result);
+    } catch (error) {
+        sendResponse({ success: false, error: error.message });
+    }
+}
+
+async function handleGetSettingsMessage(sendResponse) {
+    try {
+        const settings = await loadSettings();
+        sendResponse({ success: true, settings });
     } catch (error) {
         sendResponse({ success: false, error: error.message });
     }
