@@ -1,6 +1,7 @@
 import { normalizeVideoMetadata } from './shared/messages.js';
-import { BUTTON, FALLBACK_GROUP } from './content/constants.js';
+import { BUTTON } from './content/constants.js';
 import { isEnabled, loadConfig } from './content/config.js';
+import { resolveCategory } from './content/category.js';
 import { extractVideoMetadata } from './content/metadata.js';
 import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
 
@@ -50,43 +51,7 @@ import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
     // CATEGORY DETECTION
     // ====================================================================
 
-    /**
-     * Detect video category
-     * 
-     * Priority (highest to lowest):
-     * 1. Channel Mapping (if user mapped this channel)
-     * 2. Title Keywords (AI prediction)
-     * 3. Description (fallback)
-     * 
-     * @async
-     * @param {Object} video - Video metadata
-     * @returns {Promise<Object|null>} {name, source} or null if disabled
-     */
-    async function getCategory(video) {
-        // Check if extension is enabled
-        if (!isEnabled(config)) return null;
-
-        // 1. Check channel mapping (highest priority)
-        if (config.channelCategoryMap[video.channel]) {
-            return {
-                name: config.channelCategoryMap[video.channel],
-                source: "channel_mapping"
-            };
-        }
-
-        // 2. AI keyword detection
-        if (config.aiCategoryDetection && video.title) {
-            // Category will be predicted by background script
-            return null; // Let background handle this
-        }
-
-        // 3. Fallback to channel name
-        if (video.channel) {
-            return { name: video.channel, source: "channel_name" };
-        }
-
-        return { name: FALLBACK_GROUP, source: "fallback" };
-    }
+    const getCategory = (video) => resolveCategory(video, config);
 
     // ====================================================================
     // UI CREATION
