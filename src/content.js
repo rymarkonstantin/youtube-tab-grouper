@@ -38,7 +38,7 @@
                 aiCategoryDetection: true
             }, (settings) => {
                 config = settings;
-                console.log("🎬 Config loaded:", config);
+                console.log("Config loaded:", config);
                 resolve();
             });
         });
@@ -59,7 +59,7 @@
             document.querySelector("h1.title yt-formatted-string")?.innerText ||
             document.title.replace("- YouTube", "").trim();
 
-        // ✅ FIX: Better channel extraction
+        // FIX: Better channel extraction
         const channel = 
             document.querySelector("ytd-channel-name a")?.innerText ||
             document.querySelector("a.yt-simple-endpoint[href*='/channel/']")?.innerText ||
@@ -125,7 +125,7 @@
                         // Look for videoPrimaryInfoRenderer which contains metadata
                         if (item.videoPrimaryInfoRenderer?.categoryId) {
                             metadata.youtubeCategory = item.videoPrimaryInfoRenderer.categoryId;
-                            console.log(`📺 Found YouTube category: ${metadata.youtubeCategory}`);
+                            console.log(`Found YouTube category: ${metadata.youtubeCategory}`);
                             break;
                         }
                     }
@@ -141,7 +141,7 @@
                 const genreMeta = document.querySelector("meta[itemprop='genre']");
                 if (genreMeta?.content) {
                     metadata.youtubeCategory = genreMeta.content.trim();
-                    console.log(`📺 Found YouTube category via meta tag: ${metadata.youtubeCategory}`);
+                    console.log(`Found YouTube category via meta tag: ${metadata.youtubeCategory}`);
                 }
             } catch (e) {
                 console.warn("Failed to extract from meta tag:", e);
@@ -217,7 +217,7 @@
         // Create button element
         const button = document.createElement('button');
         button.id = 'yt-grouper-btn';
-        button.innerHTML = '📌 Group';
+        button.textContent = 'Group tab';
         button.setAttribute('title', 'Group this tab (Ctrl+Shift+G)');
 
         // Apply styling
@@ -252,18 +252,18 @@
 
         // Click handler
         button.addEventListener('click', () => {
-            // ✅ FIX: Send metadata to background script
+            // Send metadata to background script
             const metadata = extractVideoMetadata();
             chrome.runtime.sendMessage(
                 { 
                     action: "groupTab", 
                     category: "",
-                    metadata: metadata  // 👈 ADD THIS
+                    metadata: metadata  // Include metadata for background categorization
                 },
                 (response) => {
                     if (response?.success) {
                         button.remove();
-                        console.log(`✅ Tab grouped as "${response.category}"`);
+                        console.log(`Tab grouped as "${response.category}"`);
                     }
                 }
             );
@@ -296,7 +296,7 @@
 
             // Step 2: Check if enabled
             if (!config.extensionEnabled) {
-                console.log("❌ YouTube Tab Grouper is disabled");
+                console.log("YouTube Tab Grouper is disabled");
                 return;
             }
 
@@ -306,20 +306,20 @@
             // Step 4: Schedule auto-grouping (if enabled)
             if (config.autoGroupDelay > 0) {
                 setTimeout(() => {
-                    // ✅ FIX: Extract full metadata including YouTube category
+                    // Extract full metadata including YouTube category
                     const metadata = extractVideoMetadata();
                     
                     chrome.runtime.sendMessage(
                         { 
                             action: "groupTab", 
                             category: "",
-                            metadata: metadata  // 👈 ADD THIS
+                            metadata: metadata  // Include metadata for background categorization
                         },
                         (response) => {
                             if (response?.success) {
                                 const btn = document.getElementById('yt-grouper-btn');
                                 if (btn) btn.remove();
-                                console.log(`✅ Auto-grouped as "${response.category}"`);
+                                console.log(`Auto-grouped as "${response.category}"`);
                             }
                         }
                     );
@@ -327,7 +327,7 @@
             }
 
         } catch (error) {
-            console.error("❌ Error initializing YouTube Tab Grouper:", error);
+            console.error("Error initializing YouTube Tab Grouper:", error);
         }
     }
 
@@ -349,7 +349,7 @@
         if (request.action === "getVideoMetadata") {
             const metadata = extractVideoMetadata();
             sendResponse(metadata);
-            return true; // ✅ Keep channel open for async response
+            return true; // Keep channel open for async response
         }
     });
 
