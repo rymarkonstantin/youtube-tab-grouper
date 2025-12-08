@@ -1,8 +1,8 @@
-import { MESSAGE_ACTIONS, normalizeVideoMetadata } from './shared/messages.js';
-import { handleMessage, sendMessageSafe } from './shared/messaging.js';
+import { normalizeVideoMetadata } from './shared/messages.js';
 import { BUTTON, FALLBACK_GROUP } from './content/constants.js';
 import { isEnabled, loadConfig } from './content/config.js';
 import { extractVideoMetadata } from './content/metadata.js';
+import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
 
 /**
  * YouTube Tab Grouper - Content Script
@@ -32,7 +32,7 @@ import { extractVideoMetadata } from './content/metadata.js';
         }
 
         try {
-            return await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, { category, metadata });
+            return await sendGroupTab({ category, metadata });
         } catch (error) {
             return { success: false, error: error?.message || "Failed to group tab" };
         }
@@ -228,14 +228,10 @@ import { extractVideoMetadata } from './content/metadata.js';
         initialize();
     }
 
-    chrome.runtime.onMessage.addListener(handleMessage({
-        [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: async () => {
-            if (!isEnabled(config)) {
-                return normalizeVideoMetadata();
-            }
-            return getNormalizedMetadata();
-        }
-    }, { requireVersion: true }));
+    registerMessageHandlers({
+        getMetadata: getNormalizedMetadata,
+        isEnabled: () => isEnabled(config)
+    });
 
 })();
 
