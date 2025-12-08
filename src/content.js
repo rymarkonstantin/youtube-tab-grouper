@@ -27,6 +27,23 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
         aiCategoryDetection: true
     };
     let config = null; // User configuration (loaded from storage)
+    const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled" };
+
+    const isExtensionEnabled = () => config?.extensionEnabled !== false;
+
+    const getNormalizedMetadata = () => normalizeVideoMetadata(extractVideoMetadata());
+
+    async function requestGroupTab(category, metadata) {
+        if (!isExtensionEnabled()) {
+            return DISABLED_GROUP_RESPONSE;
+        }
+
+        try {
+            return await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, { category, metadata });
+        } catch (error) {
+            return { success: false, error: error?.message || "Failed to group tab" };
+        }
+    }
 
     // ====================================================================
     // CONFIGURATION LOADER
@@ -221,6 +238,10 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
      * @returns {void}
      */
     function createUI() {
+        if (!isExtensionEnabled()) {
+            return;
+        }
+
         // Don't create button if tab already grouped
         const activeTab = document.activeElement;
         if (activeTab?.groupId >= 0) return;
@@ -264,17 +285,12 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
         // Click handler
         button.addEventListener('click', async () => {
             const metadata = extractVideoMetadata();
-            try {
-                const response = await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, {
-                    category: "",
-                    metadata
-                });
-                if (response?.success) {
-                    button.remove();
-                    console.log(`Tab grouped as "${response.category}"`);
-                }
-            } catch (error) {
-                console.warn("Manual grouping failed:", error?.message || error);
+            const response = await requestGroupTab("", metadata);
+            if (response?.success) {
+                button.remove();
+                console.log(`Tab grouped as "${response.category}"`);
+            } else if (response?.error) {
+                console.warn("Manual grouping failed:", response.error);
             }
         });
 
@@ -313,22 +329,19 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
             createUI();
 
             // Step 4: Schedule auto-grouping (if enabled)
-            if (config.autoGroupDelay > 0) {
+            if (config.autoGroupDelay > 0 && isExtensionEnabled()) {
                 setTimeout(() => {
                     // Extract full metadata including YouTube category
                     const metadata = extractVideoMetadata();
 
-                    sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, {
-                        category: "",
-                        metadata
-                    }).then((response) => {
+                    requestGroupTab("", metadata).then((response) => {
                         if (response?.success) {
                             const btn = document.getElementById('yt-grouper-btn');
                             if (btn) btn.remove();
                             console.log(`Auto-grouped as "${response.category}"`);
+                        } else if (response?.error) {
+                            console.warn("Auto-group failed:", response.error);
                         }
-                    }).catch((error) => {
-                        console.warn("Auto-group failed:", error?.message || error);
                     });
                 }, config.autoGroupDelay);
             }
@@ -350,7 +363,12 @@ import { handleMessage, sendMessageSafe } from './shared/messaging.js';
     }
 
     chrome.runtime.onMessage.addListener(handleMessage({
-        [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: async () => normalizeVideoMetadata(extractVideoMetadata())
+        [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: async () => {
+            if (!isExtensionEnabled()) {
+                return normalizeVideoMetadata();
+            }
+            return getNormalizedMetadata();
+        }
     }, { requireVersion: true }));
 
 })();
