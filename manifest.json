@@ -40,7 +40,8 @@
     {
       "matches": ["https://www.youtube.com/*"],
       "js": ["src/content.js"],
-      "css": ["ui/styles/common.css"]
+      "css": ["ui/styles/common.css"],
+      "type": "module"
     }
   ],
   

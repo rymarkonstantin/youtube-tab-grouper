@@ -13,14 +13,13 @@ import { queryTabs } from './chromeApi.js';
 import { getVideoMetadata } from './metadata.js';
 import {
     MESSAGE_ACTIONS,
-    validateRequest,
     buildBatchGroupResponse,
     buildErrorResponse,
     buildGroupTabResponse,
     buildIsGroupedResponse,
-    buildSettingsResponse,
-    buildValidationErrorResponse
+    buildSettingsResponse
 } from '../shared/messages.js';
+import { handleMessage } from '../shared/messaging.js';
 
 bootstrap();
 
@@ -34,41 +33,12 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
 });
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    const action = msg?.action;
-
-    if (action === MESSAGE_ACTIONS.GROUP_TAB) {
-        const { valid, errors } = validateRequest(action, msg || {});
-        if (!valid) {
-            sendResponse(buildValidationErrorResponse(action, errors));
-            return true;
-        }
-        handleGroupTabMessage(msg, sendResponse);
-        return true;
-    }
-
-    if (action === MESSAGE_ACTIONS.IS_TAB_GROUPED) {
-        handleIsTabGroupedMessage(sendResponse);
-        return true;
-    }
-
-    if (action === MESSAGE_ACTIONS.BATCH_GROUP) {
-        const { valid, errors } = validateRequest(action, msg || {});
-        if (!valid) {
-            sendResponse(buildValidationErrorResponse(action, errors));
-            return true;
-        }
-        handleBatchGroupMessage(sendResponse);
-        return true;
-    }
-
-    if (action === MESSAGE_ACTIONS.GET_SETTINGS) {
-        handleGetSettingsMessage(sendResponse);
-        return true;
-    }
-
-    return false;
-});
+chrome.runtime.onMessage.addListener(handleMessage({
+    [MESSAGE_ACTIONS.GROUP_TAB]: handleGroupTabMessage,
+    [MESSAGE_ACTIONS.IS_TAB_GROUPED]: handleIsTabGroupedMessage,
+    [MESSAGE_ACTIONS.BATCH_GROUP]: handleBatchGroupMessage,
+    [MESSAGE_ACTIONS.GET_SETTINGS]: handleGetSettingsMessage
+}, { requireVersion: true }));
 
 chrome.contextMenus.onClicked.addListener(handleContextMenuClick);
 chrome.commands.onCommand.addListener(handleCommand);
@@ -133,54 +103,48 @@ async function clearContextMenus() {
     });
 }
 
-async function handleGroupTabMessage(msg, sendResponse) {
+async function handleGroupTabMessage(msg) {
+    const [tab] = await queryTabs({ active: true, currentWindow: true });
+    if (!tab) {
+        return buildErrorResponse("No active tab found");
+    }
+
+    const settings = await loadSettings();
+    if (!settings.extensionEnabled) {
+        return buildErrorResponse("Extension is disabled");
+    }
+
+    const enabledColors = getEnabledColors(settings, AVAILABLE_COLORS);
+    const category = await resolveCategory(tab, settings, msg.metadata, msg.category);
+    const result = await groupTab(tab, category, enabledColors);
+
+    return buildGroupTabResponse({ category, color: result.color });
+}
+
+async function handleIsTabGroupedMessage() {
     try {
         const [tab] = await queryTabs({ active: true, currentWindow: true });
-        if (!tab) {
-            sendResponse(buildErrorResponse("No active tab found"));
-            return;
-        }
-
-        const settings = await loadSettings();
-        if (!settings.extensionEnabled) {
-            sendResponse(buildErrorResponse("Extension is disabled"));
-            return;
-        }
-
-        const enabledColors = getEnabledColors(settings, AVAILABLE_COLORS);
-        const category = await resolveCategory(tab, settings, msg.metadata, msg.category);
-        const result = await groupTab(tab, category, enabledColors);
-
-        sendResponse(buildGroupTabResponse({ category, color: result.color }));
+        return buildIsGroupedResponse(tab?.groupId >= 0);
     } catch (error) {
-        sendResponse(buildErrorResponse(error.message));
+        return buildIsGroupedResponse(false, error.message);
     }
 }
 
-async function handleIsTabGroupedMessage(sendResponse) {
-    try {
-        const [tab] = await queryTabs({ active: true, currentWindow: true });
-        sendResponse(buildIsGroupedResponse(tab?.groupId >= 0));
-    } catch (error) {
-        sendResponse(buildIsGroupedResponse(false, error.message));
-    }
-}
-
-async function handleBatchGroupMessage(sendResponse) {
+async function handleBatchGroupMessage() {
     try {
         const result = await batchGroupAllTabs();
-        sendResponse(result);
+        return result;
     } catch (error) {
-        sendResponse(buildErrorResponse(error.message));
+        return buildErrorResponse(error.message);
     }
 }
 
-async function handleGetSettingsMessage(sendResponse) {
+async function handleGetSettingsMessage() {
     try {
         const settings = await loadSettings();
-        sendResponse(buildSettingsResponse(settings));
+        return buildSettingsResponse(settings);
     } catch (error) {
-        sendResponse(buildErrorResponse(error.message));
+        return buildErrorResponse(error.message);
     }
 }
 

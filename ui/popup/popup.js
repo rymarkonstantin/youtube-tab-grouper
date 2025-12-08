@@ -1,3 +1,6 @@
+import { MESSAGE_ACTIONS } from '../../src/shared/messages.js';
+import { sendMessageSafe } from '../../src/shared/messaging.js';
+
 /**
  * YouTube Tab Grouper - Popup Script
  * 
@@ -28,21 +31,17 @@ groupButton.addEventListener("click", async () => {
     
     try {
         const category = categoryInput.value.trim();
-        
-        chrome.runtime.sendMessage(
-            { action: "groupTab", category },
-            (response) => {
-                if (response?.success) {
-                    showNotification(`✅ Grouped as "${response.category}"`, "success");
-                    categoryInput.value = "";
-                } else {
-                    showNotification(`❌ ${response?.error || "Failed to group"}`, "error");
-                }
-                groupButton.disabled = false;
-            }
-        );
+        const response = await sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, { category });
+
+        if (response?.success) {
+            showNotification(`ƒo. Grouped as "${response.category}"`, "success");
+            categoryInput.value = "";
+        } else {
+            showNotification(`ƒ?O ${response?.error || "Failed to group"}`, "error");
+        }
     } catch (error) {
-        showNotification(`❌ Error: ${error.message}`, "error");
+        showNotification(`ƒ?O Error: ${error.message}`, "error");
+    } finally {
         groupButton.disabled = false;
     }
 });
@@ -54,19 +53,16 @@ batchButton.addEventListener("click", async () => {
     batchButton.disabled = true;
     
     try {
-        chrome.runtime.sendMessage(
-            { action: "batchGroup" },
-            (response) => {
-                if (response?.success) {
-                    showNotification(`✅ Grouped ${response.count} tabs`, "success");
-                } else {
-                    showNotification(`❌ ${response?.error || "Failed"}`, "error");
-                }
-                batchButton.disabled = false;
-            }
-        );
+        const response = await sendMessageSafe(MESSAGE_ACTIONS.BATCH_GROUP, {});
+
+        if (response?.success) {
+            showNotification(`ƒo. Grouped ${response.count} tabs`, "success");
+        } else {
+            showNotification(`ƒ?O ${response?.error || "Failed"}`, "error");
+        }
     } catch (error) {
-        showNotification(`❌ Error: ${error.message}`, "error");
+        showNotification(`ƒ?O Error: ${error.message}`, "error");
+    } finally {
         batchButton.disabled = false;
     }
 });

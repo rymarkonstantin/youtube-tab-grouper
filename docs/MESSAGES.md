@@ -2,6 +2,14 @@
 
 Canonical reference for runtime messages exchanged between the popup, content script, and background service worker. Code-level types and helpers live in `src/shared/messages.js`.
 
+## Envelope
+
+All messages and responses include:
+- `version`: protocol version (`1`)
+- `requestId`: per-message correlation ID
+
+Helpers attach these automatically and enforce version matching.
+
 ## Quick Reference
 
 | Action | From → To | Request payload | Response payload | Notes |
@@ -20,6 +28,7 @@ Canonical reference for runtime messages exchanged between the popup, content sc
 - `validateResponse(action, payload)`: validates outgoing responses; used for tests or debugging.
 - `normalizeVideoMetadata(metadata)`: trims and standardizes metadata payloads.
 - Response builders: `buildSuccessResponse`, `buildErrorResponse`, `buildValidationErrorResponse`, `buildGroupTabResponse`, `buildBatchGroupResponse`, `buildSettingsResponse`, `buildIsGroupedResponse`, `buildMetadataResponse`.
+- Messaging helpers (`src/shared/messaging.js`): `sendMessageSafe` wraps `chrome.runtime.sendMessage` / `chrome.tabs.sendMessage` with requestId + version + validation; `handleMessage` centralizes listener routing/validation and stamps responses with metadata.
 
 ### Usage Example
 
