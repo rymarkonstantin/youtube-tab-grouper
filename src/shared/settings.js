@@ -163,13 +163,15 @@ export async function getSettings(defaults = DEFAULT_SETTINGS) {
         try {
             chrome.storage.sync.get(mergedDefaults, (result) => {
                 if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
+                    console.warn("settings:getSettings falling back to defaults:", chrome.runtime.lastError.message);
+                    resolve(withSettingsDefaults(mergedDefaults));
                     return;
                 }
                 resolve(withSettingsDefaults(result));
             });
         } catch (error) {
-            reject(error);
+            console.warn("settings:getSettings caught error, using defaults:", error?.message || error);
+            resolve(withSettingsDefaults(mergedDefaults));
         }
     });
 }
@@ -181,13 +183,21 @@ export async function updateSettings(update) {
         : { ...current, ...update };
 
     const normalized = withSettingsDefaults(next);
-    await scheduleSyncWrite(normalized);
+    try {
+        await scheduleSyncWrite(normalized);
+    } catch (error) {
+        console.warn("settings:updateSettings failed to persist; will retry next session:", error?.message || error);
+    }
     return normalized;
 }
 
 export async function resetSettings(defaults = DEFAULT_SETTINGS) {
     const normalized = withSettingsDefaults(defaults);
-    await scheduleSyncWrite(normalized);
+    try {
+        await scheduleSyncWrite(normalized);
+    } catch (error) {
+        console.warn("settings:resetSettings failed to persist; will retry next session:", error?.message || error);
+    }
     return normalized;
 }
 
@@ -249,6 +259,7 @@ function flushSyncWrite() {
     chrome.storage.sync.set(payload, () => {
         if (chrome.runtime.lastError) {
             const error = new Error(chrome.runtime.lastError.message);
+            console.warn("settings:flushSyncWrite failed; settings will retry on next change:", error.message);
             resolvers.forEach(({ reject }) => reject(error));
         } else {
             resolvers.forEach(({ resolve }) => resolve(payload));

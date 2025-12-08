@@ -72,13 +72,15 @@ export async function getStats(defaults = DEFAULT_STATS) {
         try {
             chrome.storage.local.get({ groupingStats: mergedDefaults }, (result) => {
                 if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
+                    console.warn("stats:getStats falling back to defaults:", chrome.runtime.lastError.message);
+                    resolve(withStatsDefaults(mergedDefaults));
                     return;
                 }
                 resolve(withStatsDefaults(result.groupingStats));
             });
         } catch (error) {
-            reject(error);
+            console.warn("stats:getStats caught error, using defaults:", error?.message || error);
+            resolve(withStatsDefaults(mergedDefaults));
         }
     });
 }
@@ -91,34 +93,36 @@ export async function updateStats(update) {
 
     const normalized = withStatsDefaults(next);
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
             chrome.storage.local.set({ groupingStats: normalized }, () => {
                 if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
+                    console.warn("stats:updateStats failed to persist; will retry next session:", chrome.runtime.lastError.message);
                 } else {
                     resolve(normalized);
                 }
             });
         } catch (error) {
-            reject(error);
+            console.warn("stats:updateStats caught error; will retry next session:", error?.message || error);
+            resolve(normalized);
         }
     });
 }
 
 export async function resetStats(defaults = DEFAULT_STATS) {
     const normalized = withStatsDefaults(defaults);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
             chrome.storage.local.set({ groupingStats: normalized }, () => {
                 if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
+                    console.warn("stats:resetStats failed to persist; will retry next session:", chrome.runtime.lastError.message);
                 } else {
                     resolve(normalized);
                 }
             });
         } catch (error) {
-            reject(error);
+            console.warn("stats:resetStats caught error; will retry next session:", error?.message || error);
+            resolve(normalized);
         }
     });
 }

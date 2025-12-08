@@ -101,16 +101,29 @@ export async function saveStats(stats) {
 }
 
 export async function runMigrations(defaults = DEFAULT_SETTINGS) {
-    try {
-        const [syncData, localData] = await Promise.all([
-            readAllSync(),
-            readAllLocal()
-        ]);
+    const results = {
+        settingsMigrated: false,
+        statsMigrated: false,
+        settingsError: null,
+        statsError: null
+    };
 
-        const results = {
-            settingsMigrated: false,
-            statsMigrated: false
-        };
+    let syncData = {};
+    let localData = {};
+
+    try {
+        [syncData, localData] = await Promise.all([
+            readAllSync().catch((error) => {
+                console.warn("Storage migrations: failed to read sync; using defaults", error?.message || error);
+                results.settingsError = error;
+                return {};
+            }),
+            readAllLocal().catch((error) => {
+                console.warn("Storage migrations: failed to read local; using defaults", error?.message || error);
+                results.statsError = error;
+                return {};
+            })
+        ]);
 
         // Settings migration (sync)
         const needsSettingsMigration = !syncData?.version || syncData.version < SETTINGS_VERSION;
@@ -150,7 +163,11 @@ export async function runMigrations(defaults = DEFAULT_SETTINGS) {
         };
     } catch (error) {
         console.error("Storage migrations failed", error);
-        throw error;
+        return {
+            ...results,
+            settings: withSettingsDefaults(defaults),
+            stats: withStatsDefaults({})
+        };
     }
 }
 
