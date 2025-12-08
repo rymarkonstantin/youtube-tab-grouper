@@ -16,6 +16,13 @@
     // ====================================================================
 
     const FALLBACK_GROUP = "Other";
+    const CONTENT_SETTINGS_DEFAULTS = {
+        autoGroupDelay: 2500,
+        allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
+        channelCategoryMap: {},
+        extensionEnabled: true,
+        aiCategoryDetection: true
+    };
     let config = null; // User configuration (loaded from storage)
 
     // ====================================================================
@@ -23,24 +30,28 @@
     // ====================================================================
 
     /**
-     * Load user settings from chrome.storage.sync
+     * Load user settings via background bridge (sync storage)
      * 
      * @async
      * @returns {Promise<void>}
      */
     async function loadConfig() {
-        return new Promise(resolve => {
-            chrome.storage.sync.get({
-                autoGroupDelay: 2500,
-                allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
-                channelCategoryMap: {},
-                extensionEnabled: true,
-                aiCategoryDetection: true
-            }, (settings) => {
-                config = settings;
-                console.log("Config loaded:", config);
-                resolve();
-            });
+        return new Promise((resolve) => {
+            chrome.runtime.sendMessage(
+                { action: "getSettings" },
+                (response) => {
+                    if (response?.success && response.settings) {
+                        config = {
+                            ...CONTENT_SETTINGS_DEFAULTS,
+                            ...response.settings
+                        };
+                    } else {
+                        config = { ...CONTENT_SETTINGS_DEFAULTS };
+                    }
+                    console.log("Config loaded:", config);
+                    resolve();
+                }
+            );
         });
     }
 
