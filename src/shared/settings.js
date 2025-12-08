@@ -119,6 +119,7 @@ export function withSettingsDefaults(value = {}) {
         ...source,
         autoGroupDelay,
         autoGroupDelayMs: autoGroupDelay,
+        version: SETTINGS_VERSION,
         extensionEnabled: source.extensionEnabled !== false,
         aiCategoryDetection: source.aiCategoryDetection !== false,
         autoCleanupEnabled: source.autoCleanupEnabled !== false,

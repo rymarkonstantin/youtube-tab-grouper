@@ -1,6 +1,8 @@
 import {
     DEFAULT_SETTINGS,
     DEFAULT_STATS,
+    SETTINGS_VERSION,
+    STATS_VERSION,
     withSettingsDefaults,
     withStatsDefaults,
     migrateSettingsV0ToV1,
@@ -16,6 +18,8 @@ import {
     updateStats,
     resetStats
 } from '../shared/stats.js';
+
+const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 function handleCallback(resolve, reject, transform = (value) => value) {
     if (chrome.runtime.lastError) {
@@ -97,22 +101,87 @@ export async function saveStats(stats) {
 }
 
 export async function runMigrations(defaults = DEFAULT_SETTINGS) {
-    const settings = await loadSettings(defaults);
-    let updated = false;
+    try {
+        const [syncData, localData] = await Promise.all([
+            readAllSync(),
+            readAllLocal()
+        ]);
 
-    if (!settings.enabledColors || Object.keys(settings.enabledColors).length === 0) {
-        settings.enabledColors = defaults.enabledColors;
-        updated = true;
+        const results = {
+            settingsMigrated: false,
+            statsMigrated: false
+        };
+
+        // Settings migration (sync)
+        const needsSettingsMigration = !syncData?.version || syncData.version < SETTINGS_VERSION;
+        let migratedSettings;
+        if (needsSettingsMigration) {
+            migratedSettings = migrateSettingsV0ToV1({
+                ...defaults,
+                ...syncData
+            });
+            await setSync(migratedSettings);
+            results.settingsMigrated = true;
+        } else {
+            migratedSettings = withSettingsDefaults(syncData);
+        }
+
+        // Stats migration (local)
+        const rawStats = isObject(localData?.groupingStats) ? localData.groupingStats : {};
+        const needsStatsMigration = !rawStats?.version || rawStats.version < STATS_VERSION;
+        let migratedStats;
+        if (needsStatsMigration) {
+            migratedStats = migrateStatsV0ToV1(rawStats);
+            await setLocal({ groupingStats: migratedStats });
+            results.statsMigrated = true;
+        } else {
+            migratedStats = withStatsDefaults(rawStats);
+        }
+
+        console.info("Storage migrations finished", {
+            settingsMigrated: results.settingsMigrated,
+            statsMigrated: results.statsMigrated
+        });
+
+        return {
+            ...results,
+            settings: migratedSettings,
+            stats: migratedStats
+        };
+    } catch (error) {
+        console.error("Storage migrations failed", error);
+        throw error;
     }
+}
 
-    if (!settings.categoryKeywords) {
-        settings.categoryKeywords = defaults.categoryKeywords;
-        updated = true;
-    }
+async function readAllSync() {
+    return new Promise((resolve, reject) => {
+        try {
+            chrome.storage.sync.get(null, (result) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(result || {});
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
 
-    if (updated) {
-        await saveSettings(settings);
-    }
-
-    return settings;
+async function readAllLocal() {
+    return new Promise((resolve, reject) => {
+        try {
+            chrome.storage.local.get(null, (result) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(result || {});
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
 }

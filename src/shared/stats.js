@@ -41,7 +41,8 @@ export function withStatsDefaults(value = {}) {
         categoryCount: normalizeCategoryCount(source.categoryCount),
         lastReset: typeof source.lastReset === 'string' && source.lastReset.trim()
             ? source.lastReset
-            : DEFAULT_STATS.lastReset
+            : DEFAULT_STATS.lastReset,
+        version: STATS_VERSION
     };
 }
 
