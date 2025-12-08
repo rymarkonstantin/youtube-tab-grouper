@@ -55,6 +55,8 @@ This document explains the system design and how components interact.
 3. When triggered, it sends `{ action: "groupTab", category: "", metadata }` to the service worker.
 4. Service worker groups the tab and responds; the button is removed after success.
 
+Refer to `src/shared/messages.js` and `docs/MESSAGES.md` for the full message catalog, schemas, and response helpers.
+
 ---
 
 ## Color Assignment Algorithm
