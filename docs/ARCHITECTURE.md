@@ -1,47 +1,47 @@
-# YouTube Tab Grouper - Architecture
+﻿# YouTube Tab Grouper - Architecture
 
 This document explains the system design and how components interact.
 
 ---
 
-## 🏗️ System Overview
+## ðŸ—ï¸ System Overview
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              CHROME BROWSER                          │
-├─────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌──────────────────┐         ┌──────────────────┐  │
-│  │ BACKGROUND.JS    │◄────────┤ CONTENT.JS       │  │
-│  │ (Service Worker) │         │ (Page Injection) │  │
-│  │                  │         │                  │  │
-│  │ • Tab grouping   │         │ • UI button      │  │
-│  │ • Color assign   │         │ • Auto-group     │  │
-│  │ • Messaging      │         │ • Data extract   │  │
-│  │ • Statistics     │         │                  │  │
-│  └────────┬─────────┘         └──────────────────┘  │
-│           │                                          │
-│  ┌────────┴──────────────────────────────────────┐  │
-│  │ STORAGE (chrome.storage.*)                    │  │
-│  │ • sync: Settings (user config)                │  │
-│  │ • local: Groups, Colors, Stats                │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                      │
-│  ┌──────────────────────────────────────────────┐   │
-│  │ UI PAGES (popup, options, stats)             │   │
-│  │ • popup/popup.html - Extension popup         │   │
-│  │ • options/options.html - Settings page       │   │
-│  │ • stats/stats.html - Statistics dashboard    │   │
-│  └──────────────────────────────────────────────┘   │
-│                                                      │
-└─────────────────────────────────────────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚              CHROME BROWSER                          â”‚
+â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
+â”‚                                                      â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
+â”‚  â”‚ background/index.js    â”‚â—„â”€â”€â”€â”€â”€â”€â”€â”€â”¤ CONTENT.JS       â”‚  â”‚
+â”‚  â”‚ (Service Worker) â”‚         â”‚ (Page Injection) â”‚  â”‚
+â”‚  â”‚                  â”‚         â”‚                  â”‚  â”‚
+â”‚  â”‚ â€¢ Tab grouping   â”‚         â”‚ â€¢ UI button      â”‚  â”‚
+â”‚  â”‚ â€¢ Color assign   â”‚         â”‚ â€¢ Auto-group     â”‚  â”‚
+â”‚  â”‚ â€¢ Messaging      â”‚         â”‚ â€¢ Data extract   â”‚  â”‚
+â”‚  â”‚ â€¢ Statistics     â”‚         â”‚                  â”‚  â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
+â”‚           â”‚                                          â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”‚
+â”‚  â”‚ STORAGE (chrome.storage.*)                    â”‚  â”‚
+â”‚  â”‚ â€¢ sync: Settings (user config)                â”‚  â”‚
+â”‚  â”‚ â€¢ local: Groups, Colors, Stats                â”‚  â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â”‚
+â”‚                                                      â”‚
+â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+â”‚  â”‚ UI PAGES (popup, options, stats)             â”‚   â”‚
+â”‚  â”‚ â€¢ popup/popup.html - Extension popup         â”‚   â”‚
+â”‚  â”‚ â€¢ options/options.html - Settings page       â”‚   â”‚
+â”‚  â”‚ â€¢ stats/stats.html - Statistics dashboard    â”‚   â”‚
+â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+â”‚                                                      â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ---
 
-## 📊 Component Breakdown
+## ðŸ“Š Component Breakdown
 
-### 1. **Service Worker (background.js)**
+### 1. **Service Worker (background/index.js)**
 
 **Purpose**: Core extension logic
 
@@ -83,9 +83,9 @@ This document explains the system design and how components interact.
 - `initialize()` - Setup on page load
 
 **Triggers**:
-- Page load → Load config → Create UI
-- Button click → Send grouping request
-- Auto-delay timeout → Auto-group
+- Page load â†’ Load config â†’ Create UI
+- Button click â†’ Send grouping request
+- Auto-delay timeout â†’ Auto-group
 
 ---
 
@@ -99,9 +99,9 @@ This document explains the system design and how components interact.
 - Link to settings/stats
 
 **Interactions**:
-- Click "Group" button → Send message to background
-- Click "Batch" button → Send batch message
-- Click settings icon → Open options page
+- Click "Group" button â†’ Send message to background
+- Click "Batch" button â†’ Send batch message
+- Click settings icon â†’ Open options page
 
 ---
 
@@ -141,33 +141,33 @@ This document explains the system design and how components interact.
 
 ---
 
-## 🔄 Message Flow
+## ðŸ”„ Message Flow
 
 ### Manual Grouping Flow
 
 ```
 User clicks "Group" button (popup.html)
-        │
-        ▼
+        â”‚
+        â–¼
 popup.js sends message to background
     { action: "groupTab", category: "" }
-        │
-        ▼
-background.js receives message
-        │
-        ├─► Get active tab
-        ├─► Predict category (if empty)
-        ├─► Assign color
-        ├─► Find/create group
-        ├─► Add tab to group
-        ├─► Save state
-        └─► Update stats
-        │
-        ▼
+        â”‚
+        â–¼
+background/index.js receives message
+        â”‚
+        â”œâ”€â–º Get active tab
+        â”œâ”€â–º Predict category (if empty)
+        â”œâ”€â–º Assign color
+        â”œâ”€â–º Find/create group
+        â”œâ”€â–º Add tab to group
+        â”œâ”€â–º Save state
+        â””â”€â–º Update stats
+        â”‚
+        â–¼
 Send response back to popup
     { success: true, category: "Tech", color: "blue" }
-        │
-        ▼
+        â”‚
+        â–¼
 popup.js displays success message
 ```
 
@@ -177,86 +177,86 @@ popup.js displays success message
 
 ```
 User opens YouTube video
-        │
-        ▼
+        â”‚
+        â–¼
 content.js loads on page
-        │
-        ├─► Load user config
-        ├─► Create "Group" button
-        └─► Schedule auto-group timer
-        │
-        ▼
+        â”‚
+        â”œâ”€â–º Load user config
+        â”œâ”€â–º Create "Group" button
+        â””â”€â–º Schedule auto-group timer
+        â”‚
+        â–¼
 Timer fires after delay (default 2.5s)
-        │
-        ▼
+        â”‚
+        â–¼
 Send grouping message to background
-        │
-        ▼
-background.js processes grouping
-        │
-        ▼
+        â”‚
+        â–¼
+background/index.js processes grouping
+        â”‚
+        â–¼
 Tab is grouped automatically
 ```
 
 ---
 
-## 🎨 Color Assignment Algorithm
+## ðŸŽ¨ Color Assignment Algorithm
 
 ```
 1. getColorForGroup(categoryName)
-       │
-       ├─► Check if color cached
-       │   YES → Return cached color
-       │   NO → Continue
-       │
-       ├─► Check if assignment locked
-       │   YES → Wait for lock
-       │   NO → Continue
-       │
-       └─► Start assignment process
-           │
-           ├─► Get neighbor colors
-           │   (fetch all groups in window)
-           │
-           ├─► Filter available colors
-           │   (enabled colors NOT used by neighbors)
-           │
-           ├─► Select random from available
-           │   (or fallback to any color)
-           │
-           ├─► Cache assignment
-           │   (save to groupColorMap)
-           │
-           └─► Return color
+       â”‚
+       â”œâ”€â–º Check if color cached
+       â”‚   YES â†’ Return cached color
+       â”‚   NO â†’ Continue
+       â”‚
+       â”œâ”€â–º Check if assignment locked
+       â”‚   YES â†’ Wait for lock
+       â”‚   NO â†’ Continue
+       â”‚
+       â””â”€â–º Start assignment process
+           â”‚
+           â”œâ”€â–º Get neighbor colors
+           â”‚   (fetch all groups in window)
+           â”‚
+           â”œâ”€â–º Filter available colors
+           â”‚   (enabled colors NOT used by neighbors)
+           â”‚
+           â”œâ”€â–º Select random from available
+           â”‚   (or fallback to any color)
+           â”‚
+           â”œâ”€â–º Cache assignment
+           â”‚   (save to groupColorMap)
+           â”‚
+           â””â”€â–º Return color
 ```
 
 ---
 
-## 🤖 Category Detection Algorithm
+## ðŸ¤– Category Detection Algorithm
 
 ```
 1. predictCategory(metadata, aiEnabled)
-       │
-       ├─► Check if AI enabled
-       │   NO → Return "Other"
-       │   YES → Continue
-       │
-       ├─► Combine text sources
-       │   title + description + keywords
-       │
-       ├─► Score each category
-       │   Count keyword matches
-       │
-       ├─► Find highest score
-       │   Sort by match count
-       │
-       └─► Return top category
+       â”‚
+       â”œâ”€â–º Check if AI enabled
+       â”‚   NO â†’ Return "Other"
+       â”‚   YES â†’ Continue
+       â”‚
+       â”œâ”€â–º Combine text sources
+       â”‚   title + description + keywords
+       â”‚
+       â”œâ”€â–º Score each category
+       â”‚   Count keyword matches
+       â”‚
+       â”œâ”€â–º Find highest score
+       â”‚   Sort by match count
+       â”‚
+       â””â”€â–º Return top category
            (or "Other" if no matches)
 ```
 
 ---
 
-## 💾 Storage Schema
+## ðŸ’¾ Storage Schema
 
 ### chrome.storage.sync (User Settings)
 
@@ -282,14 +282,14 @@ Tab is grouped automatically
 ### chrome.storage.local (Runtime Data)
 
 ```javascript
-// groupColorMap: Category → Color assignments
+// groupColorMap: Category â†’ Color assignments
 {
   'Tech': 'blue',
   'Music': 'red',
   'Gaming': 'green'
 }
 
-// groupIdMap: Category → Group ID
+// groupIdMap: Category â†’ Group ID
 {
   'Tech': 42,
   'Music': 43,
@@ -312,9 +312,9 @@ Tab is grouped automatically
 
 ---
 
-## 🔌 API Interfaces
+## ðŸ”Œ API Interfaces
 
-### Background → Content Script Messages
+### Background â†’ Content Script Messages
 
 ```javascript
 // Sent TO content script (from popup)
@@ -331,7 +331,7 @@ chrome.tabs.sendMessage(tabId, {
 }
 ```
 
-### Content Script → Background Messages
+### Content Script â†’ Background Messages
 
 ```javascript
 // Sent TO background (from content script)
@@ -350,7 +350,7 @@ chrome.runtime.sendMessage({
 
 ---
 
-## ⚡ Performance Considerations
+## âš¡ Performance Considerations
 
 ### Optimization Strategies
 
@@ -379,7 +379,7 @@ chrome.runtime.sendMessage({
 
 ---
 
-## 🔐 Security Considerations
+## ðŸ” Security Considerations
 
 ### Permissions Justification
 
@@ -398,19 +398,19 @@ chrome.runtime.sendMessage({
 
 ---
 
-## 🧪 Testing Strategy
+## ðŸ§ª Testing Strategy
 
 ### Unit Tests (Future)
 
 ```
 src/
-├── background.test.js
-│   ├── groupTab()
-│   ├── predictCategory()
-│   └── getColorForGroup()
-└── content.test.js
-    ├── getVideoData()
-    └── createUI()
+â”œâ”€â”€ background.test.js
+â”‚   â”œâ”€â”€ groupTab()
+â”‚   â”œâ”€â”€ predictCategory()
+â”‚   â””â”€â”€ getColorForGroup()
+â””â”€â”€ content.test.js
+    â”œâ”€â”€ getVideoData()
+    â””â”€â”€ createUI()
 ```
 
 ### Integration Tests (Future)
@@ -424,7 +424,7 @@ src/
 
 ---
 
-## 🚀 Scalability Roadmap
+## ðŸš€ Scalability Roadmap
 
 ### Phase 1 (Current)
 - Single extension instance
@@ -443,7 +443,7 @@ src/
 
 ---
 
-## 📚 Related Files
+## ðŸ“š Related Files
 
 - [README.md](../README.md) - User documentation
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide
