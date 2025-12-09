@@ -1,4 +1,4 @@
-import { MESSAGE_ACTIONS } from '../../src/shared/messages.js';
+import { MESSAGE_ACTIONS, validateResponse } from '../../src/shared/messages.js';
 import { sendMessageSafe } from '../../src/shared/messaging.js';
 
 /**
@@ -15,19 +15,30 @@ const buttons = [groupButton, batchButton];
 
 const isGuardDisabled = (error) => typeof error === "string" && /disabled/i.test(error);
 
-async function sendPopupMessage(action, payload = {}) {
+async function sendPopupMessage(action, payload = {}, { timeoutMs } = {}) {
     try {
-        // Allow error envelopes (success:false) to flow through for guard-aware handling.
-        return await sendMessageSafe(action, payload, { validateResponsePayload: false });
+        const response = await sendMessageSafe(action, payload, { timeoutMs, validateResponsePayload: true });
+        const { valid, errors } = validateResponse(action, response || {});
+        if (!valid) {
+            return { success: false, error: errors.join("; ") || "Invalid response" };
+        }
+        return response;
     } catch (error) {
-        return { success: false, error: error?.message || "Unknown error" };
+        const message = error?.message || "Unknown error";
+        if (/disabled/i.test(message)) {
+            return { success: false, error: "Extension is disabled" };
+        }
+        if (/timed out/i.test(message) && timeoutMs) {
+            return { success: false, error: `Message timed out after ${timeoutMs}ms` };
+        }
+        return { success: false, error: message };
     }
 }
 
 function handleGuard(response) {
     if (response?.success === false && isGuardDisabled(response.error)) {
         buttons.forEach((btn) => { if (btn) btn.disabled = true; });
-        showNotification(`’'?O ${response.error}`, "error");
+        showNotification(`Error: ${response.error}`, "error");
         return true;
     }
     return false;
@@ -50,13 +61,13 @@ groupButton?.addEventListener("click", async () => {
         const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
 
         if (response?.success) {
-            showNotification(`’'o. Grouped as "${response.category}"`, "success");
+            showNotification(`Grouped as "${response.category}"`, "success");
             categoryInput.value = "";
         } else if (!handleGuard(response)) {
-            showNotification(`’'?O ${formatError(response)}`, "error");
+            showNotification(`Error: ${formatError(response)}`, "error");
         }
     } catch (error) {
-        showNotification(`’'?O Error: ${error.message}`, "error");
+        showNotification(`Error: ${error.message}`, "error");
     } finally {
         groupButton.disabled = false;
     }
@@ -69,12 +80,12 @@ batchButton?.addEventListener("click", async () => {
         const response = await sendPopupMessage(MESSAGE_ACTIONS.BATCH_GROUP);
 
         if (response?.success) {
-            showNotification(`’'o. Grouped ${response.count} tabs`, "success");
+            showNotification(`Grouped ${response.count} tabs`, "success");
         } else if (!handleGuard(response)) {
-            showNotification(`’'?O ${formatError(response)}`, "error");
+            showNotification(`Error: ${formatError(response)}`, "error");
         }
     } catch (error) {
-        showNotification(`’'?O Error: ${error.message}`, "error");
+        showNotification(`Error: ${error.message}`, "error");
     } finally {
         batchButton.disabled = false;
     }

@@ -1,8 +1,7 @@
 import { normalizeVideoMetadata } from '../shared/metadata.js';
-import { MESSAGE_ACTIONS } from '../shared/messages.js';
+import { MESSAGE_ACTIONS, validateResponse } from '../shared/messages.js';
 import { handleMessage, sendMessageSafe } from '../shared/messaging.js';
 
-// TODO: bolt on shared schema validation here once content-side message schemas are available.
 const toGroupTabPayload = (categoryOrPayload, metadata) => {
     if (categoryOrPayload && typeof categoryOrPayload === 'object' && !Array.isArray(categoryOrPayload)) {
         return categoryOrPayload;
@@ -10,12 +9,58 @@ const toGroupTabPayload = (categoryOrPayload, metadata) => {
     return { category: categoryOrPayload, metadata };
 };
 
-export function sendGroupTab(categoryOrPayload, metadata) {
-    return sendMessageSafe(MESSAGE_ACTIONS.GROUP_TAB, toGroupTabPayload(categoryOrPayload, metadata));
+const timeoutResponse = (timeoutMs) => ({ success: false, error: `Message timed out after ${timeoutMs}ms` });
+const disabledResponse = () => ({ success: false, error: "Extension is disabled" });
+
+export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
+    const { timeoutMs } = options;
+    try {
+        const response = await sendMessageSafe(
+            MESSAGE_ACTIONS.GROUP_TAB,
+            toGroupTabPayload(categoryOrPayload, metadata),
+            { timeoutMs, validateResponsePayload: true }
+        );
+
+        const { valid, errors } = validateResponse(MESSAGE_ACTIONS.GROUP_TAB, response || {});
+        if (!valid) {
+            return { success: false, error: errors.join("; ") || "Invalid response" };
+        }
+        return response;
+    } catch (error) {
+        const message = error?.message || "Unknown error";
+        if (/disabled/i.test(message)) {
+            return disabledResponse();
+        }
+        if (/timed out/i.test(message) && timeoutMs) {
+            return timeoutResponse(timeoutMs);
+        }
+        return { success: false, error: message };
+    }
 }
 
-export function sendGetSettings() {
-    return sendMessageSafe(MESSAGE_ACTIONS.GET_SETTINGS, {});
+export async function sendGetSettings(options = {}) {
+    const { timeoutMs } = options;
+    try {
+        const response = await sendMessageSafe(
+            MESSAGE_ACTIONS.GET_SETTINGS,
+            {},
+            { timeoutMs, validateResponsePayload: true }
+        );
+        const { valid, errors } = validateResponse(MESSAGE_ACTIONS.GET_SETTINGS, response || {});
+        if (!valid) {
+            return { success: false, error: errors.join("; ") || "Invalid response" };
+        }
+        return response;
+    } catch (error) {
+        const message = error?.message || "Unknown error";
+        if (/disabled/i.test(message)) {
+            return disabledResponse();
+        }
+        if (/timed out/i.test(message) && timeoutMs) {
+            return timeoutResponse(timeoutMs);
+        }
+        return { success: false, error: message };
+    }
 }
 
 export function replyWithMetadata({ getMetadata, isEnabled }) {
@@ -30,16 +75,11 @@ export function replyWithMetadata({ getMetadata, isEnabled }) {
 }
 
 export function registerMessageHandlers({ getMetadata, isEnabled }) {
-    // TODO: add runtime validation for msg payloads once shared schemas land.
     const listener = handleMessage({
         [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: replyWithMetadata({ getMetadata, isEnabled })
     }, {
         requireVersion: true,
         onUnknown: (action, msg) => {
-            // Legacy bridge for unversioned { action: "groupTab" } requests.
-            if (action === MESSAGE_ACTIONS.GROUP_TAB || msg?.action === MESSAGE_ACTIONS.GROUP_TAB) {
-                return sendGroupTab(msg);
-            }
             console.warn(`Unknown content message action: ${action || msg?.action || "undefined"}`);
             return false;
         }
