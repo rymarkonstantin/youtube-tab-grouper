@@ -14,13 +14,7 @@ export const MESSAGE_ACTIONS = {
   GET_VIDEO_METADATA: "getVideoMetadata"
 } as const;
 
-export const enum MessageAction {
-  GROUP_TAB = "groupTab",
-  BATCH_GROUP = "batchGroup",
-  GET_SETTINGS = "getSettings",
-  IS_TAB_GROUPED = "isTabGrouped",
-  GET_VIDEO_METADATA = "getVideoMetadata"
-}
+export type MessageAction = (typeof MESSAGE_ACTIONS)[keyof typeof MESSAGE_ACTIONS];
 
 export type MessageCatalog = Record<
   MessageAction,
@@ -32,7 +26,7 @@ export type MessageCatalog = Record<
 >;
 
 export const MESSAGE_CATALOG: MessageCatalog = {
-  [MessageAction.GROUP_TAB]: {
+  [MESSAGE_ACTIONS.GROUP_TAB]: {
     description: "Request the background worker to group the active YouTube tab.",
     request: {
       category: "Optional string override for the category.",
@@ -45,7 +39,7 @@ export const MESSAGE_CATALOG: MessageCatalog = {
       error: "Error message when grouping fails."
     }
   },
-  [MessageAction.BATCH_GROUP]: {
+  [MESSAGE_ACTIONS.BATCH_GROUP]: {
     description: "Group all YouTube tabs in the current window.",
     request: {},
     response: {
@@ -54,7 +48,7 @@ export const MESSAGE_CATALOG: MessageCatalog = {
       error: "Error message when grouping fails."
     }
   },
-  [MessageAction.GET_SETTINGS]: {
+  [MESSAGE_ACTIONS.GET_SETTINGS]: {
     description: "Read current settings from the background worker.",
     request: {},
     response: {
@@ -63,7 +57,7 @@ export const MESSAGE_CATALOG: MessageCatalog = {
       error: "Error message when retrieval fails."
     }
   },
-  [MessageAction.IS_TAB_GROUPED]: {
+  [MESSAGE_ACTIONS.IS_TAB_GROUPED]: {
     description: "Check if the active tab is already part of a group.",
     request: {},
     response: {
@@ -71,7 +65,7 @@ export const MESSAGE_CATALOG: MessageCatalog = {
       error: "Error message when the check fails."
     }
   },
-  [MessageAction.GET_VIDEO_METADATA]: {
+  [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: {
     description: "Ask the content script to return parsed YouTube metadata.",
     request: {},
     response: {
@@ -95,38 +89,38 @@ interface FieldRule {
 type ValidationSchema = Record<string, FieldRule>;
 
 const REQUEST_SCHEMAS: Record<MessageAction, ValidationSchema> = {
-  [MessageAction.GROUP_TAB]: {
+  [MESSAGE_ACTIONS.GROUP_TAB]: {
     category: { type: "string", required: false, allowEmpty: true },
     metadata: { type: "metadata", required: false }
   },
-  [MessageAction.BATCH_GROUP]: {},
-  [MessageAction.GET_SETTINGS]: {},
-  [MessageAction.IS_TAB_GROUPED]: {},
-  [MessageAction.GET_VIDEO_METADATA]: {}
+  [MESSAGE_ACTIONS.BATCH_GROUP]: {},
+  [MESSAGE_ACTIONS.GET_SETTINGS]: {},
+  [MESSAGE_ACTIONS.IS_TAB_GROUPED]: {},
+  [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: {}
 };
 
 const RESPONSE_SCHEMAS: Record<MessageAction, ValidationSchema> = {
-  [MessageAction.GROUP_TAB]: {
+  [MESSAGE_ACTIONS.GROUP_TAB]: {
     success: { type: "boolean", required: true },
     category: { type: "string", required: false, allowEmpty: false },
     color: { type: "string", required: false, allowEmpty: false },
     error: { type: "string", required: false, allowEmpty: true }
   },
-  [MessageAction.BATCH_GROUP]: {
+  [MESSAGE_ACTIONS.BATCH_GROUP]: {
     success: { type: "boolean", required: true },
     count: { type: "number", required: false },
     error: { type: "string", required: false, allowEmpty: true }
   },
-  [MessageAction.GET_SETTINGS]: {
+  [MESSAGE_ACTIONS.GET_SETTINGS]: {
     success: { type: "boolean", required: true },
     settings: { type: "object", required: false },
     error: { type: "string", required: false, allowEmpty: true }
   },
-  [MessageAction.IS_TAB_GROUPED]: {
+  [MESSAGE_ACTIONS.IS_TAB_GROUPED]: {
     grouped: { type: "boolean", required: true },
     error: { type: "string", required: false, allowEmpty: true }
   },
-  [MessageAction.GET_VIDEO_METADATA]: {}
+  [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: {}
 };
 
 interface ValidationResult {
@@ -195,7 +189,7 @@ function validateFields(payload: unknown, schema: ValidationSchema, pathPrefix =
 
 export function validateRequest(action: MessageAction, payload: Partial<GroupTabRequest> = {}): ValidationResult {
   const errors: string[] = [];
-  if (!Object.values(MessageAction).includes(action)) {
+  if (!Object.values(MESSAGE_ACTIONS).includes(action)) {
     errors.push(`Unknown action "${action}"`);
     return { valid: false, errors };
   }
@@ -208,12 +202,12 @@ export function validateRequest(action: MessageAction, payload: Partial<GroupTab
 
 export function validateResponse(action: MessageAction, payload: unknown = {}): ValidationResult {
   const errors: string[] = [];
-  if (!Object.values(MessageAction).includes(action)) {
+  if (!Object.values(MESSAGE_ACTIONS).includes(action)) {
     errors.push(`Unknown action "${action}"`);
     return { valid: false, errors };
   }
 
-  if (action === MessageAction.GET_VIDEO_METADATA) {
+  if (action === MESSAGE_ACTIONS.GET_VIDEO_METADATA) {
     if (!isVideoMetadata(payload)) {
       errors.push("response must be a valid metadata payload");
     }
@@ -268,6 +262,6 @@ export function buildIsGroupedResponse(grouped: boolean, error?: unknown) {
 }
 
 export function buildMetadataResponse(metadata: Partial<Metadata> = {}, extras: Record<string, unknown> = {}) {
-  const normalized = normalizeVideoMetadata(metadata);
+  const normalized = normalizeVideoMetadata(metadata as Metadata);
   return { ...extras, ...normalized } as Metadata & typeof extras;
 }

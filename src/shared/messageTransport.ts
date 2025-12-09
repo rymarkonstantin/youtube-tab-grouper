@@ -45,7 +45,10 @@ function buildVersionError(expected: number, received: unknown, requestId?: stri
  * @param {HandleMessageOptions} [options]
  * @returns {(msg:any,sender:any,sendResponse:Function)=>boolean}
  */
-export function handleMessage(handlers: Record<MessageAction, Function> = {}, options: HandleMessageOptions = {}) {
+export function handleMessage(
+  handlers: Partial<Record<MessageAction, Function>> = {},
+  options: HandleMessageOptions = {}
+) {
   const { requireVersion = true, validateResponses = true, onUnknown } = options;
 
   return (msg: any, sender: any, sendResponse: Function) => {
@@ -75,7 +78,8 @@ export function handleMessage(handlers: Record<MessageAction, Function> = {}, op
       return true;
     }
 
-    const requestValidation = validateRequest(action, msg || {});
+    const payload = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
+    const requestValidation = validateRequest(action, payload);
     if (!requestValidation.valid) {
       sendResponse(envelopeResponse(buildValidationErrorResponse(action, requestValidation.errors), requestId));
       return true;
@@ -109,7 +113,11 @@ export function handleMessage(handlers: Record<MessageAction, Function> = {}, op
 /**
  * Send a message with envelope, validation, and timeout handling.
  */
-export function sendMessageSafe(action: MessageAction, payload: Record<string, unknown> = {}, options: SendMessageOptions = {}) {
+export function sendMessageSafe(
+  action: MessageAction,
+  payload: Record<string, unknown> = {},
+  options: SendMessageOptions = {}
+) {
   const {
     tabId,
     timeoutMs = DEFAULT_MESSAGE_TIMEOUT_MS,
@@ -122,7 +130,7 @@ export function sendMessageSafe(action: MessageAction, payload: Record<string, u
     return Promise.reject(new Error(`Unknown action "${action}"`));
   }
 
-  const requestValidation = validateRequest(action, payload || {});
+    const requestValidation = validateRequest(action, payload as Record<string, unknown>);
   if (!requestValidation.valid) {
     return Promise.reject(new Error(requestValidation.errors.join("; ")));
   }
