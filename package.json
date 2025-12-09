@@ -12,6 +12,8 @@
     "lint": "eslint \"src/**/*.{js,ts}\" \"ui/**/*.{js,ts}\" \"scripts/**/*.{js,ts}\" --max-warnings=0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "globals": "^14.0.0",
     "@types/chrome": "^0.0.268",
     "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^8.14.0",
