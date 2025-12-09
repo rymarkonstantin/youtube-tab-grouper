@@ -3,10 +3,10 @@ import { isVideoMetadata, normalizeVideoMetadata } from './metadataSchema.js';
 export { normalizeVideoMetadata } from './metadataSchema.js';
 
 /**
- * @typedef {import('./types.js').Metadata} Metadata
- * @typedef {import('./types.js').MessageEnvelope} MessageEnvelope
- * @typedef {import('./types.js').GroupTabRequest} GroupTabRequest
- * @typedef {import('./types.js').GroupTabResponse} GroupTabResponse
+ * @typedef {import('./types.ts').Metadata} Metadata
+ * @typedef {import('./types.ts').MessageEnvelope} MessageEnvelope
+ * @typedef {import('./types.ts').GroupTabRequest} GroupTabRequest
+ * @typedef {import('./types.ts').GroupTabResponse} GroupTabResponse
  */
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -1,4 +1,4 @@
-/** @typedef {import('../shared/types.js').Metadata} Metadata */
+/** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
 import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { SELECTORS } from './constants.js';
@@ -87,7 +87,7 @@ function detectYouTubeCategory() {
 
 /**
  * Extract basic metadata from the DOM.
- * @returns {import('../shared/types.js').Metadata}
+ * @returns {import('../shared/types.ts').Metadata}
  */
 export function getVideoData() {
     const base = readDomMetadata();
@@ -96,7 +96,7 @@ export function getVideoData() {
 
 /**
  * Extract metadata from DOM + JSON-LD + meta tags, normalized.
- * @returns {import('../shared/types.js').Metadata}
+ * @returns {import('../shared/types.ts').Metadata}
  */
 export function extractVideoMetadata() {
     const base = getVideoData();

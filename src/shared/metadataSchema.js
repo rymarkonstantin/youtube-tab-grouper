@@ -1,4 +1,4 @@
-/** @typedef {import('./types.js').Metadata} Metadata */
+/** @typedef {import('./types.ts').Metadata} Metadata */
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';
