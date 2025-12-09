@@ -1,4 +1,4 @@
-/** @typedef {import('../shared/types.js').MessageEnvelope} MessageEnvelope */
+/** @typedef {import('../shared/types.ts').MessageEnvelope} MessageEnvelope */
 
 import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { MESSAGE_ACTIONS, validateResponse } from '../shared/messageContracts.js';
@@ -17,9 +17,9 @@ const disabledResponse = () => ({ success: false, error: "Extension is disabled"
 /**
  * Send a groupTab request from the content script.
  * @param {string|object} categoryOrPayload
- * @param {import('../shared/types.js').Metadata} [metadata]
+ * @param {import('../shared/types.ts').Metadata} [metadata]
  * @param {{ timeoutMs?: number }} [options]
- * @returns {Promise<import('../shared/types.js').GroupTabResponse>}
+ * @returns {Promise<import('../shared/types.ts').GroupTabResponse>}
  */
 export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
     const { timeoutMs } = options;
@@ -50,7 +50,7 @@ export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
 /**
  * Fetch settings from background.
  * @param {{ timeoutMs?: number }} [options]
- * @returns {Promise<{ success:boolean, settings?: import('../shared/types.js').Settings, error?: string }>}
+ * @returns {Promise<{ success:boolean, settings?: import('../shared/types.ts').Settings, error?: string }>}
  */
 export async function sendGetSettings(options = {}) {
     const { timeoutMs } = options;
@@ -116,6 +116,6 @@ export function registerMessageHandlers({ getMetadata, isEnabled }) {
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
 }
-/** @typedef {import('../shared/types.js').Metadata} Metadata */
-/** @typedef {import('../shared/types.js').GroupTabResponse} GroupTabResponse */
-/** @typedef {import('../shared/types.js').Settings} Settings */
+/** @typedef {import('../shared/types.ts').Metadata} Metadata */
+/** @typedef {import('../shared/types.ts').GroupTabResponse} GroupTabResponse */
+/** @typedef {import('../shared/types.ts').Settings} Settings */

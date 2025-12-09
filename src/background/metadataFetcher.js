@@ -1,4 +1,4 @@
-/** @typedef {import('../shared/types.js').Metadata} Metadata */
+/** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
 import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { MESSAGE_ACTIONS } from '../shared/messageContracts.js';

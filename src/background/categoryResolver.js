@@ -1,4 +1,4 @@
-/** @typedef {import('../shared/types.js').Metadata} Metadata */
+/** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
 import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { DEFAULT_SETTINGS } from './constants.js';

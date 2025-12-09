@@ -1,4 +1,4 @@
-/** @typedef {import('./types.js').Settings} Settings */
+/** @typedef {import('./types.ts').Settings} Settings */
 
 export const SETTINGS_VERSION = 1;
 
@@ -18,7 +18,7 @@ export const CATEGORY_KEYWORDS = {
     "Entertainment": ["movie", "series", "trailer", "reaction", "comedy", "funny", "meme"]
 };
 
-/** @typedef {import('./types.js').Settings} Settings */
+/** @typedef {import('./types.ts').Settings} Settings */
 
 export const DEFAULT_SETTINGS = {
     autoGroupDelay: 2500,

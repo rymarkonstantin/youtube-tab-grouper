@@ -7,9 +7,9 @@ import {
 } from './messageContracts.js';
 
 /**
- * @typedef {import('./types.js').MessageEnvelope} MessageEnvelope
- * @typedef {import('./types.js').SendMessageOptions} SendMessageOptions
- * @typedef {import('./types.js').HandleMessageOptions} HandleMessageOptions
+ * @typedef {import('./types.ts').MessageEnvelope} MessageEnvelope
+ * @typedef {import('./types.ts').SendMessageOptions} SendMessageOptions
+ * @typedef {import('./types.ts').HandleMessageOptions} HandleMessageOptions
  */
 
 export const MESSAGE_VERSION = 1;
