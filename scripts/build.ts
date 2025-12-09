@@ -10,7 +10,7 @@ const ROOT_DIR = path.resolve(__dirname, "..");
 const DIST_DIR = path.join(ROOT_DIR, "dist");
 
 const ESM_ENTRY_POINTS: Record<string, string> = {
-  "background/index": path.join(ROOT_DIR, "src/background/index.js"),
+  "background/index": path.join(ROOT_DIR, "src/background/index.ts"),
   "ui/popup/popup": path.join(ROOT_DIR, "ui/popup/popup.js"),
   "ui/options/options": path.join(ROOT_DIR, "ui/options/options.js"),
   "ui/stats/stats": path.join(ROOT_DIR, "ui/stats/stats.js")
