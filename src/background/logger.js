@@ -1,4 +1,4 @@
-import { buildErrorResponse } from '../shared/messages.js';
+import { buildErrorResponse } from '../shared/messageContracts.js';
 
 const PREFIX = "[yt-grouper]";
 

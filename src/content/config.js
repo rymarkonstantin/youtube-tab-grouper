@@ -1,6 +1,6 @@
 import { withSettingsDefaults } from '../shared/settings.js';
 import { CONTENT_SETTINGS_DEFAULTS } from './constants.js';
-import { sendGetSettings } from './messaging.js';
+import { sendGetSettings } from './messageClient.js';
 
 export const normalizeContentSettings = (settings = {}) =>
     withSettingsDefaults({ ...CONTENT_SETTINGS_DEFAULTS, ...(settings || {}) });

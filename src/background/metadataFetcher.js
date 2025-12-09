@@ -1,6 +1,6 @@
-import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadata.js';
-import { MESSAGE_ACTIONS } from '../shared/messages.js';
-import { sendMessageSafe } from '../shared/messaging.js';
+import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { MESSAGE_ACTIONS } from '../shared/messageContracts.js';
+import { sendMessageSafe } from '../shared/messageTransport.js';
 import { logWarn } from './logger.js';
 
 const CONTENT_METADATA_TIMEOUTS_MS = [1200, 2000, 3200];

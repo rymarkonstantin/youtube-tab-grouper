@@ -1,9 +1,9 @@
-import { normalizeVideoMetadata } from '../shared/metadata.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { isEnabled, loadConfig } from './config.js';
 import { cancelAutoGroup, startAutoGroup } from './autoGroup.js';
 import { removeGroupButton, renderGroupButton } from './dom.js';
-import { extractVideoMetadata } from './metadata.js';
-import { registerMessageHandlers, sendGroupTab } from './messaging.js';
+import { extractVideoMetadata } from './metadataExtractor.js';
+import { registerMessageHandlers, sendGroupTab } from './messageClient.js';
 
 const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled" };
 

@@ -1,4 +1,4 @@
-import { normalizeVideoMetadata } from '../shared/metadata.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { DEFAULT_SETTINGS } from './constants.js';
 
 const FALLBACK_CATEGORY = "Other";

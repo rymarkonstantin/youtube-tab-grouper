@@ -1,6 +1,6 @@
-import { normalizeVideoMetadata } from '../shared/metadata.js';
-import { MESSAGE_ACTIONS, validateResponse } from '../shared/messages.js';
-import { handleMessage, sendMessageSafe } from '../shared/messaging.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { MESSAGE_ACTIONS, validateResponse } from '../shared/messageContracts.js';
+import { handleMessage, sendMessageSafe } from '../shared/messageTransport.js';
 
 const toGroupTabPayload = (categoryOrPayload, metadata) => {
     if (categoryOrPayload && typeof categoryOrPayload === 'object' && !Array.isArray(categoryOrPayload)) {

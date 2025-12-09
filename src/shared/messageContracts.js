@@ -1,6 +1,6 @@
-import { isVideoMetadata, normalizeVideoMetadata } from './metadata.js';
+import { isVideoMetadata, normalizeVideoMetadata } from './metadataSchema.js';
 
-export { normalizeVideoMetadata } from './metadata.js';
+export { normalizeVideoMetadata } from './metadataSchema.js';
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';

@@ -1,4 +1,4 @@
-import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadata.js';
+import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { SELECTORS } from './constants.js';
 
 const splitKeywords = (value = "") => typeof value === 'string'
