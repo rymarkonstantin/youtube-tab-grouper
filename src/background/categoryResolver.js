@@ -1,3 +1,5 @@
+/** @typedef {import('../shared/types.js').Metadata} Metadata */
+
 import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { DEFAULT_SETTINGS } from './constants.js';
 
@@ -73,7 +75,7 @@ export function mapYouTubeCategory(youtubeCategory) {
  * 4) YouTube category mapping
  * 5) fallback ("Other")
  *
- * @param {import('../shared/types.js').Metadata} rawMetadata
+ * @param {Metadata} rawMetadata
  * @param {{
  *  requestedCategory?: string,
  *  aiEnabled?: boolean,

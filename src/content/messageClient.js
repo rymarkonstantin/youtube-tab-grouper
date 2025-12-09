@@ -100,3 +100,6 @@ export function registerMessageHandlers({ getMetadata, isEnabled }) {
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
 }
+/** @typedef {import('../shared/types.js').Metadata} Metadata */
+/** @typedef {import('../shared/types.js').GroupTabResponse} GroupTabResponse */
+/** @typedef {import('../shared/types.js').Settings} Settings */

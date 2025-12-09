@@ -43,6 +43,9 @@ function createMutex() {
 
 const runCategoryExclusive = createMutex();
 
+/**
+ * Load persisted group color/id maps into memory.
+ */
 export async function initializeGroupingState() {
     const { groupColorMap: savedColors, groupIdMap: savedIds } = await loadState();
     Object.assign(groupColorMap, savedColors || {});
@@ -131,6 +134,13 @@ async function recordGroupingStats(category) {
     }
 }
 
+/**
+ * Group a tab under a category, handling color assignment and stats.
+ * @param {chrome.tabs.Tab} tab
+ * @param {string} category
+ * @param {string[]} enabledColors
+ * @returns {Promise<{groupId:number,color:string}>}
+ */
 export async function groupTab(tab, category, enabledColors) {
     return runCategoryExclusive(category, async () => {
         try {
@@ -226,6 +236,10 @@ async function tryCleanupGroup(group, graceMs = 300000) {
     }
 }
 
+/**
+ * Attempt cleanup of empty tab groups after a grace period.
+ * @param {number} [graceMs]
+ */
 export async function autoCleanupEmptyGroups(graceMs = 300000) {
     try {
         const groups = await queryGroups({});
@@ -244,6 +258,10 @@ export async function autoCleanupEmptyGroups(graceMs = 300000) {
     }
 }
 
+/**
+ * Cleanup state when a tab group is removed.
+ * @param {number} groupId
+ */
 export async function handleGroupRemoved(groupId) {
     try {
         clearPendingCleanup(groupId);
@@ -253,6 +271,10 @@ export async function handleGroupRemoved(groupId) {
     }
 }
 
+/**
+ * Update in-memory maps when a group is renamed/color-changed.
+ * @param {chrome.tabGroups.TabGroup} group
+ */
 export async function handleGroupUpdated(group) {
     if (!group || typeof group !== 'object') {
         return;
@@ -274,6 +296,12 @@ export async function handleGroupUpdated(group) {
     }
 }
 
+/**
+ * Return enabled colors from settings with fallback when all disabled.
+ * @param {Settings} settings
+ * @param {string[]} [fallbackColors]
+ * @returns {string[]}
+ */
 export function getEnabledColors(settings, fallbackColors = AVAILABLE_COLORS) {
     let enabledColors = [];
 
