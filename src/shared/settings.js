@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS = {
     allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
     channelCategoryMap: {},
     extensionEnabled: true,
+    debugLogging: false,
     enabledColors: AVAILABLE_COLORS.reduce((obj, color) => {
         obj[color] = true;
         return obj;
@@ -132,6 +133,7 @@ export function withSettingsDefaults(value = {}) {
         ...source,
         autoGroupDelay,
         autoGroupDelayMs: autoGroupDelay,
+        debugLogging: source.debugLogging === true,
         autoCleanupGraceMs,
         version: SETTINGS_VERSION,
         extensionEnabled: source.extensionEnabled !== false,
