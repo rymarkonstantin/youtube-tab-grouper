@@ -6,7 +6,7 @@ export {
     withSettingsDefaults,
     isSettings,
     migrateSettingsV0ToV1
-} from '../shared/settings.js';
+} from '../shared/settings';
 
 export {
     DEFAULT_STATS,
@@ -14,4 +14,4 @@ export {
     withStatsDefaults,
     isStats,
     migrateStatsV0ToV1
-} from '../shared/stats.js';
+} from '../shared/stats';

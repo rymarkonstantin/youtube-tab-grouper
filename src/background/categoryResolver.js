@@ -1,6 +1,6 @@
 /** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
-import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema';
 import { DEFAULT_SETTINGS } from './constants.js';
 
 const FALLBACK_CATEGORY = "Other";

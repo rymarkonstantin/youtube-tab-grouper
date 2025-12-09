@@ -1,5 +1,5 @@
-import { isVideoMetadata, normalizeVideoMetadata } from "./metadataSchema.js";
-import type { Metadata, GroupTabRequest, GroupTabResponse } from "./types.js";
+import { isVideoMetadata, normalizeVideoMetadata } from "./metadataSchema";
+import type { Metadata, GroupTabRequest, GroupTabResponse } from "./types";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

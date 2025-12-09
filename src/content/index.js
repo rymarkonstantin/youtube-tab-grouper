@@ -1,4 +1,4 @@
-import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema';
 import { isEnabled, loadConfig } from './config.js';
 import { cancelAutoGroup, startAutoGroup } from './autoGroup.js';
 import { removeGroupButton, renderGroupButton } from './dom.js';

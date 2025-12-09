@@ -1,7 +1,7 @@
 import {
     getStats,
     resetStats
-} from '../../src/shared/stats.js';
+} from '../../src/shared/stats';
 
 /**
  * YouTube Tab Grouper - Statistics Page
