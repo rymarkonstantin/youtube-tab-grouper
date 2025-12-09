@@ -5,7 +5,20 @@ import { logError, logWarn, toErrorEnvelope } from './logger.js';
 
 const groupColorMap = {};
 const groupIdMap = {};
-const groupTabCounts = {};
+const pendingCleanup = new Map();
+
+const now = () => Date.now();
+
+function markPendingCleanup(groupId) {
+    if (!pendingCleanup.has(groupId)) {
+        pendingCleanup.set(groupId, now());
+    }
+    return pendingCleanup.get(groupId);
+}
+
+function clearPendingCleanup(groupId) {
+    pendingCleanup.delete(groupId);
+}
 
 function createMutex() {
     const locks = new Map();
@@ -136,7 +149,84 @@ export async function groupTab(tab, category, enabledColors) {
     });
 }
 
-export async function autoCleanupEmptyGroups() {
+async function isGroupActive(group) {
+    try {
+        const [activeTab] = await queryTabs({ active: true, windowId: group.windowId });
+        return activeTab?.groupId === group.id;
+    } catch (error) {
+        logWarn("grouping:isGroupActive check failed; assuming inactive", error?.message || error);
+        return false;
+    }
+}
+
+async function isGroupEmpty(groupId) {
+    const tabs = await queryTabs({ groupId });
+    return tabs.length === 0;
+}
+
+async function removeTabGroup(groupId) {
+    return new Promise((resolve, reject) => {
+        try {
+            chrome.tabGroups.remove(groupId, () => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve();
+                }
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+async function pruneGroupState(groupId) {
+    let mutated = false;
+    for (const [name, id] of Object.entries(groupIdMap)) {
+        if (id === groupId) {
+            delete groupIdMap[name];
+            delete groupColorMap[name];
+            mutated = true;
+        }
+    }
+
+    if (!mutated) return;
+
+    try {
+        await saveState(groupColorMap, groupIdMap);
+    } catch (error) {
+        logWarn("grouping:pruneGroupState failed to persist", error?.message || error);
+    }
+}
+
+async function tryCleanupGroup(group, graceMs = 300000) {
+    try {
+        markPendingCleanup(group.id);
+
+        const elapsed = now() - (pendingCleanup.get(group.id) || 0);
+        if (elapsed < Math.max(0, graceMs)) {
+            return;
+        }
+
+        const [empty, active] = await Promise.all([
+            isGroupEmpty(group.id),
+            isGroupActive(group)
+        ]);
+
+        if (active || !empty) {
+            clearPendingCleanup(group.id);
+            return;
+        }
+
+        await removeTabGroup(group.id);
+        await pruneGroupState(group.id);
+        clearPendingCleanup(group.id);
+    } catch (error) {
+        logWarn("grouping:tryCleanupGroup failed", error?.message || error);
+    }
+}
+
+export async function autoCleanupEmptyGroups(graceMs = 300000) {
     try {
         const groups = await queryGroups({});
 
@@ -144,26 +234,9 @@ export async function autoCleanupEmptyGroups() {
             const tabs = await queryTabs({ groupId: group.id });
 
             if (tabs.length === 0) {
-                if (!groupTabCounts[group.id]) {
-                    groupTabCounts[group.id] = Date.now();
-                }
-                else if (Date.now() - groupTabCounts[group.id] > 300000) {
-                    chrome.tabGroups.remove(group.id, () => {
-                        if (chrome.runtime.lastError) {
-                            logWarn("grouping:autoCleanupEmptyGroups remove failed", chrome.runtime.lastError.message);
-                            return;
-                        }
-                        for (const [name, id] of Object.entries(groupIdMap)) {
-                            if (id === group.id) {
-                                delete groupIdMap[name];
-                                delete groupColorMap[name];
-                            }
-                        }
-                        saveState(groupColorMap, groupIdMap);
-                    });
-                }
+                await tryCleanupGroup(group, graceMs);
             } else {
-                delete groupTabCounts[group.id];
+                clearPendingCleanup(group.id);
             }
         }
     } catch (error) {
@@ -173,13 +246,8 @@ export async function autoCleanupEmptyGroups() {
 
 export async function handleGroupRemoved(groupId) {
     try {
-        for (const [name, id] of Object.entries(groupIdMap)) {
-            if (id === groupId) {
-                delete groupIdMap[name];
-                delete groupColorMap[name];
-            }
-        }
-        await saveState(groupColorMap, groupIdMap);
+        clearPendingCleanup(groupId);
+        await pruneGroupState(groupId);
     } catch (error) {
         logWarn("grouping:handleGroupRemoved failed to persist cleanup", error?.message || error);
     }
@@ -191,6 +259,7 @@ export async function handleGroupUpdated(group) {
     }
 
     try {
+        clearPendingCleanup(group.id);
         for (const [name, id] of Object.entries(groupIdMap)) {
             if (id === group.id && group.title && group.title !== name) {
                 delete groupIdMap[name];
