@@ -63,7 +63,7 @@ const normalizeEnabledColors = (value: unknown): Record<string, boolean> => {
   let enabledCount = 0;
 
   for (const color of AVAILABLE_COLORS) {
-    const raw = (value as Record<string, unknown>)[color];
+    const raw = value[color];
     const enabled = raw === false ? false : true;
     normalized[color] = enabled;
     if (enabled) enabledCount += 1;
@@ -84,7 +84,7 @@ const normalizeCategoryKeywords = (value: unknown): CategoryKeywordsMap => {
 
   const normalized: CategoryKeywordsMap = {};
 
-  const combinedKeys = new Set([
+  const combinedKeys = new Set<string>([
     ...Object.keys(DEFAULT_SETTINGS.categoryKeywords),
     ...Object.keys(value as CategoryKeywordsMap)
   ]);
@@ -116,7 +116,7 @@ const normalizeChannelCategoryMap = (value: unknown): ChannelCategoryMap => {
 };
 
 export function withSettingsDefaults(value: Partial<Settings> = {}): Settings {
-  const source = isObject(value) ? (value as Partial<Settings>) : {};
+  const source = isObject(value) ? value : {};
 
   const rawDelay = Number.isFinite(Number(source.autoGroupDelayMs))
     ? Number(source.autoGroupDelayMs)
@@ -154,7 +154,7 @@ export function withSettingsDefaults(value: Partial<Settings> = {}): Settings {
 
 export function isSettings(value: unknown): value is Settings {
   if (!isObject(value)) return false;
-  const normalized = withSettingsDefaults(value as Partial<Settings>);
+  const normalized = withSettingsDefaults(value);
   return (
     typeof normalized.autoGroupDelay === "number" &&
     Array.isArray(normalized.allowedHashtags) &&
@@ -165,7 +165,7 @@ export function isSettings(value: unknown): value is Settings {
 }
 
 export function migrateSettingsV0ToV1(value: Partial<Settings> = {}): Settings {
-  const source = isObject(value) ? (value as Partial<Settings>) : {};
+  const source = isObject(value) ? value : {};
 
   const migrated = withSettingsDefaults({
     ...source,
@@ -189,10 +189,10 @@ export async function getSettings(defaults: Settings = DEFAULT_SETTINGS): Promis
           resolve(withSettingsDefaults(mergedDefaults));
           return;
         }
-        resolve(withSettingsDefaults(result as Partial<Settings>));
+        resolve(withSettingsDefaults(result));
       });
-    } catch (error: any) {
-      console.warn("settings:getSettings caught error, using defaults:", error?.message || error);
+    } catch (error) {
+      console.warn("settings:getSettings caught error, using defaults:", (error as Error)?.message || error);
       resolve(withSettingsDefaults(mergedDefaults));
     }
   });
@@ -206,8 +206,8 @@ export async function updateSettings(update: SettingsUpdater): Promise<Settings>
   const normalized = withSettingsDefaults(next);
   try {
     await scheduleSyncWrite(normalized);
-  } catch (error: any) {
-    console.warn("settings:updateSettings failed to persist; will retry next session:", error?.message || error);
+  } catch (error) {
+    console.warn("settings:updateSettings failed to persist; will retry next session:", (error as Error)?.message || error);
   }
   return normalized;
 }
@@ -216,8 +216,8 @@ export async function resetSettings(defaults: Settings = DEFAULT_SETTINGS): Prom
   const normalized = withSettingsDefaults(defaults);
   try {
     await scheduleSyncWrite(normalized);
-  } catch (error: any) {
-    console.warn("settings:resetSettings failed to persist; will retry next session:", error?.message || error);
+  } catch (error) {
+    console.warn("settings:resetSettings failed to persist; will retry next session:", (error as Error)?.message || error);
   }
   return normalized;
 }
@@ -228,7 +228,7 @@ export async function resetSettings(defaults: Settings = DEFAULT_SETTINGS): Prom
 const SYNC_WRITE_DEBOUNCE_MS = 150;
 let pendingSyncPayload: Partial<Settings> | null = null;
 let pendingSyncSettings: Settings | null = null;
-let pendingSyncResolvers: Array<{ resolve: (value: Settings | PromiseLike<Settings>) => void; reject: (reason?: unknown) => void }> =
+let pendingSyncResolvers: { resolve: (value: Settings | PromiseLike<Settings>) => void; reject: (reason?: unknown) => void }[] =
   [];
 let pendingSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
