@@ -301,12 +301,12 @@ async function resolveCategory(tab, settings, metadataOverride = {}, requestedCa
         fallbackTitle: tab?.title || ""
     });
 
-    return predictCategory(
-        metadata,
-        settings.aiCategoryDetection,
-        settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
-        settings.channelCategoryMap || {}
-    ) || "Other";
+    return predictCategory(metadata, {
+        requestedCategory,
+        aiEnabled: settings.aiCategoryDetection,
+        categoryKeywords: settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+        channelMap: settings.channelCategoryMap || {}
+    });
 }
 
 function isYouTubeUrl(url = "") {
