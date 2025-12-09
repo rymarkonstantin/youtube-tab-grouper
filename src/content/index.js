@@ -117,7 +117,10 @@ export function startContent() {
         initialize();
     }
 
-    window.addEventListener('unload', cleanup, { once: true });
+    // Some pages (e.g., YouTube) disallow unload handlers by permission policy.
+    // Use pagehide to trigger cleanup when the document is discarded.
+    const onPageHide = () => cleanup();
+    window.addEventListener('pagehide', onPageHide, { once: true });
 }
 
 startContent();
