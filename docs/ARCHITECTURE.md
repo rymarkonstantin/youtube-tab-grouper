@@ -6,7 +6,7 @@ This document explains the system design and how components interact.
 
 ## System Overview
 
-- **Service worker** (`src/background/index.js`): coordinates grouping, color assignment, messaging, and cleanup jobs.
+- **Service worker** (`src/background/index.ts`): coordinates grouping, color assignment, messaging, and cleanup jobs.
 - **Content script** (`src/content/index.js`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
 - **UI pages** (`ui/popup`, `ui/options`, `ui/stats`): popup controls, settings, and stats dashboard.
 - **Storage**: `chrome.storage.sync` for user settings, `chrome.storage.local` for runtime data such as groups, colors, and statistics.
@@ -16,7 +16,7 @@ This document explains the system design and how components interact.
 
 ## Component Breakdown
 
-### 1. Service Worker (`background/index.js`)
+### 1. Service Worker (`background/index.ts` → `dist/background/index.js`)
 - **Purpose**: core orchestration.
 - **Responsibilities**: handle grouping requests, assign colors, predict categories, manage storage, process context menu clicks, and commands.
 - **Key functions**: `groupTab`, `batchGroupAllTabs`, `getColorForGroup`, `predictCategory`, `autoCleanupEmptyGroups`.

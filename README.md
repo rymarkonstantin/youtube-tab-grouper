@@ -78,7 +78,7 @@ Visit the Chrome Web Store and click "Add to Chrome"
 - `npm run lint` – lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
 
 Dist layout mirrors Manifest V3 modules:
-- `dist/background/index.js` – service worker (from `src/background/index.js`)
+- `dist/background/index.js` – service worker (built from `src/background/index.ts`)
 - `dist/content/index.js` – content script (from `src/content/index.js`)
 - `dist/ui/**` – popup/options/stats assets; `.js` bundled, static files copied
 - `dist/images/**` – icons
@@ -291,7 +291,7 @@ youtube-tab-grouper/
  README.md                  # Main documentation
 
  src/                       # Core extension logic
-    background/index.js    # Service worker entry
+    background/index.ts    # Service worker entry
    content/index.js       # Content script entry
 
  ui/                        # User interface
