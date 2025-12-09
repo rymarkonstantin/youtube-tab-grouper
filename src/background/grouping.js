@@ -5,8 +5,30 @@ import { logError, logWarn, toErrorEnvelope } from './logger.js';
 
 const groupColorMap = {};
 const groupIdMap = {};
-const colorAssignmentLock = {};
 const groupTabCounts = {};
+
+function createMutex() {
+    const locks = new Map();
+
+    return async function runExclusive(key, task) {
+        const previous = locks.get(key) || Promise.resolve();
+        let release;
+        const current = new Promise((resolve) => { release = resolve; });
+        locks.set(key, previous.then(() => current));
+
+        await previous;
+        try {
+            return await task();
+        } finally {
+            release();
+            if (locks.get(key) === current) {
+                locks.delete(key);
+            }
+        }
+    };
+}
+
+const runCategoryExclusive = createMutex();
 
 export async function initializeGroupingState() {
     const { groupColorMap: savedColors, groupIdMap: savedIds } = await loadState();
@@ -28,65 +50,90 @@ async function getNeighborColors(tabId, windowId) {
     return new Set(groups.map(g => g?.color).filter(Boolean));
 }
 
-async function getColorForGroup(groupName, tabId, windowId, enabledColors) {
-    if (groupColorMap[groupName]) {
-        return groupColorMap[groupName];
+function pickRandomColor(colors = []) {
+    if (!colors.length) return "";
+    const idx = Math.floor(Math.random() * colors.length);
+    return colors[idx] || "";
+}
+
+async function selectColorForCategory(category, tabId, windowId, enabledColors = []) {
+    if (groupColorMap[category]) {
+        return groupColorMap[category];
     }
 
-    if (colorAssignmentLock[groupName]) {
-        return colorAssignmentLock[groupName];
+    if (!Array.isArray(enabledColors) || enabledColors.length === 0) {
+        throw new Error("No enabled colors available for assignment");
     }
 
-    const assignmentPromise = (async () => {
-        try {
-            const neighborColors = await getNeighborColors(tabId, windowId, enabledColors);
-            const available = enabledColors.filter(c => !neighborColors.has(c));
-            const color = available.length > 0
-                ? available[Math.floor(Math.random() * available.length)]
-                : enabledColors[Math.floor(Math.random() * enabledColors.length)];
+    const neighborColors = await getNeighborColors(tabId, windowId);
+    const available = enabledColors.filter((color) => !neighborColors.has(color));
+    const color = available.length > 0 ? pickRandomColor(available) : pickRandomColor(enabledColors);
 
-            groupColorMap[groupName] = color;
-            return color;
-        } finally {
-            delete colorAssignmentLock[groupName];
-        }
-    })();
+    if (!color) {
+        throw new Error("Unable to assign a color for the category");
+    }
 
-    colorAssignmentLock[groupName] = assignmentPromise;
-    return assignmentPromise;
+    groupColorMap[category] = color;
+    return color;
+}
+
+async function ensureGroupForCategory(tab, category, color) {
+    const groups = await queryGroups({ title: category });
+    const groupInWindow = groups.find(g => g.windowId === tab.windowId);
+
+    let groupId;
+    if (groupInWindow) {
+        groupId = groupInWindow.id;
+        await groupTabs(tab.id, groupId);
+    } else {
+        groupId = await groupTabs(tab.id);
+    }
+
+    await updateTabGroup(groupId, { title: category, color });
+    return { groupId, color };
+}
+
+async function persistGroupingState(category, groupId, color) {
+    groupIdMap[category] = groupId;
+    groupColorMap[category] = color;
+    try {
+        await saveState(groupColorMap, groupIdMap);
+    } catch (error) {
+        const err = new Error(`Failed to persist grouping state: ${error?.message || error}`);
+        err.cause = error;
+        throw err;
+    }
+}
+
+async function recordGroupingStats(category) {
+    const stats = await loadStats(DEFAULT_STATS);
+    stats.totalTabs = (stats.totalTabs || 0) + 1;
+    stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
+    try {
+        await saveStats(stats);
+    } catch (error) {
+        const err = new Error(`Failed to persist grouping stats: ${error?.message || error}`);
+        err.cause = error;
+        throw err;
+    }
 }
 
 export async function groupTab(tab, category, enabledColors) {
-    try {
-        const color = await getColorForGroup(category, tab.id, tab.windowId, enabledColors);
-        const groups = await queryGroups({ title: category });
-        const groupInWindow = groups.find(g => g.windowId === tab.windowId);
+    return runCategoryExclusive(category, async () => {
+        try {
+            const color = await selectColorForCategory(category, tab.id, tab.windowId, enabledColors);
+            const { groupId } = await ensureGroupForCategory(tab, category, color);
 
-        let groupId;
-        if (groupInWindow) {
-            groupId = groupInWindow.id;
-            await groupTabs(tab.id, groupId);
-        } else {
-            groupId = await groupTabs(tab.id);
+            await persistGroupingState(category, groupId, color);
+            await recordGroupingStats(category);
+
+            return { groupId, color };
+        } catch (error) {
+            const wrapped = toErrorEnvelope(error, error?.message || "Failed to group tab");
+            logError("grouping:groupTab failed", wrapped.message);
+            throw wrapped;
         }
-
-        await updateTabGroup(groupId, { title: category, color });
-
-        groupIdMap[category] = groupId;
-        groupColorMap[category] = color;
-        await saveState(groupColorMap, groupIdMap);
-
-        const stats = await loadStats(DEFAULT_STATS);
-        stats.totalTabs = (stats.totalTabs || 0) + 1;
-        stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
-        await saveStats(stats);
-
-        return { groupId, color };
-    } catch (error) {
-        const wrapped = toErrorEnvelope(error, "Failed to group tab");
-        logError("grouping:groupTab failed", wrapped.message);
-        throw wrapped;
-    }
+    });
 }
 
 export async function autoCleanupEmptyGroups() {
