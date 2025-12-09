@@ -88,6 +88,7 @@ Refer to `src/shared/messages.js` and `docs/MESSAGES.md` for the full message ca
 - Defaults: `src/background/constants.js#DEFAULT_SETTINGS` (mirrored in `src/content.js` and `ui/options/options.js`).
 - Persisted fields:
   - `autoGroupDelay` (number, ms) default `2500`.
+  - `autoCleanupGraceMs` (number, ms) default `300000` (delay before removing empty groups).
   - `allowedHashtags` (string[]) default `['tech','music','gaming','cooking','sports','education','news']`.
   - `channelCategoryMap` (record<channel, category>) default `{}`.
   - `extensionEnabled` (boolean) default `true`.

@@ -94,7 +94,7 @@ setInterval(() => {
     loadSettings()
         .then((settings) => {
             if (settings.autoCleanupEnabled) {
-                autoCleanupEmptyGroups();
+                autoCleanupEmptyGroups(settings.autoCleanupGraceMs);
             }
         })
         .catch((error) => console.error("Auto cleanup check failed:", error));

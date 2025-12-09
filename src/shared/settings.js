@@ -19,6 +19,7 @@ export const CATEGORY_KEYWORDS = {
 export const DEFAULT_SETTINGS = {
     autoGroupDelay: 2500,
     autoGroupDelayMs: 2500, // legacy alias support
+    autoCleanupGraceMs: 300000,
     allowedHashtags: ['tech', 'music', 'gaming', 'cooking', 'sports', 'education', 'news'],
     channelCategoryMap: {},
     extensionEnabled: true,
@@ -114,11 +115,20 @@ export function withSettingsDefaults(value = {}) {
         ? Math.max(0, rawDelay)
         : DEFAULT_SETTINGS.autoGroupDelay;
 
+    const rawCleanupGrace = Number.isFinite(Number(source.autoCleanupGraceMs))
+        ? Number(source.autoCleanupGraceMs)
+        : DEFAULT_SETTINGS.autoCleanupGraceMs;
+
+    const autoCleanupGraceMs = rawCleanupGrace >= 0
+        ? rawCleanupGrace
+        : DEFAULT_SETTINGS.autoCleanupGraceMs;
+
     return {
         ...DEFAULT_SETTINGS,
         ...source,
         autoGroupDelay,
         autoGroupDelayMs: autoGroupDelay,
+        autoCleanupGraceMs,
         version: SETTINGS_VERSION,
         extensionEnabled: source.extensionEnabled !== false,
         aiCategoryDetection: source.aiCategoryDetection !== false,
@@ -214,6 +224,7 @@ function sanitizeSettingsPayload(settings) {
         version: settings.version ?? SETTINGS_VERSION,
         autoGroupDelay: settings.autoGroupDelay,
         autoGroupDelayMs: settings.autoGroupDelay,
+        autoCleanupGraceMs: settings.autoCleanupGraceMs,
         allowedHashtags: settings.allowedHashtags || [],
         channelCategoryMap: settings.channelCategoryMap || {},
         extensionEnabled: settings.extensionEnabled !== false,
