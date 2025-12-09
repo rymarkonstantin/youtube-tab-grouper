@@ -1,4 +1,4 @@
-# 📺 YouTube Tab Grouper
+# YouTube Tab Grouper
 
 A powerful Chrome extension that intelligently organizes your YouTube tabs by automatically grouping them into categories with smart color assignment and AI-powered detection.
 
@@ -8,45 +8,45 @@ A powerful Chrome extension that intelligently organizes your YouTube tabs by au
 
 ---
 
-## ✨ Features
+## Features
 
-### 🤖 AI-Powered Category Detection
+### AI-Powered Category Detection
 - Automatically detects video categories using keyword matching
 - Supports 8 pre-defined categories: Gaming, Music, Tech, Cooking, Fitness, Education, News, Entertainment
 - Falls back to channel name or title if no category detected
 
-### 🎨 Smart Color Assignment
+### Smart Color Assignment
 - Automatically assigns unique colors to avoid visual clutter
 - Intelligently avoids using colors already in use by neighbor groups
 - 8 beautiful colors to choose from
 - User can enable/disable specific colors
 
-### ⌨️ Keyboard Shortcuts
+### Keyboard Shortcuts
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Shift+G` (Cmd+Shift+G on Mac) | Group current tab |
 | `Ctrl+Shift+B` (Cmd+Shift+B on Mac) | Batch group all YouTube tabs |
 | `Ctrl+Shift+T` (Cmd+Shift+T on Mac) | Toggle extension on/off |
 
-### 🎯 Multiple Grouping Methods
+### Multiple Grouping Methods
 - **Manual**: Click "Group" button or use keyboard shortcut
 - **Auto**: Groups tabs automatically after configurable delay
 - **Batch**: Group all YouTube tabs in one click
 - **Context Menu**: Right-click on tabs to group
 
-### 📊 Statistics & Analytics
+### Statistics & Analytics
 - Track total grouped tabs
 - View breakdown by category
 - See most used categories
 - Export/import statistics
 
-### ⚙️ Advanced Configuration
+### Advanced Configuration
 - **Channel Mapping**: Map specific YouTube channels to categories
 - **Hashtag Whitelist**: Define which hashtags trigger grouping
 - **Auto Cleanup**: Automatically remove empty groups
 - **Import/Export Settings**: Backup and restore configurations
 
-### 🔧 Customization
+### Customization
 - Enable/disable specific colors
 - Adjust auto-group delay (0-10 seconds)
 - Toggle AI detection on/off
@@ -54,7 +54,7 @@ A powerful Chrome extension that intelligently organizes your YouTube tabs by au
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### From Chrome Web Store (Coming Soon)
 Visit the Chrome Web Store and click "Add to Chrome"
@@ -66,16 +66,16 @@ Visit the Chrome Web Store and click "Add to Chrome"
 3. Enable **Developer mode** (top-right corner)
 4. Click **"Load unpacked"**
 5. Select the extension folder
-6. ✅ Extension is now installed!
+6.  Extension is now installed!
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic Usage
 
 1. **Open any YouTube video**
-   - You'll see a blue "📌 Group" button in the top-left corner
+   - You'll see a blue " Group" button in the top-left corner
 
 2. **Group the tab**
    - Click the button
@@ -102,17 +102,17 @@ Group all YouTube tabs at once:
 
 ---
 
-## ⚙️ Settings & Configuration
+## Settings & Configuration
 
-Open settings by clicking the ⚙️ icon in the extension popup or from the Chrome menu.
+Open settings by clicking the  icon in the extension popup or from the Chrome menu.
 
 ### General Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| **Extension Enabled** | Turn the extension on/off | ✅ On |
-| **AI Category Detection** | Auto-detect categories using keywords | ✅ On |
-| **Auto Cleanup Empty Groups** | Remove empty groups after 5 min | ✅ On |
+| **Extension Enabled** | Turn the extension on/off |  On |
+| **AI Category Detection** | Auto-detect categories using keywords |  On |
+| **Auto Cleanup Empty Groups** | Remove empty groups after 5 min |  On |
 | **Auto-Group Delay** | Seconds before auto-grouping (0=off) | 2.5s |
 
 ### Color Preferences
@@ -134,9 +134,9 @@ Videos with these hashtags in the title/description will be auto-grouped.
 
 Map specific YouTube channels to categories:
 ```
-MKBHD → Tech
-Gordon Ramsay → Cooking
-PewDiePie → Gaming
+MKBHD  Tech
+Gordon Ramsay  Cooking
+PewDiePie  Gaming
 ```
 
 When you watch videos from these channels, they'll be automatically grouped into the mapped category.
@@ -144,19 +144,19 @@ When you watch videos from these channels, they'll be automatically grouped into
 ### Import/Export Settings
 
 **Export**: Download your settings as a JSON file for backup
-- Click "⬇️ Export Settings"
+- Click "Export Settings""
 - Save the file to your computer
 
 **Import**: Restore settings from a backup file
-- Click "⬆️ Import Settings"
+- Click "Import Settings""
 - Select a previously exported JSON file
 
 ---
 
-## 📊 Statistics Dashboard
+## Statistics Dashboard
 
 View grouping statistics by opening the stats page:
-- Click "📊 Stats" in the popup
+- Click " Stats" in the popup
 - See total grouped tabs
 - View category breakdown in a chart
 - Track which categories you use most
@@ -165,7 +165,7 @@ Stats are automatically tracked and can be reset at any time.
 
 ---
 
-## 🎯 Category Detection
+## Category Detection
 
 The extension detects categories in priority order:
 
@@ -197,7 +197,7 @@ If nothing matches, groups as "Other".
 
 ---
 
-## 🎨 Color Assignment Algorithm
+## Color Assignment Algorithm
 
 The extension intelligently selects colors to avoid visual clutter:
 
@@ -211,7 +211,7 @@ This ensures tab groups remain visually distinct and organized.
 
 ---
 
-## 🔄 Auto-Cleanup Feature
+## Auto-Cleanup Feature
 
 Empty groups are automatically cleaned up:
 
@@ -224,7 +224,7 @@ Empty groups are automatically cleaned up:
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Extension not grouping tabs
 
@@ -261,54 +261,54 @@ Empty groups are automatically cleaned up:
 **Problem**: Settings reset after restart
 
 **Solutions**:
-- Make sure you click "✓ Save Settings"
+- Make sure you click "Save Settings""
 - Check browser's sync settings (chrome://settings/syncSetup)
 - Try exporting and re-importing settings
 - Clear browser cache and reload
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 youtube-tab-grouper/
-├── manifest.json              # Extension configuration
-├── README.md                  # Main documentation
-│
-├── src/                       # Core extension logic
-│   ├── background/index.js    # Service worker entry
-│   └── content.js             # Content script
-│
-├── ui/                        # User interface
-│   ├── popup/
-│   │   ├── popup.html
-│   │   ├── popup.js
-│   │   └── popup.css
-│   ├── options/
-│   │   ├── options.html
-│   │   ├── options.js
-│   │   └── options.css
-│   ├── stats/
-│   │   ├── stats.html
-│   │   ├── stats.js
-│   │   └── stats.css
-│   └── styles/
-│       └── common.css
-│
-├── images/                    # Extension icons
-│   ├── icon-16.png
-│   ├── icon-48.png
-│   └── icon-128.png
-│
-└── docs/                      # Developer documentation
-    ├── CONTRIBUTING.md
-    ├── ARCHITECTURE.md
-    └── CHANGELOG.md
+ manifest.json              # Extension configuration
+ README.md                  # Main documentation
+
+ src/                       # Core extension logic
+    background/index.js    # Service worker entry
+    content.js             # Content script
+
+ ui/                        # User interface
+    popup/
+       popup.html
+       popup.js
+       popup.css
+    options/
+       options.html
+       options.js
+       options.css
+    stats/
+       stats.html
+       stats.js
+       stats.css
+    styles/
+        common.css
+
+ images/                    # Extension icons
+    icon-16.png
+    icon-48.png
+    icon-128.png
+
+ docs/                      # Developer documentation
+     CONTRIBUTING.md
+     ARCHITECTURE.md
+     CHANGELOG.md
 ```
 
 ---
 
-## 🔐 Privacy & Security
+## Privacy & Security
 
 - **No data collection**: Extension doesn't track you
 - **No remote calls**: All processing done locally
@@ -326,19 +326,19 @@ youtube-tab-grouper/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Found a bug or have a feature request? Check [CONTRIBUTING.md](docs/CONTRIBUTING.md)
 
 ---
 
-## 📄 License
+## License
 
 MIT License - Feel free to use, modify, and distribute
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - [Contributing Guide](docs/CONTRIBUTING.md) - How to contribute
 - [Architecture](docs/ARCHITECTURE.md) - System design
@@ -347,7 +347,7 @@ MIT License - Feel free to use, modify, and distribute
 
 ---
 
-## 📞 Support
+## Support
 
 Need help? Try:
 1. Check **Troubleshooting** section above
@@ -356,7 +356,7 @@ Need help? Try:
 
 ---
 
-## 🚀 Roadmap
+## Roadmap
 
 Planned features:
 - [ ] Sync groups across devices
@@ -368,7 +368,7 @@ Planned features:
 
 ---
 
-## 📈 Performance
+## Performance
 
 - **Memory**: < 5MB
 - **CPU**: Negligible
@@ -377,4 +377,4 @@ Planned features:
 
 ---
 
-Made with 🎬 for YouTube lovers | v2.0
+Made with  for YouTube lovers | v2.0

@@ -23,7 +23,7 @@ resetStatsBtn.addEventListener('click', async () => {
 
     await resetStats();
     await loadAndDisplayStats();
-    alert('ƒo. Statistics reset');
+    alert('Statistics reset');
 });
 
 backBtn.addEventListener('click', () => window.close());
@@ -50,7 +50,7 @@ async function loadAndDisplayStats() {
         displayChart(stats.categoryCount || {});
     } catch (error) {
         console.error('Error loading stats:', error);
-        alert('ƒ?O Failed to load statistics');
+        alert('Failed to load statistics');
     }
 }
 

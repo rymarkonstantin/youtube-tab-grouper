@@ -92,7 +92,7 @@ async function initializeSettings() {
  */
 function displayColorToggles(enabledColors) {
     if (!colorTogglesContainer) {
-        console.warn("⚠️ colorTogglesContainer not found");
+        console.warn(" colorTogglesContainer not found");
         return;
     }
 
@@ -135,11 +135,11 @@ function getEnabledColorsFromUI() {
 
 /**
  * Display category keywords editor
- * ✅ NEW: Allows users to customize keywords
+ *  NEW: Allows users to customize keywords
  */
 function displayCategoryKeywords(categoryKeywords) {
     if (!keywordsEditorContainer) {
-        console.warn("⚠️ keywordsEditorContainer not found");
+        console.warn(" keywordsEditorContainer not found");
         return;
     }
 
@@ -191,7 +191,7 @@ function getCategoryKeywordsFromUI() {
  */
 function displayChannelMappings(channelMap) {
     if (!channelMappingsContainer) {
-        console.warn("⚠️ channelMappingsContainer not found");
+        console.warn(" channelMappingsContainer not found");
         return;
     }
 
@@ -230,7 +230,7 @@ function createMappingElement(channel, category) {
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-delete';
-    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.innerHTML = '';
     deleteBtn.title = 'Delete';
     deleteBtn.type = 'button';
     deleteBtn.addEventListener('click', () => div.remove());
@@ -274,7 +274,7 @@ function getChannelMappingsFromUI() {
 
 /**
  * Save all settings
- * ✅ FIX: Now includes categoryKeywords
+ *  FIX: Now includes categoryKeywords
  */
 async function handleSaveSettings() {
     try {
@@ -295,12 +295,12 @@ async function handleSaveSettings() {
         };
 
         await saveSettings(settings);
-        showStatus('✅ Settings saved successfully!', 'success');
-        console.log('📊 Saved settings:', settings);
+        showStatus(' Settings saved successfully!', 'success');
+        console.log(' Saved settings:', settings);
 
     } catch (error) {
-        console.error('❌ Error saving settings:', error);
-        showStatus('❌ Failed to save settings', 'error');
+        console.error(' Error saving settings:', error);
+        showStatus(' Failed to save settings', 'error');
     } finally {
         saveBtn.disabled = false;
     }
@@ -310,7 +310,7 @@ async function handleSaveSettings() {
  * Reset all settings to defaults
  */
 async function handleResetSettings() {
-    if (!confirm('⚠️ Are you sure you want to reset all settings to defaults?\n\nThis cannot be undone.')) {
+    if (!confirm(' Are you sure you want to reset all settings to defaults?\n\nThis cannot be undone.')) {
         return;
     }
 
@@ -322,12 +322,12 @@ async function handleResetSettings() {
         // Reload UI with defaults
         await initializeSettings();
 
-        showStatus('✅ Settings reset to defaults', 'success');
-        console.log('🔄 Reset to defaults');
+        showStatus(' Settings reset to defaults', 'success');
+        console.log(' Reset to defaults');
 
     } catch (error) {
-        console.error('❌ Error resetting settings:', error);
-        showStatus('❌ Failed to reset settings', 'error');
+        console.error(' Error resetting settings:', error);
+        showStatus(' Failed to reset settings', 'error');
     } finally {
         resetBtn.disabled = false;
     }
@@ -355,10 +355,10 @@ async function handleExportSettings() {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        showStatus('✅ Settings exported', 'success');
+        showStatus(' Settings exported', 'success');
     } catch (error) {
-        console.error('❌ Export error:', error);
-        showStatus('❌ Failed to export settings', 'error');
+        console.error(' Export error:', error);
+        showStatus(' Failed to export settings', 'error');
     }
 }
 
@@ -389,11 +389,11 @@ async function handleImportSettings() {
             await saveSettings(settings);
             await initializeSettings();
 
-            showStatus('✅ Settings imported successfully', 'success');
-            console.log('📥 Imported settings');
+            showStatus(' Settings imported successfully', 'success');
+            console.log(' Imported settings');
         } catch (error) {
-            console.error('❌ Import error:', error);
-            showStatus('❌ Failed to import settings', 'error');
+            console.error(' Import error:', error);
+            showStatus(' Failed to import settings', 'error');
         }
     });
 
@@ -409,7 +409,7 @@ async function handleImportSettings() {
  */
 function showStatus(message, type = 'info') {
     if (!statusEl) {
-        console.warn("⚠️ statusEl not found");
+        console.warn(" statusEl not found");
         return;
     }
 
