@@ -79,7 +79,7 @@ async function getNeighborColors(tabId: number, windowId: number): Promise<Set<s
   if (groupIds.length === 0) return new Set();
 
   const groups = await Promise.all(groupIds.map((gid) => getTabGroup(gid)));
-  return new Set(groups.map((g) => g?.color).filter((color): color is string => Boolean(color)));
+  return new Set(groups.map((g) => g?.color).filter(isGroupColor));
 }
 
 function pickRandomColor(colors: string[] = []) {
@@ -87,6 +87,9 @@ function pickRandomColor(colors: string[] = []) {
   const idx = Math.floor(Math.random() * colors.length);
   return colors[idx] || "";
 }
+
+const isGroupColor = (value: unknown): value is chrome.tabGroups.ColorEnum =>
+  typeof value === "string" && (AVAILABLE_COLORS as readonly string[]).includes(value);
 
 async function selectColorForCategory(
   category: string,
@@ -133,7 +136,8 @@ async function ensureGroupForCategory(tab: chrome.tabs.Tab, category: string, co
     groupId = await groupTabs(tab.id);
   }
 
-  await updateTabGroup(groupId, { title: category, color });
+  const groupColor: chrome.tabGroups.ColorEnum = color as chrome.tabGroups.ColorEnum;
+  await updateTabGroup(groupId, { title: category, color: groupColor });
   return { groupId, color };
 }
 
