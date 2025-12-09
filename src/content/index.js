@@ -9,8 +9,17 @@ const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled"
 
 export function startContent() {
     let config = null;
+    let lastGroupedMetadataHash = null;
 
     const getNormalizedMetadata = () => normalizeVideoMetadata(extractVideoMetadata());
+    const computeMetadataHash = (metadata) => {
+        try {
+            return JSON.stringify(metadata);
+        } catch (error) {
+            console.warn("Failed to compute metadata hash:", error?.message || error);
+            return null;
+        }
+    };
 
     const requestGroupTab = async (category, metadata) => {
         if (!isEnabled(config)) {
@@ -25,10 +34,12 @@ export function startContent() {
     };
 
     const handleManualGroup = async () => {
-        const metadata = extractVideoMetadata();
+        const metadata = getNormalizedMetadata();
+        const metadataHash = computeMetadataHash(metadata);
         const response = await requestGroupTab("", metadata);
         if (response?.success) {
             removeGroupButton();
+            lastGroupedMetadataHash = metadataHash;
             console.log(`Tab grouped as "${response.category}"`);
         } else if (response?.error) {
             console.warn("Manual grouping failed:", response.error);
@@ -51,15 +62,23 @@ export function startContent() {
         return renderGroupButton({ onClick: handleManualGroup });
     };
 
-    const triggerAutoGroup = () => requestGroupTab("", extractVideoMetadata())
-        .then((response) => {
-            if (response?.success) {
-                removeGroupButton();
-                console.log(`Auto-grouped as "${response.category}"`);
-            } else if (response?.error) {
-                console.warn("Auto-group failed:", response.error);
-            }
-        });
+    const triggerAutoGroup = async () => {
+        const metadata = getNormalizedMetadata();
+        const metadataHash = computeMetadataHash(metadata);
+
+        if (metadataHash && metadataHash === lastGroupedMetadataHash) {
+            return;
+        }
+
+        const response = await requestGroupTab("", metadata);
+        if (response?.success) {
+            removeGroupButton();
+            lastGroupedMetadataHash = metadataHash;
+            console.log(`Auto-grouped as "${response.category}"`);
+        } else if (response?.error) {
+            console.warn("Auto-group failed:", response.error);
+        }
+    };
 
     const initialize = async () => {
         try {
