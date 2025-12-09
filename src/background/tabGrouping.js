@@ -128,9 +128,7 @@ async function recordGroupingStats(category) {
     try {
         await saveStats(stats);
     } catch (error) {
-        const err = new Error(`Failed to persist grouping stats: ${error?.message || error}`);
-        err.cause = error;
-        throw err;
+        logWarn("grouping:recordGroupingStats failed to persist stats", error?.message || error);
     }
 }
 
