@@ -27,7 +27,7 @@ const normalizeCategoryCount = (value: unknown): Record<string, number> => {
 };
 
 export function withStatsDefaults(value: Partial<GroupingStats> = {}): GroupingStats {
-  const source = isObject(value) ? (value as Partial<GroupingStats>) : {};
+  const source = isObject(value) ? value : {};
   const totalTabs =
     Number.isFinite(Number(source.totalTabs)) && Number(source.totalTabs) >= 0
       ? Math.floor(Number(source.totalTabs))
@@ -54,7 +54,7 @@ export function withStatsDefaults(value: Partial<GroupingStats> = {}): GroupingS
 
 export function isStats(value: unknown): value is GroupingStats {
   if (!isObject(value)) return false;
-  const normalized = withStatsDefaults(value as Partial<GroupingStats>);
+  const normalized = withStatsDefaults(value);
   return (
     typeof normalized.totalTabs === "number" &&
     typeof normalized.sessionsToday === "number" &&
@@ -64,8 +64,10 @@ export function isStats(value: unknown): value is GroupingStats {
 }
 
 export function migrateStatsV0ToV1(value: Partial<GroupingStats> = {}): GroupingStats {
-  const source = isObject(value) ? (value as Partial<GroupingStats>) : {};
-  const candidate = isObject((source as any).groupingStats) ? (source as any).groupingStats : source;
+  const source = isObject(value) ? value : {};
+  const candidate = isObject((source as { groupingStats?: Partial<GroupingStats> }).groupingStats)
+    ? (source as { groupingStats?: Partial<GroupingStats> }).groupingStats
+    : source;
   const migrated = withStatsDefaults(candidate);
   return {
     ...migrated,
@@ -83,10 +85,11 @@ export async function getStats(defaults: GroupingStats = DEFAULT_STATS): Promise
           resolve(withStatsDefaults(mergedDefaults));
           return;
         }
-        resolve(withStatsDefaults((result as any).groupingStats));
+        const payload = (result as { groupingStats?: Partial<GroupingStats> }).groupingStats;
+        resolve(withStatsDefaults(payload));
       });
-    } catch (error: any) {
-      console.warn("stats:getStats caught error, using defaults:", error?.message || error);
+    } catch (error) {
+      console.warn("stats:getStats caught error, using defaults:", (error as Error)?.message || error);
       resolve(withStatsDefaults(mergedDefaults));
     }
   });
@@ -112,8 +115,8 @@ export async function updateStats(
           resolve(normalized);
         }
       });
-    } catch (error: any) {
-      console.warn("stats:updateStats caught error; will retry next session:", error?.message || error);
+    } catch (error) {
+      console.warn("stats:updateStats caught error; will retry next session:", (error as Error)?.message || error);
       resolve(normalized);
     }
   });
@@ -130,8 +133,8 @@ export async function resetStats(defaults: GroupingStats = DEFAULT_STATS): Promi
           resolve(normalized);
         }
       });
-    } catch (error: any) {
-      console.warn("stats:resetStats caught error; will retry next session:", error?.message || error);
+    } catch (error) {
+      console.warn("stats:resetStats caught error; will retry next session:", (error as Error)?.message || error);
       resolve(normalized);
     }
   });

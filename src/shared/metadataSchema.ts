@@ -53,7 +53,7 @@ export function normalizeVideoMetadata(
   metadata: Partial<Metadata> = {},
   { fallbackTitle = "" }: { fallbackTitle?: string } = {}
 ): Metadata {
-  const source = isObject(metadata) ? (metadata as Partial<Metadata>) : {};
+  const source = isObject(metadata) ? metadata : {};
   return {
     title: toTrimmedString(source.title) || toTrimmedString(fallbackTitle),
     channel: toTrimmedString(source.channel),
