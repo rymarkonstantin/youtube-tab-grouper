@@ -1,6 +1,6 @@
 # Message Catalog
 
-Canonical reference for runtime messages exchanged between the popup, content script, and background service worker. Code-level types and helpers live in `src/shared/messageContracts.js` (envelopes/validation) and `src/shared/metadataSchema.js` (metadata normalization utilities).
+Canonical reference for runtime messages exchanged between the popup, content script, and background service worker. Code-level types and helpers live in `src/shared/messageContracts.ts` (envelopes/validation) and `src/shared/metadataSchema.js` (metadata normalization utilities).
 
 ## Envelope
 
@@ -20,7 +20,7 @@ Helpers attach these automatically and enforce version matching.
 | `isTabGrouped` | Any → Background | `{ action }` | `{ grouped, error? }` | Returns a simple grouped flag; no `success` field. |
 | `getVideoMetadata` | Background → Content | `{ action }` | `{ title, channel, description, keywords[], youtubeCategory? }` | Sent from the background to pull structured metadata from the page. |
 
-## Shared Helpers (`src/shared/messageContracts.js`)
+## Shared Helpers (`src/shared/messageContracts.ts`)
 
 - `MESSAGE_ACTIONS`: frozen set of action string constants used across the extension.
 - `MESSAGE_CATALOG`: human-readable descriptions of each request/response pair.
@@ -38,7 +38,7 @@ import {
   validateRequest,
   buildGroupTabResponse,
   buildValidationErrorResponse
-} from '../shared/messageContracts.js';
+} from '../shared/messageContracts.ts';
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === MESSAGE_ACTIONS.GROUP_TAB) {

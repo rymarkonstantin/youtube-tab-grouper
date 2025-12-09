@@ -175,7 +175,7 @@ export function migrateSettingsV0ToV1(value = {}) {
 
 export async function getSettings(defaults = DEFAULT_SETTINGS) {
     const mergedDefaults = withSettingsDefaults(defaults);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
             chrome.storage.sync.get(mergedDefaults, (result) => {
                 if (chrome.runtime.lastError) {

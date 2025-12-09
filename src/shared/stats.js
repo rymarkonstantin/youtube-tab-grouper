@@ -70,7 +70,7 @@ export function migrateStatsV0ToV1(value = {}) {
 
 export async function getStats(defaults = DEFAULT_STATS) {
     const mergedDefaults = withStatsDefaults(defaults);
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
             chrome.storage.local.get({ groupingStats: mergedDefaults }, (result) => {
                 if (chrome.runtime.lastError) {
