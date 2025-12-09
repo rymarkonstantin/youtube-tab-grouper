@@ -167,7 +167,7 @@ git push origin feature/your-feature-name
 ## 🔍 Key Files to Know
 
 - **src/background/index.js**: Main grouping logic, color assignment, messaging
-- **src/content.js**: Page injection, UI button, auto-grouping
+- **src/content/index.js**: Page injection, UI button, auto-grouping
 - **ui/popup/popup.js**: Popup interactions
 - **ui/options/options.js**: Settings management
 - **ui/stats/stats.js**: Statistics tracking

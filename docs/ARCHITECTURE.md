@@ -7,7 +7,7 @@ This document explains the system design and how components interact.
 ## System Overview
 
 - **Service worker** (`src/background/index.js`): coordinates grouping, color assignment, messaging, and cleanup jobs.
-- **Content script** (`src/content.js`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
+- **Content script** (`src/content/index.js`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
 - **UI pages** (`ui/popup`, `ui/options`, `ui/stats`): popup controls, settings, and stats dashboard.
 - **Storage**: `chrome.storage.sync` for user settings, `chrome.storage.local` for runtime data such as groups, colors, and statistics.
 - **Chrome features**: uses `tabs`, `tabGroups`, `storage`, `contextMenus`, and keyboard `commands`.
@@ -22,7 +22,7 @@ This document explains the system design and how components interact.
 - **Key functions**: `groupTab`, `batchGroupAllTabs`, `getColorForGroup`, `predictCategory`, `autoCleanupEmptyGroups`.
 - **Storage**: reads/writes settings, group color map, group IDs, and statistics.
 
-### 2. Content Script (`content.js`)
+### 2. Content Script (`content/index.js`)
 - **Purpose**: page integration on YouTube.
 - **Responsibilities**: build the floating "Group" button, extract video metadata (title, channel, description, keywords), trigger auto-group after delay, and communicate with the service worker.
 - **Key functions**: `getVideoData`, `extractVideoMetadata`, `createUI`, `initialize`.
@@ -85,7 +85,7 @@ Refer to `src/shared/messageContracts.js` and `docs/MESSAGES.md` for the full me
 
 ### SettingsV1 (`chrome.storage.sync`)
 - Purpose: user preferences shared across devices.
-- Defaults: `src/background/constants.js#DEFAULT_SETTINGS` (mirrored in `src/content.js` and `ui/options/options.js`).
+- Defaults: `src/background/constants.js#DEFAULT_SETTINGS` (mirrored in `src/content/index.js` and `ui/options/options.js`).
 - Persisted fields:
   - `autoGroupDelay` (number, ms) default `2500`.
   - `autoCleanupGraceMs` (number, ms) default `300000` (delay before removing empty groups).

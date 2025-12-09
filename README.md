@@ -277,7 +277,7 @@ youtube-tab-grouper/
 
  src/                       # Core extension logic
     background/index.js    # Service worker entry
-    content.js             # Content script
+   content/index.js       # Content script entry
 
  ui/                        # User interface
     popup/

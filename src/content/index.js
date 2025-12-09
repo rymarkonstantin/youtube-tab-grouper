@@ -100,3 +100,5 @@ export function startContent() {
 
     window.addEventListener('unload', cleanup, { once: true });
 }
+
+startContent();
