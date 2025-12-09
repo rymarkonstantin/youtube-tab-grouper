@@ -20,7 +20,7 @@
   },
   
   "background": {
-    "service_worker": "src/background/index.js",
+    "service_worker": "background/index.js",
     "type": "module"
   },
   
@@ -39,9 +39,8 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["src/content/index.js"],
-      "css": ["ui/styles/common.css"],
-      "type": "module"
+      "js": ["content/index.js"],
+      "css": ["ui/styles/common.css"]
     }
   ],
   

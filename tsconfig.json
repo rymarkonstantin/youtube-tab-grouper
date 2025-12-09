@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": ["chrome", "node"],
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "include": [
+    "src",
+    "ui",
+    "scripts",
+    "manifest.json",
+    "types"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

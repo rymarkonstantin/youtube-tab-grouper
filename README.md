@@ -62,11 +62,26 @@ Visit the Chrome Web Store and click "Add to Chrome"
 ### Manual Installation (Developer Mode)
 
 1. Download or clone this repository
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable **Developer mode** (top-right corner)
-4. Click **"Load unpacked"**
-5. Select the extension folder
-6.  Extension is now installed!
+2. Install dependencies: `npm install` (requires Node 18+)
+3. Build the extension: `npm run build` (or `npm run build:watch` while developing) – output is written to `dist/`
+4. Open Chrome and go to `chrome://extensions/`
+5. Enable **Developer mode** (top-right corner)
+6. Click **"Load unpacked"**
+7. Select the `dist` folder
+8. Extension is now installed!
+
+#### Development scripts
+
+- `npm run build` – bundle background, content, and UI scripts to `dist/`
+- `npm run build:watch` – rebuild on change for fast iteration
+- `npm run typecheck` – run `tsc --noEmit` (JS allowed while migrating)
+- `npm run lint` – lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
+
+Dist layout mirrors Manifest V3 modules:
+- `dist/background/index.js` – service worker (from `src/background/index.js`)
+- `dist/content/index.js` – content script (from `src/content/index.js`)
+- `dist/ui/**` – popup/options/stats assets; `.js` bundled, static files copied
+- `dist/images/**` – icons
 
 ---
 
