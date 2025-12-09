@@ -52,7 +52,7 @@ type RouteHandler = (
   msg: Record<string, unknown>,
   sender: chrome.runtime.MessageSender,
   settings?: Settings
-) => Promise<Record<string, unknown>>;
+) => Promise<unknown>;
 
 interface RouteConfig {
   requiresEnabled: boolean;
@@ -106,8 +106,8 @@ chrome.commands.onCommand.addListener((command) => {
   void handleCommand(command);
 });
 
-chrome.tabGroups.onRemoved.addListener((groupId) => {
-  void handleGroupRemoved(groupId);
+chrome.tabGroups.onRemoved.addListener((group) => {
+  void handleGroupRemoved(group.id);
 });
 
 chrome.tabGroups.onUpdated.addListener((group) => {
@@ -250,7 +250,7 @@ async function handleBatchGroupMessage(_msg: unknown, _sender: chrome.runtime.Me
 async function handleGetSettingsMessage() {
   try {
     const settings = await loadSettings();
-    return buildSettingsResponse(settings);
+    return buildSettingsResponse({ ...settings });
   } catch (error) {
     return buildErrorResponse((error as Error)?.message || "Failed to load settings");
   }
