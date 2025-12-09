@@ -43,6 +43,12 @@ function buildVersionError(expected, received, requestId) {
     return withEnvelope(buildErrorResponse(message, { expectedVersion: expected }), requestId || generateRequestId("resp"));
 }
 
+/**
+ * Wrap chrome.runtime.onMessage handling with validation + envelopes.
+ * @param {Record<string, Function>} handlers
+ * @param {HandleMessageOptions} [options]
+ * @returns {(msg:any,sender:any,sendResponse:Function)=>boolean}
+ */
 export function handleMessage(handlers = {}, options = {}) {
     const {
         requireVersion = true,
@@ -111,6 +117,13 @@ export function handleMessage(handlers = {}, options = {}) {
     };
 }
 
+/**
+ * Send a message with envelope, validation, and timeout handling.
+ * @param {string} action
+ * @param {object} payload
+ * @param {SendMessageOptions} [options]
+ * @returns {Promise<any>}
+ */
 export function sendMessageSafe(action, payload = {}, options = {}) {
     const {
         tabId,

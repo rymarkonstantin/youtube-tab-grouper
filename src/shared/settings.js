@@ -1,3 +1,5 @@
+/** @typedef {import('./types.js').Settings} Settings */
+
 export const SETTINGS_VERSION = 1;
 
 export const AVAILABLE_COLORS = [

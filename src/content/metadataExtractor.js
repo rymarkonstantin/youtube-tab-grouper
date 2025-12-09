@@ -1,3 +1,5 @@
+/** @typedef {import('../shared/types.js').Metadata} Metadata */
+
 import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { SELECTORS } from './constants.js';
 

@@ -1,3 +1,5 @@
+/** @typedef {import('../shared/types.js').Metadata} Metadata */
+
 import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { MESSAGE_ACTIONS } from '../shared/messageContracts.js';
 import { sendMessageSafe } from '../shared/messageTransport.js';
@@ -25,8 +27,8 @@ async function requestContentMetadata(tabId, timeoutMs, fallbackTitle) {
 /**
  * Fetch metadata from content script with retries and merge with fallbacks.
  * @param {number} tabId
- * @param {{ fallbackMetadata?: import('../shared/types.js').Metadata, fallbackTitle?: string }} [options]
- * @returns {Promise<import('../shared/types.js').Metadata>}
+ * @param {{ fallbackMetadata?: Metadata, fallbackTitle?: string }} [options]
+ * @returns {Promise<Metadata>}
  */
 export async function getVideoMetadata(tabId, options = {}) {
     const { fallbackMetadata = {}, fallbackTitle = "" } = options;
