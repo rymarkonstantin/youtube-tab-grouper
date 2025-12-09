@@ -1,6 +1,4 @@
 import {
-    DEFAULT_STATS,
-    withStatsDefaults,
     getStats,
     resetStats
 } from '../../src/shared/stats.js';
@@ -23,10 +21,7 @@ document.addEventListener('DOMContentLoaded', loadAndDisplayStats);
 resetStatsBtn.addEventListener('click', async () => {
     if (!confirm('Are you sure you want to reset all statistics?')) return;
 
-    await resetStats({
-        ...DEFAULT_STATS,
-        lastReset: new Date().toDateString()
-    });
+    await resetStats();
     await loadAndDisplayStats();
     alert('ƒo. Statistics reset');
 });
@@ -60,8 +55,7 @@ async function loadAndDisplayStats() {
 }
 
 async function loadStats() {
-    const stats = await getStats(DEFAULT_STATS);
-    return withStatsDefaults(stats);
+    return getStats();
 }
 
 function displayChart(categoryCount) {

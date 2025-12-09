@@ -1,6 +1,5 @@
 import {
     AVAILABLE_COLORS,
-    DEFAULT_SETTINGS,
     withSettingsDefaults,
     getSettings,
     updateSettings,
@@ -45,25 +44,6 @@ const importBtn = document.getElementById('importBtn');
 const statusEl = document.getElementById('status');
 
 // ============================================================================
-// STORAGE UTILITIES
-// ============================================================================
-
-/**
- * Load settings from Chrome sync storage
- */
-async function loadSettings() {
-    const settings = await getSettings(DEFAULT_SETTINGS);
-    return withSettingsDefaults(settings);
-}
-
-/**
- * Save settings to Chrome sync storage
- */
-async function saveSettings(settings) {
-    return updateSettings(settings);
-}
-
-// ============================================================================
 // EVENT LISTENERS
 // ============================================================================
 
@@ -82,7 +62,7 @@ addMappingBtn.addEventListener('click', addChannelMapping);
  * Load and display current settings
  */
 async function initializeSettings() {
-    const settings = await loadSettings();
+    const settings = await getSettings();
 
     // Load general settings
     extensionEnabledCheckbox.checked = settings.extensionEnabled !== false;
@@ -94,10 +74,10 @@ async function initializeSettings() {
     allowedHashtagsTextarea.value = (settings.allowedHashtags || []).join(', ');
 
     // Load color toggles
-    displayColorToggles(settings.enabledColors || DEFAULT_SETTINGS.enabledColors);
+    displayColorToggles(settings.enabledColors);
 
-    // ✅ FIX: Load category keywords
-    displayCategoryKeywords(settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords);
+    // Load category keywords
+    displayCategoryKeywords(settings.categoryKeywords);
 
     // Load channel mappings
     displayChannelMappings(settings.channelCategoryMap || {});
@@ -337,7 +317,7 @@ async function handleResetSettings() {
     try {
         resetBtn.disabled = true;
 
-        await resetSettings(DEFAULT_SETTINGS);
+        await resetSettings();
 
         // Reload UI with defaults
         await initializeSettings();
@@ -362,7 +342,7 @@ async function handleResetSettings() {
  */
 async function handleExportSettings() {
     try {
-        const settings = await loadSettings();
+        const settings = await getSettings();
         const dataStr = JSON.stringify(settings, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
@@ -404,10 +384,7 @@ async function handleImportSettings() {
             }
 
             // Merge with defaults to ensure all fields exist
-            const settings = withSettingsDefaults({
-                ...DEFAULT_SETTINGS,
-                ...importedSettings
-            });
+            const settings = withSettingsDefaults(importedSettings);
 
             await saveSettings(settings);
             await initializeSettings();
