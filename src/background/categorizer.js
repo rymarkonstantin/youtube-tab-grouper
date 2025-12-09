@@ -1,44 +1,47 @@
 import { normalizeVideoMetadata } from '../shared/metadata.js';
 import { DEFAULT_SETTINGS } from './constants.js';
 
-export function predictCategory(rawMetadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords, channelMap = {}) {
-    const metadata = normalizeVideoMetadata(rawMetadata);
+const FALLBACK_CATEGORY = "Other";
 
-    if (metadata.channel && channelMap[metadata.channel]) {
-        return channelMap[metadata.channel];
-    }
+const toCategory = (value) => typeof value === 'string' ? value.trim() : '';
 
-    if (!aiEnabled) {
-        return "Other";
-    }
+function fromChannelMap(channel, channelMap = {}) {
+    if (!channel) return "";
+    return channelMap[channel] || "";
+}
+
+function predictFromKeywords(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords) {
+    if (!aiEnabled) return "";
 
     const scores = {};
     const text = `${metadata.title} ${metadata.description} ${(metadata.keywords || []).join(' ')}`.toLowerCase();
 
-    Object.entries(categoryKeywords || {}).forEach(([category, keywords]) => {
-        const score = keywords.reduce((sum, keyword) => {
+    for (const [category, keywords] of Object.entries(categoryKeywords || {})) {
+        const score = (keywords || []).reduce((sum, keyword) => {
             const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
             return sum + (text.match(regex) || []).length;
         }, 0);
+
         if (score > 0) {
             scores[category] = score;
         }
-    });
-
-    const topCategory = Object.entries(scores).sort(([, a], [, b]) => b - a)[0];
-    if (topCategory && topCategory[1] > 0) {
-        return topCategory[0];
     }
 
-    if (metadata.youtubeCategory) {
-        return mapYouTubeCategory(metadata.youtubeCategory);
+    let bestCategory = "";
+    let bestScore = 0;
+
+    for (const [category, score] of Object.entries(scores)) {
+        if (score > bestScore) {
+            bestCategory = category;
+            bestScore = score;
+        }
     }
 
-    return "Other";
+    return bestCategory;
 }
 
 export function mapYouTubeCategory(youtubeCategory) {
-    if (!youtubeCategory) return "Other";
+    if (!youtubeCategory) return "";
 
     const categoryMap = {
         "Music": "Music",
@@ -59,5 +62,46 @@ export function mapYouTubeCategory(youtubeCategory) {
         "Nonprofits & Activism": "News"
     };
 
-    return categoryMap[youtubeCategory] || "Other";
+    return categoryMap[youtubeCategory] || "";
+}
+
+/**
+ * Deterministic category resolution priority:
+ * 1) channel mapping
+ * 2) supplied override
+ * 3) keyword scoring (if enabled)
+ * 4) YouTube category mapping
+ * 5) fallback ("Other")
+ */
+export function predictCategory(rawMetadata, options = {}) {
+    const {
+        requestedCategory = "",
+        aiEnabled = true,
+        categoryKeywords = DEFAULT_SETTINGS.categoryKeywords,
+        channelMap = {}
+    } = options;
+
+    const metadata = normalizeVideoMetadata(rawMetadata);
+
+    const mappedChannelCategory = fromChannelMap(metadata.channel, channelMap);
+    if (mappedChannelCategory) {
+        return mappedChannelCategory;
+    }
+
+    const override = toCategory(requestedCategory);
+    if (override) {
+        return override;
+    }
+
+    const keywordCategory = predictFromKeywords(metadata, aiEnabled, categoryKeywords);
+    if (keywordCategory) {
+        return keywordCategory;
+    }
+
+    const youtubeMappedCategory = mapYouTubeCategory(metadata.youtubeCategory);
+    if (youtubeMappedCategory) {
+        return youtubeMappedCategory;
+    }
+
+    return FALLBACK_CATEGORY;
 }

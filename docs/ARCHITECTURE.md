@@ -46,7 +46,7 @@ This document explains the system design and how components interact.
 ### Manual Grouping
 1. User clicks "Group Current Tab" in the popup.
 2. Popup sends `{ action: "groupTab", category }` to the service worker.
-3. Service worker gets the active tab, resolves category (channel map -> AI -> fallback), assigns a color, and groups the tab.
+3. Service worker gets the active tab, resolves category (channel map -> override -> keywords -> YouTube category -> fallback), assigns a color, and groups the tab.
 4. Result `{ success, category, color }` is returned to the popup for display.
 
 ### Auto Grouping
@@ -72,10 +72,12 @@ Refer to `src/shared/messages.js` and `docs/MESSAGES.md` for the full message ca
 
 ## Category Detection Algorithm
 
-1. If AI detection is disabled, return `Other`.
-2. Combine text sources: title, description, keywords, and optional YouTube category metadata.
-3. Score each category by counting keyword matches.
-4. Pick the highest score (ties broken by order) and return that category, otherwise `Other`.
+- Deterministic priority (shared by popup/manual/content auto-group/context menus/batch):
+  1. Channel mapping (user-defined map by channel name)
+  2. Supplied override (e.g., explicit category passed in a message)
+  3. Keyword scoring (respecting `aiCategoryDetection`; title + description + keywords)
+  4. YouTube category mapping (when provided by the page)
+  5. Fallback to `Other`
 
 ---
 
