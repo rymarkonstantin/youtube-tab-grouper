@@ -296,11 +296,10 @@ async function resolveCategory(tab, settings, metadataOverride = {}, requestedCa
         return requestedCategory.trim();
     }
 
-    let metadata = metadataOverride || {};
-    if (!metadata.title) {
-        metadata = await getVideoMetadata(tab.id);
-    }
-    metadata.title = tab.title;
+    const metadata = await getVideoMetadata(tab.id, {
+        fallbackMetadata: metadataOverride,
+        fallbackTitle: tab?.title || ""
+    });
 
     return predictCategory(
         metadata,

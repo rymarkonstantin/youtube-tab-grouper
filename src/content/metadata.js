@@ -1,17 +1,16 @@
+import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadata.js';
 import { SELECTORS } from './constants.js';
 
-/**
- * Extract metadata from current YouTube video.
- *
- * @returns {Object} Video metadata with channel.
- */
-export function getVideoData() {
-    // Better title extraction
+const splitKeywords = (value = "") => typeof value === 'string'
+    ? value.split(',').map((item) => item.trim()).filter(Boolean)
+    : [];
+const getDocumentTitle = () => document.title.replace("- YouTube", "").trim();
+
+function readDomMetadata() {
     const title =
         document.querySelector(SELECTORS.title)?.innerText ||
-        document.title.replace("- YouTube", "").trim();
+        "";
 
-    // FIX: Better channel extraction
     const channel =
         document.querySelector(SELECTORS.channelName)?.innerText ||
         document.querySelector(SELECTORS.channelLink)?.innerText ||
@@ -21,85 +20,83 @@ export function getVideoData() {
     const description =
         document.querySelector(SELECTORS.descriptionMeta)?.content || "";
 
-    const keywords =
-        (document.querySelector(SELECTORS.keywordsMeta)?.content || "")
-            .split(',')
-            .map(k => k.trim());
+    const keywords = splitKeywords(document.querySelector(SELECTORS.keywordsMeta)?.content || "");
 
     return {
         title,
-        channel: channel.trim(),
+        channel,
         description,
         keywords
     };
 }
 
-/**
- * Extract full metadata including YouTube category.
- *
- * @returns {Object} Complete video metadata.
- */
-export function extractVideoMetadata() {
-    const videoData = getVideoData();
+function extractJsonLdMetadata() {
+    const script = document.querySelector(SELECTORS.jsonLdScript);
+    if (!script) return {};
 
-    const metadata = {
-        title: videoData.title,
-        channel: videoData.channel,
-        description: videoData.description,
-        keywords: videoData.keywords,
-        youtubeCategory: null
-    };
-
-    // Method 1: Extract from JSON-LD (most reliable)
-    const jsonLdScript = document.querySelector(SELECTORS.jsonLdScript);
-    if (jsonLdScript) {
-        try {
-            const jsonLd = JSON.parse(jsonLdScript.textContent);
-            if (jsonLd.description) metadata.description = jsonLd.description;
-            if (jsonLd.keywords) {
-                metadata.keywords = jsonLd.keywords.split(',').map(k => k.trim());
-            }
-        } catch (e) {
-            console.warn("Failed to parse JSON-LD:", e);
-        }
-    }
-
-    // Method 2: Extract YouTube category from ytInitialData
     try {
-        // Access YouTube's global data object
-        if (window.ytInitialData) {
-            const data = window.ytInitialData;
+        const data = JSON.parse(script.textContent);
+        const keywords = Array.isArray(data.keywords)
+            ? data.keywords
+            : splitKeywords(data.keywords || "");
 
-            // Navigate through YouTube's complex structure
-            const contents = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
-            if (contents && Array.isArray(contents)) {
-                for (const item of contents) {
-                    // Look for videoPrimaryInfoRenderer which contains metadata
-                    if (item.videoPrimaryInfoRenderer?.categoryId) {
-                        metadata.youtubeCategory = item.videoPrimaryInfoRenderer.categoryId;
-                        console.log(`Found YouTube category: ${metadata.youtubeCategory}`);
-                        break;
-                    }
-                }
+        return {
+            description: data.description,
+            keywords
+        };
+    } catch (error) {
+        console.warn("Failed to parse JSON-LD:", error);
+        return {};
+    }
+}
+
+function extractCategoryFromInitialData() {
+    try {
+        if (!window.ytInitialData) return null;
+        const contents = window.ytInitialData?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
+        if (!Array.isArray(contents)) return null;
+
+        for (const item of contents) {
+            if (item?.videoPrimaryInfoRenderer?.categoryId !== undefined && item?.videoPrimaryInfoRenderer?.categoryId !== null) {
+                return item.videoPrimaryInfoRenderer.categoryId;
             }
         }
-    } catch (e) {
-        console.warn("Failed to extract YouTube category from ytInitialData:", e);
+    } catch (error) {
+        console.warn("Failed to extract YouTube category from ytInitialData:", error);
     }
+    return null;
+}
 
-    // Method 3: Fallback - Extract from meta tags
-    if (!metadata.youtubeCategory) {
-        try {
-            const genreMeta = document.querySelector(SELECTORS.genreMeta);
-            if (genreMeta?.content) {
-                metadata.youtubeCategory = genreMeta.content.trim();
-                console.log(`Found YouTube category via meta tag: ${metadata.youtubeCategory}`);
-            }
-        } catch (e) {
-            console.warn("Failed to extract from meta tag:", e);
+function extractCategoryFromMeta() {
+    try {
+        const genreMeta = document.querySelector(SELECTORS.genreMeta);
+        if (genreMeta?.content) {
+            return genreMeta.content.trim();
         }
+    } catch (error) {
+        console.warn("Failed to extract category from meta tag:", error);
     }
+    return null;
+}
 
-    console.log("Extracted metadata:", metadata);
-    return metadata;
+function detectYouTubeCategory() {
+    return extractCategoryFromInitialData() ?? extractCategoryFromMeta();
+}
+
+export function getVideoData() {
+    const base = readDomMetadata();
+    return normalizeVideoMetadata(base, { fallbackTitle: getDocumentTitle() });
+}
+
+export function extractVideoMetadata() {
+    const base = getVideoData();
+    const jsonLd = extractJsonLdMetadata();
+    const youtubeCategory = detectYouTubeCategory();
+
+    const merged = mergeMetadata(
+        { ...jsonLd, youtubeCategory },
+        base
+    );
+
+    return normalizeVideoMetadata(merged, { fallbackTitle: base.title || getDocumentTitle() });
 }

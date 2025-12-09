@@ -1,6 +1,9 @@
+import { normalizeVideoMetadata } from '../shared/metadata.js';
 import { DEFAULT_SETTINGS } from './constants.js';
 
-export function predictCategory(metadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords, channelMap = {}) {
+export function predictCategory(rawMetadata, aiEnabled, categoryKeywords = DEFAULT_SETTINGS.categoryKeywords, channelMap = {}) {
+    const metadata = normalizeVideoMetadata(rawMetadata);
+
     if (metadata.channel && channelMap[metadata.channel]) {
         return channelMap[metadata.channel];
     }

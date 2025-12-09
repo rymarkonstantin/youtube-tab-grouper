@@ -1,6 +1,5 @@
-import { normalizeVideoMetadata } from '../shared/messages.js';
+import { normalizeVideoMetadata } from '../shared/metadata.js';
 import { isEnabled, loadConfig } from './config.js';
-import { resolveCategory } from './category.js';
 import { cancelAutoGroup, startAutoGroup } from './autoGroup.js';
 import { removeGroupButton, renderGroupButton } from './dom.js';
 import { extractVideoMetadata } from './metadata.js';
@@ -12,7 +11,6 @@ export function startContent() {
     let config = null;
 
     const getNormalizedMetadata = () => normalizeVideoMetadata(extractVideoMetadata());
-    const getCategory = (video) => resolveCategory(video, config);
 
     const requestGroupTab = async (category, metadata) => {
         if (!isEnabled(config)) {

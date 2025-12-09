@@ -1,4 +1,5 @@
-import { MESSAGE_ACTIONS, normalizeVideoMetadata } from '../shared/messages.js';
+import { normalizeVideoMetadata } from '../shared/metadata.js';
+import { MESSAGE_ACTIONS } from '../shared/messages.js';
 import { handleMessage, sendMessageSafe } from '../shared/messaging.js';
 
 // TODO: bolt on shared schema validation here once content-side message schemas are available.
