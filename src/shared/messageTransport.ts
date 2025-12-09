@@ -19,17 +19,20 @@ export function generateRequestId(prefix = "req") {
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 const isFunction = (value: unknown): value is Function => typeof value === "function";
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
-function withEnvelope(payload: Record<string, unknown> = {}, requestId?: string): MessageEnvelope {
+function withEnvelope(payload: unknown = {}, requestId?: string): MessageEnvelope {
+  const base = isPlainObject(payload) ? payload : {};
   return {
-    ...payload,
+    ...base,
     requestId: requestId ?? generateRequestId("resp"),
     version: MESSAGE_VERSION,
-    action: (payload as any).action ?? ""
+    action: (base as any).action ?? ""
   };
 }
 
-export function envelopeResponse(payload: Record<string, unknown> = {}, requestId?: string): MessageEnvelope {
+export function envelopeResponse(payload: unknown = {}, requestId?: string): MessageEnvelope {
   return withEnvelope(payload, requestId || generateRequestId("resp"));
 }
 
