@@ -85,7 +85,7 @@ function detectYouTubeCategory() {
 
 /**
  * Extract basic metadata from the DOM.
- * @returns {import('../shared/metadataSchema.js').Metadata}
+ * @returns {import('../shared/types.js').Metadata}
  */
 export function getVideoData() {
     const base = readDomMetadata();
@@ -94,7 +94,7 @@ export function getVideoData() {
 
 /**
  * Extract metadata from DOM + JSON-LD + meta tags, normalized.
- * @returns {import('../shared/metadataSchema.js').Metadata}
+ * @returns {import('../shared/types.js').Metadata}
  */
 export function extractVideoMetadata() {
     const base = getVideoData();

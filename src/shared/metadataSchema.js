@@ -1,11 +1,4 @@
-/**
- * @typedef {Object} Metadata
- * @property {string} title
- * @property {string} channel
- * @property {string} description
- * @property {string[]} keywords
- * @property {string|number|null} youtubeCategory
- */
+/** @typedef {import('./types.js').Metadata} Metadata */
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';
@@ -63,6 +56,11 @@ export function isVideoMetadata(value) {
  * Normalize metadata into a consistent, trimmed shape.
  * Optional fallbackTitle is used when the incoming payload omits a title.
  */
+/**
+ * @param {Metadata} [metadata]
+ * @param {{ fallbackTitle?: string }} [options]
+ * @returns {Metadata}
+ */
 export function normalizeVideoMetadata(metadata = {}, { fallbackTitle = "" } = {}) {
     const source = isObject(metadata) ? metadata : {};
     const normalized = {
@@ -79,6 +77,11 @@ export function normalizeVideoMetadata(metadata = {}, { fallbackTitle = "" } = {
 /**
  * Merge two metadata payloads, preferring populated fields from `preferred`.
  */
+/**
+ * @param {Metadata} [preferred]
+ * @param {Metadata} [fallback]
+ * @returns {Metadata}
+ */
 export function mergeMetadata(preferred = {}, fallback = {}) {
     const base = normalizeVideoMetadata(fallback);
     const prioritized = normalizeVideoMetadata(preferred);
@@ -94,6 +97,10 @@ export function mergeMetadata(preferred = {}, fallback = {}) {
 
 /**
  * Determine if a metadata payload contains any usable content.
+ */
+/**
+ * @param {Metadata} [metadata]
+ * @returns {boolean}
  */
 export function hasMetadataContent(metadata = {}) {
     const normalized = normalizeVideoMetadata(metadata);

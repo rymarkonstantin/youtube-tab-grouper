@@ -3,14 +3,10 @@ import { isVideoMetadata, normalizeVideoMetadata } from './metadataSchema.js';
 export { normalizeVideoMetadata } from './metadataSchema.js';
 
 /**
- * @typedef {import('./metadataSchema.js').Metadata} Metadata
- */
-
-/**
- * @typedef {Object} MessageEnvelope
- * @property {string} action
- * @property {number} version
- * @property {string} requestId
+ * @typedef {import('./types.js').Metadata} Metadata
+ * @typedef {import('./types.js').MessageEnvelope} MessageEnvelope
+ * @typedef {import('./types.js').GroupTabRequest} GroupTabRequest
+ * @typedef {import('./types.js').GroupTabResponse} GroupTabResponse
  */
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -24,20 +20,6 @@ export const MESSAGE_ACTIONS = Object.freeze({
     IS_TAB_GROUPED: "isTabGrouped",
     GET_VIDEO_METADATA: "getVideoMetadata"
 });
-
-/**
- * @typedef {Object} GroupTabRequest
- * @property {string} [category]
- * @property {Metadata} [metadata]
- */
-
-/**
- * @typedef {Object} GroupTabResponse
- * @property {boolean} success
- * @property {string} [category]
- * @property {string} [color]
- * @property {string} [error]
- */
 
 export const MESSAGE_CATALOG = Object.freeze({
     [MESSAGE_ACTIONS.GROUP_TAB]: {

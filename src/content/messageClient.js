@@ -15,9 +15,9 @@ const disabledResponse = () => ({ success: false, error: "Extension is disabled"
 /**
  * Send a groupTab request from the content script.
  * @param {string|object} categoryOrPayload
- * @param {import('../shared/metadataSchema.js').Metadata} [metadata]
+ * @param {import('../shared/types.js').Metadata} [metadata]
  * @param {{ timeoutMs?: number }} [options]
- * @returns {Promise<import('../shared/messageContracts.js').GroupTabResponse>}
+ * @returns {Promise<import('../shared/types.js').GroupTabResponse>}
  */
 export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
     const { timeoutMs } = options;
@@ -48,7 +48,7 @@ export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
 /**
  * Fetch settings from background.
  * @param {{ timeoutMs?: number }} [options]
- * @returns {Promise<{ success:boolean, settings?: import('../shared/settings.js').Settings, error?: string }>}
+ * @returns {Promise<{ success:boolean, settings?: import('../shared/types.js').Settings, error?: string }>}
  */
 export async function sendGetSettings(options = {}) {
     const { timeoutMs } = options;

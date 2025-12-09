@@ -7,14 +7,7 @@ export const DEFAULT_STATS = {
     lastReset: new Date().toDateString()
 };
 
-/**
- * @typedef {Object} GroupingStats
- * @property {number} totalTabs
- * @property {Record<string, number>} categoryCount
- * @property {number} sessionsToday
- * @property {string} lastReset
- * @property {number} [version]
- */
+/** @typedef {import('./types.js').GroupingStats} GroupingStats */
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 

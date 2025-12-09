@@ -73,7 +73,7 @@ export function mapYouTubeCategory(youtubeCategory) {
  * 4) YouTube category mapping
  * 5) fallback ("Other")
  *
- * @param {import('../shared/metadataSchema.js').Metadata} rawMetadata
+ * @param {import('../shared/types.js').Metadata} rawMetadata
  * @param {{
  *  requestedCategory?: string,
  *  aiEnabled?: boolean,
