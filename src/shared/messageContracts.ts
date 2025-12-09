@@ -242,7 +242,7 @@ export function buildGroupTabResponse(data: Partial<GroupTabResponse> = {}, extr
   return buildSuccessResponse(payload) as GroupTabResponse;
 }
 
-export function buildBatchGroupResponse(count: number = 0, extras: Record<string, unknown> = {}) {
+export function buildBatchGroupResponse(count = 0, extras: Record<string, unknown> = {}) {
   const numeric = Number.isFinite(Number(count)) ? Math.floor(Number(count)) : 0;
   const safeCount = numeric < 0 ? 0 : numeric;
   return buildSuccessResponse({ ...extras, count: safeCount });

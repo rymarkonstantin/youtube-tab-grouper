@@ -2,7 +2,6 @@ import {
     AVAILABLE_COLORS,
     withSettingsDefaults,
     getSettings,
-    updateSettings,
     resetSettings
 } from '../../src/shared/settings.js';
 
