@@ -1,4 +1,4 @@
-import type { GroupingStats } from "./types.js";
+import type { GroupingStats } from "./types";
 
 export const STATS_VERSION = 1;
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "./types.js";
+import type { Metadata } from "./types";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

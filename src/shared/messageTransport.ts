@@ -16,7 +16,7 @@ import {
   validateRequest,
   validateResponse
 } from "./messageContracts";
-import type { HandleMessageOptions, MessageEnvelope, SendMessageOptions } from "./types.js";
+import type { HandleMessageOptions, MessageEnvelope, SendMessageOptions } from "./types";
 
 export const MESSAGE_VERSION = 1;
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;
