@@ -1,6 +1,7 @@
 import { normalizeVideoMetadata } from './shared/messages.js';
 import { isEnabled, loadConfig } from './content/config.js';
 import { resolveCategory } from './content/category.js';
+import { cancelAutoGroup, startAutoGroup } from './content/autoGroup.js';
 import { removeGroupButton, renderGroupButton } from './content/dom.js';
 import { extractVideoMetadata } from './content/metadata.js';
 import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
@@ -97,6 +98,19 @@ import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
     // INITIALIZATION & AUTO-GROUPING
     // ====================================================================
 
+    const triggerAutoGroup = () => {
+        const metadata = extractVideoMetadata();
+
+        return requestGroupTab("", metadata).then((response) => {
+            if (response?.success) {
+                removeGroupButton();
+                console.log(`Auto-grouped as "${response.category}"`);
+            } else if (response?.error) {
+                console.warn("Auto-group failed:", response.error);
+            }
+        });
+    };
+
     /**
      * Main initialization function
      * 
@@ -124,21 +138,10 @@ import { registerMessageHandlers, sendGroupTab } from './content/messaging.js';
             createUI();
 
             // Step 4: Schedule auto-grouping (if enabled)
-            if (config.autoGroupDelay > 0 && isEnabled(config)) {
-                setTimeout(() => {
-                    // Extract full metadata including YouTube category
-                    const metadata = extractVideoMetadata();
-
-                    requestGroupTab("", metadata).then((response) => {
-                        if (response?.success) {
-                            removeGroupButton();
-                            console.log(`Auto-grouped as "${response.category}"`);
-                        } else if (response?.error) {
-                            console.warn("Auto-group failed:", response.error);
-                        }
-                    });
-                }, config.autoGroupDelay);
-            }
+            startAutoGroup({
+                config,
+                onGroup: triggerAutoGroup
+            });
 
         } catch (error) {
             console.error("Error initializing YouTube Tab Grouper:", error);
