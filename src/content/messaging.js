@@ -1,6 +1,7 @@
 import { MESSAGE_ACTIONS, normalizeVideoMetadata } from '../shared/messages.js';
 import { handleMessage, sendMessageSafe } from '../shared/messaging.js';
 
+// TODO: bolt on shared schema validation here once content-side message schemas are available.
 const toGroupTabPayload = (categoryOrPayload, metadata) => {
     if (categoryOrPayload && typeof categoryOrPayload === 'object' && !Array.isArray(categoryOrPayload)) {
         return categoryOrPayload;
@@ -28,6 +29,7 @@ export function replyWithMetadata({ getMetadata, isEnabled }) {
 }
 
 export function registerMessageHandlers({ getMetadata, isEnabled }) {
+    // TODO: add runtime validation for msg payloads once shared schemas land.
     const listener = handleMessage({
         [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: replyWithMetadata({ getMetadata, isEnabled })
     }, {
@@ -37,6 +39,7 @@ export function registerMessageHandlers({ getMetadata, isEnabled }) {
             if (action === MESSAGE_ACTIONS.GROUP_TAB || msg?.action === MESSAGE_ACTIONS.GROUP_TAB) {
                 return sendGroupTab(msg);
             }
+            console.warn(`Unknown content message action: ${action || msg?.action || "undefined"}`);
             return false;
         }
     });
