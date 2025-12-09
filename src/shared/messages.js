@@ -1,3 +1,7 @@
+import { isVideoMetadata, normalizeVideoMetadata } from './metadata.js';
+
+export { normalizeVideoMetadata } from './metadata.js';
+
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';
 const toTrimmedString = (value) => isString(value) ? value.trim() : '';
@@ -98,25 +102,6 @@ const RESPONSE_SCHEMAS = Object.freeze({
     [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: {}
 });
 
-function isVideoMetadata(value) {
-    if (!isObject(value)) return false;
-
-    const { title, channel, description, keywords, youtubeCategory } = value;
-    const stringsAreValid = [title, channel, description].every(
-        (field) => field === undefined || isString(field)
-    );
-
-    const keywordsAreValid = keywords === undefined
-        || (Array.isArray(keywords) && keywords.every(isString));
-
-    const categoryIsValid = youtubeCategory === undefined
-        || youtubeCategory === null
-        || isString(youtubeCategory)
-        || typeof youtubeCategory === "number";
-
-    return stringsAreValid && keywordsAreValid && categoryIsValid;
-}
-
 function validateFields(payload, schema, pathPrefix = "message") {
     const errors = [];
 
@@ -207,22 +192,6 @@ export function validateResponse(action, payload = {}) {
     errors.push(...validateFields(payload, schema, "response"));
 
     return { valid: errors.length === 0, errors };
-}
-
-export function normalizeVideoMetadata(metadata = {}) {
-    const source = isObject(metadata) ? metadata : {};
-
-    return {
-        title: toTrimmedString(source.title),
-        channel: toTrimmedString(source.channel),
-        description: toTrimmedString(source.description),
-        keywords: Array.isArray(source.keywords)
-            ? source.keywords
-                .map((item) => toTrimmedString(item))
-                .filter((item) => item.length > 0)
-            : [],
-        youtubeCategory: source.youtubeCategory ?? null
-    };
 }
 
 export function buildSuccessResponse(payload = {}) {

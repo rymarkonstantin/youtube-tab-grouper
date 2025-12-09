@@ -1,6 +1,6 @@
 # Message Catalog
 
-Canonical reference for runtime messages exchanged between the popup, content script, and background service worker. Code-level types and helpers live in `src/shared/messages.js`.
+Canonical reference for runtime messages exchanged between the popup, content script, and background service worker. Code-level types and helpers live in `src/shared/messages.js` (envelopes/validation) and `src/shared/metadata.js` (metadata normalization utilities).
 
 ## Envelope
 
@@ -26,7 +26,7 @@ Helpers attach these automatically and enforce version matching.
 - `MESSAGE_CATALOG`: human-readable descriptions of each request/response pair.
 - `validateRequest(action, payload)`: guards incoming messages; returns `{ valid, errors }`.
 - `validateResponse(action, payload)`: validates outgoing responses; used for tests or debugging.
-- `normalizeVideoMetadata(metadata)`: trims and standardizes metadata payloads.
+- `normalizeVideoMetadata(metadata)`: trims and standardizes metadata payloads (re-exported from `src/shared/metadata.js`).
 - Response builders: `buildSuccessResponse`, `buildErrorResponse`, `buildValidationErrorResponse`, `buildGroupTabResponse`, `buildBatchGroupResponse`, `buildSettingsResponse`, `buildIsGroupedResponse`, `buildMetadataResponse`.
 - Messaging helpers (`src/shared/messaging.js`): `sendMessageSafe` wraps `chrome.runtime.sendMessage` / `chrome.tabs.sendMessage` with requestId + version + validation; `handleMessage` centralizes listener routing/validation and stamps responses with metadata.
 
