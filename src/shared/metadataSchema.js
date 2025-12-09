@@ -1,3 +1,12 @@
+/**
+ * @typedef {Object} Metadata
+ * @property {string} title
+ * @property {string} channel
+ * @property {string} description
+ * @property {string[]} keywords
+ * @property {string|number|null} youtubeCategory
+ */
+
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';
 const toTrimmedString = (value) => isString(value) ? value.trim() : '';

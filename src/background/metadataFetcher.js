@@ -8,6 +8,11 @@ const CONTENT_METADATA_BACKOFF_MS = [150, 350];
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * @param {number} tabId
+ * @param {number} timeoutMs
+ * @param {string} fallbackTitle
+ */
 async function requestContentMetadata(tabId, timeoutMs, fallbackTitle) {
     const response = await sendMessageSafe(
         MESSAGE_ACTIONS.GET_VIDEO_METADATA,
@@ -17,6 +22,12 @@ async function requestContentMetadata(tabId, timeoutMs, fallbackTitle) {
     return normalizeVideoMetadata(response, { fallbackTitle });
 }
 
+/**
+ * Fetch metadata from content script with retries and merge with fallbacks.
+ * @param {number} tabId
+ * @param {{ fallbackMetadata?: import('../shared/metadataSchema.js').Metadata, fallbackTitle?: string }} [options]
+ * @returns {Promise<import('../shared/metadataSchema.js').Metadata>}
+ */
 export async function getVideoMetadata(tabId, options = {}) {
     const { fallbackMetadata = {}, fallbackTitle = "" } = options;
     let lastError = null;

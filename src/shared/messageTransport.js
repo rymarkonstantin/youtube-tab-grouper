@@ -6,8 +6,28 @@ import {
     buildValidationErrorResponse
 } from './messageContracts.js';
 
+/**
+ * @typedef {import('./messageContracts.js').MessageEnvelope} MessageEnvelope
+ */
+
 export const MESSAGE_VERSION = 1;
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;
+
+/**
+ * @typedef {Object} SendMessageOptions
+ * @property {number} [tabId]
+ * @property {number} [timeoutMs]
+ * @property {string} [requestId]
+ * @property {boolean} [requireVersion]
+ * @property {boolean} [validateResponsePayload]
+ */
+
+/**
+ * @typedef {Object} HandleMessageOptions
+ * @property {boolean} [requireVersion]
+ * @property {boolean} [validateResponses]
+ * @property {(action:string,msg:any,sender:any)=>any} [onUnknown]
+ */
 
 export function generateRequestId(prefix = "req") {
     const rand = Math.random().toString(36).slice(2, 8);

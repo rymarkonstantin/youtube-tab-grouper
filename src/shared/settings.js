@@ -32,6 +32,21 @@ export const DEFAULT_SETTINGS = {
     categoryKeywords: CATEGORY_KEYWORDS
 };
 
+/**
+ * @typedef {Object} Settings
+ * @property {number} autoGroupDelay
+ * @property {number} autoGroupDelayMs
+ * @property {number} autoCleanupGraceMs
+ * @property {string[]} allowedHashtags
+ * @property {Record<string,string>} channelCategoryMap
+ * @property {boolean} extensionEnabled
+ * @property {Record<string,boolean>} enabledColors
+ * @property {boolean} autoCleanupEnabled
+ * @property {boolean} aiCategoryDetection
+ * @property {Record<string,string[]>} categoryKeywords
+ * @property {number} [version]
+ */
+
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toStringArray = (value) => {

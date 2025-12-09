@@ -12,6 +12,13 @@ const toGroupTabPayload = (categoryOrPayload, metadata) => {
 const timeoutResponse = (timeoutMs) => ({ success: false, error: `Message timed out after ${timeoutMs}ms` });
 const disabledResponse = () => ({ success: false, error: "Extension is disabled" });
 
+/**
+ * Send a groupTab request from the content script.
+ * @param {string|object} categoryOrPayload
+ * @param {import('../shared/metadataSchema.js').Metadata} [metadata]
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<import('../shared/messageContracts.js').GroupTabResponse>}
+ */
 export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
     const { timeoutMs } = options;
     try {
@@ -38,6 +45,11 @@ export async function sendGroupTab(categoryOrPayload, metadata, options = {}) {
     }
 }
 
+/**
+ * Fetch settings from background.
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<{ success:boolean, settings?: import('../shared/settings.js').Settings, error?: string }>}
+ */
 export async function sendGetSettings(options = {}) {
     const { timeoutMs } = options;
     try {
