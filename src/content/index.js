@@ -3,7 +3,7 @@ import { isEnabled, loadConfig } from './config.js';
 import { cancelAutoGroup, startAutoGroup } from './autoGroup.js';
 import { removeGroupButton, renderGroupButton } from './dom.js';
 import { extractVideoMetadata } from './metadataExtractor.js';
-import { registerMessageHandlers, sendGroupTab } from './messageClient.js';
+import { registerMessageHandlers, sendGroupTab, sendIsTabGrouped } from './messageClient.js';
 
 const DISABLED_GROUP_RESPONSE = { success: false, error: "Extension is disabled" };
 
@@ -35,11 +35,18 @@ export function startContent() {
         }
     };
 
-    const renderButton = () => {
+    const renderButton = async () => {
         if (!isEnabled(config)) return null;
 
-        const activeTab = document.activeElement;
-        if (activeTab?.groupId >= 0) return null;
+        try {
+            const groupedCheck = await sendIsTabGrouped();
+            if (groupedCheck?.grouped) {
+                removeGroupButton();
+                return null;
+            }
+        } catch (error) {
+            console.warn("Grouped status check failed:", error?.message || error);
+        }
 
         return renderGroupButton({ onClick: handleManualGroup });
     };
@@ -63,7 +70,7 @@ export function startContent() {
                 return;
             }
 
-            renderButton();
+            await renderButton();
 
             startAutoGroup({
                 config,
