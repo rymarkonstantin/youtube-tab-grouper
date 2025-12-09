@@ -20,6 +20,7 @@ import {
     buildSettingsResponse
 } from '../shared/messageContracts.js';
 import { handleMessage, generateRequestId, MESSAGE_VERSION } from '../shared/messageTransport.js';
+import { logDebug, setDebugLogging } from './logger.js';
 
 bootstrap();
 
@@ -117,12 +118,27 @@ function buildRouteHandlers(routes) {
 
             if (route.requiresEnabled) {
                 settings = await loadSettings();
+                setDebugLogging(settings.debugLogging);
                 if (!settings.extensionEnabled) {
                     return buildErrorResponse("Extension is disabled");
                 }
             }
 
-            return route.handler(msg, sender, settings);
+            const context = {
+                action,
+                tabId: sender?.tab?.id,
+                windowId: sender?.tab?.windowId
+            };
+
+            logDebug("action:start", context);
+            try {
+                const result = await route.handler(msg, sender, settings);
+                logDebug("action:success", { ...context, success: result?.success, error: result?.error });
+                return result;
+            } catch (error) {
+                logDebug("action:error", { ...context, error: error?.message || error });
+                throw error;
+            }
         };
         return acc;
     }, {});
