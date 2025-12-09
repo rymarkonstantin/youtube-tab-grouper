@@ -1,3 +1,5 @@
+/** @typedef {import('../shared/types.js').MessageEnvelope} MessageEnvelope */
+
 import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
 import { MESSAGE_ACTIONS, validateResponse } from '../shared/messageContracts.js';
 import { handleMessage, sendMessageSafe } from '../shared/messageTransport.js';
@@ -73,6 +75,20 @@ export async function sendGetSettings(options = {}) {
         }
         return { success: false, error: message };
     }
+}
+
+/**
+ * Check if the active tab is already grouped.
+ * @param {{ timeoutMs?: number }} [options]
+ * @returns {Promise<{ grouped: boolean, error?: string } & Partial<MessageEnvelope>>}
+ */
+export async function sendIsTabGrouped(options = {}) {
+    const { timeoutMs } = options;
+    return sendMessageSafe(
+        MESSAGE_ACTIONS.IS_TAB_GROUPED,
+        {},
+        { timeoutMs, validateResponsePayload: true }
+    );
 }
 
 export function replyWithMetadata({ getMetadata, isEnabled }) {
