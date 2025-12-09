@@ -1,6 +1,6 @@
 import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from './constants.js';
 import { loadSettings, saveSettings, runMigrations } from './storage.js';
-import { predictCategory } from './categorizer.js';
+import { predictCategory } from './categoryResolver.js';
 import {
     initializeGroupingState,
     groupTab,
@@ -8,9 +8,9 @@ import {
     handleGroupRemoved,
     handleGroupUpdated,
     getEnabledColors
-} from './grouping.js';
+} from './tabGrouping.js';
 import { queryTabs } from './chromeApi.js';
-import { getVideoMetadata } from './metadata.js';
+import { getVideoMetadata } from './metadataFetcher.js';
 import {
     MESSAGE_ACTIONS,
     buildBatchGroupResponse,
@@ -18,8 +18,8 @@ import {
     buildGroupTabResponse,
     buildIsGroupedResponse,
     buildSettingsResponse
-} from '../shared/messages.js';
-import { handleMessage, generateRequestId, MESSAGE_VERSION } from '../shared/messaging.js';
+} from '../shared/messageContracts.js';
+import { handleMessage, generateRequestId, MESSAGE_VERSION } from '../shared/messageTransport.js';
 
 bootstrap();
 

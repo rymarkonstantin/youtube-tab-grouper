@@ -4,7 +4,7 @@ import {
     validateResponse,
     buildErrorResponse,
     buildValidationErrorResponse
-} from './messages.js';
+} from './messageContracts.js';
 
 export const MESSAGE_VERSION = 1;
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;

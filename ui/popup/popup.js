@@ -1,5 +1,5 @@
-import { MESSAGE_ACTIONS, validateResponse } from '../../src/shared/messages.js';
-import { sendMessageSafe } from '../../src/shared/messaging.js';
+import { MESSAGE_ACTIONS, validateResponse } from '../../src/shared/messageContracts.js';
+import { sendMessageSafe } from '../../src/shared/messageTransport.js';
 
 /**
  * YouTube Tab Grouper - Popup Script
