@@ -15,7 +15,7 @@ import {
   buildValidationErrorResponse,
   validateRequest,
   validateResponse
-} from "./messageContracts.js";
+} from "./messageContracts";
 import type { HandleMessageOptions, MessageEnvelope, SendMessageOptions } from "./types.js";
 
 export const MESSAGE_VERSION = 1;

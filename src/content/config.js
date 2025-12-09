@@ -1,4 +1,4 @@
-import { withSettingsDefaults } from '../shared/settings.js';
+import { withSettingsDefaults } from '../shared/settings';
 import { CONTENT_SETTINGS_DEFAULTS } from './constants.js';
 import { sendGetSettings } from './messageClient.js';
 

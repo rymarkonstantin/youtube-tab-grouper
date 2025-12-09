@@ -1,4 +1,4 @@
-import { isVideoMetadata, normalizeVideoMetadata } from "./metadataSchema.js";
+import { isVideoMetadata, normalizeVideoMetadata } from "./metadataSchema";
 import type { Metadata, GroupTabRequest, GroupTabResponse } from "./types.js";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>

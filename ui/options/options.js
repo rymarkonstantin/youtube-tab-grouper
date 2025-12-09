@@ -3,7 +3,7 @@ import {
     withSettingsDefaults,
     getSettings,
     resetSettings
-} from '../../src/shared/settings.js';
+} from '../../src/shared/settings';
 
 /**
  * YouTube Tab Grouper - Settings Page

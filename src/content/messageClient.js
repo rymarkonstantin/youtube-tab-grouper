@@ -1,6 +1,6 @@
 /** @typedef {import('../shared/types.ts').MessageEnvelope} MessageEnvelope */
 
-import { normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { normalizeVideoMetadata } from '../shared/metadataSchema';
 import { MESSAGE_ACTIONS, validateResponse } from '../shared/messageContracts.js';
 import { handleMessage, sendMessageSafe } from '../shared/messageTransport.js';
 

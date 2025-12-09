@@ -1,6 +1,6 @@
 /** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
-import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema';
 import { SELECTORS } from './constants.js';
 
 const splitKeywords = (value = "") => typeof value === 'string'

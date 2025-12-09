@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '../shared/settings.js';
+import { DEFAULT_SETTINGS } from '../shared/settings';
 
 export const CONTENT_SETTINGS_DEFAULTS = {
     ...DEFAULT_SETTINGS

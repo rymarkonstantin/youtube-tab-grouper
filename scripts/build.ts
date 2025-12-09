@@ -27,7 +27,8 @@ const baseOptions: BuildOptions = {
   sourcemap: true,
   target: ["chrome120"],
   platform: "browser",
-  logLevel: "info"
+  logLevel: "info",
+  resolveExtensions: [".ts", ".js", ".tsx", ".jsx", ".json"]
 };
 
 async function ensureDist() {

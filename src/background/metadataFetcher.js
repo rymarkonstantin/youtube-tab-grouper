@@ -1,6 +1,6 @@
 /** @typedef {import('../shared/types.ts').Metadata} Metadata */
 
-import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema.js';
+import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from '../shared/metadataSchema';
 import { MESSAGE_ACTIONS } from '../shared/messageContracts.js';
 import { sendMessageSafe } from '../shared/messageTransport.js';
 import { logWarn } from './logger.js';
