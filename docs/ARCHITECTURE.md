@@ -61,12 +61,12 @@ Refer to `src/shared/messages.js` and `docs/MESSAGES.md` for the full message ca
 
 ## Color Assignment Algorithm
 
-1. Check cache: if category already has a color, return it.
-2. If assignment is locked, wait until the lock clears.
-3. Collect neighbor colors from existing tab groups in the window.
-4. Filter enabled colors that are not used by neighbors.
-5. Choose a random available color (fallback to any enabled color if empty).
-6. Cache the assignment and return the color.
+1. Require at least one enabled color (otherwise error).
+2. Per-category mutex serializes assignment to avoid races.
+3. Check cache: if category already has a color, return it.
+4. Collect neighbor colors from existing tab groups in the window.
+5. Filter enabled colors that are not used by neighbors.
+6. Choose a random available color (fallback to any enabled color if empty) and cache it.
 
 ---
 
