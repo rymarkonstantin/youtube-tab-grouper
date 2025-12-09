@@ -16,6 +16,8 @@ export const CATEGORY_KEYWORDS = {
     "Entertainment": ["movie", "series", "trailer", "reaction", "comedy", "funny", "meme"]
 };
 
+/** @typedef {import('./types.js').Settings} Settings */
+
 export const DEFAULT_SETTINGS = {
     autoGroupDelay: 2500,
     autoGroupDelayMs: 2500, // legacy alias support

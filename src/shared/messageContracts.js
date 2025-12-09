@@ -2,6 +2,13 @@ import { isVideoMetadata, normalizeVideoMetadata } from './metadataSchema.js';
 
 export { normalizeVideoMetadata } from './metadataSchema.js';
 
+/**
+ * @typedef {import('./types.js').Metadata} Metadata
+ * @typedef {import('./types.js').MessageEnvelope} MessageEnvelope
+ * @typedef {import('./types.js').GroupTabRequest} GroupTabRequest
+ * @typedef {import('./types.js').GroupTabResponse} GroupTabResponse
+ */
+
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isString = (value) => typeof value === 'string';
 const toTrimmedString = (value) => isString(value) ? value.trim() : '';

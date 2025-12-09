@@ -72,6 +72,15 @@ export function mapYouTubeCategory(youtubeCategory) {
  * 3) keyword scoring (if enabled)
  * 4) YouTube category mapping
  * 5) fallback ("Other")
+ *
+ * @param {import('../shared/types.js').Metadata} rawMetadata
+ * @param {{
+ *  requestedCategory?: string,
+ *  aiEnabled?: boolean,
+ *  categoryKeywords?: Record<string,string[]>,
+ *  channelMap?: Record<string,string>
+ * }} [options]
+ * @returns {string}
  */
 export function predictCategory(rawMetadata, options = {}) {
     const {

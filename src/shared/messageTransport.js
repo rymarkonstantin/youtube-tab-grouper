@@ -6,6 +6,12 @@ import {
     buildValidationErrorResponse
 } from './messageContracts.js';
 
+/**
+ * @typedef {import('./types.js').MessageEnvelope} MessageEnvelope
+ * @typedef {import('./types.js').SendMessageOptions} SendMessageOptions
+ * @typedef {import('./types.js').HandleMessageOptions} HandleMessageOptions
+ */
+
 export const MESSAGE_VERSION = 1;
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;
 

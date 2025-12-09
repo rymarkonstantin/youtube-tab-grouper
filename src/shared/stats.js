@@ -7,6 +7,8 @@ export const DEFAULT_STATS = {
     lastReset: new Date().toDateString()
 };
 
+/** @typedef {import('./types.js').GroupingStats} GroupingStats */
+
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const normalizeCategoryCount = (value) => {
