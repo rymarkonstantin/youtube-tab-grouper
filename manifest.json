@@ -39,7 +39,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["src/content.js"],
+      "js": ["src/content/index.js"],
       "css": ["ui/styles/common.css"],
       "type": "module"
     }
