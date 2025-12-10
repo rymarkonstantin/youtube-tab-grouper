@@ -1,11 +1,10 @@
-import { normalizeVideoMetadata } from "../../shared/metadataSchema";
 import type { GroupTabResponse, Metadata, Settings } from "../../shared/types";
 import { isEnabled, loadConfig } from "../config";
 import { AutoGroupController } from "./autoGroupController";
 import { GroupButtonView } from "./groupButtonView";
-import { extractVideoMetadata } from "../metadataExtractor";
 import { sendGroupTab, sendIsTabGrouped } from "../messageClient";
 import { ContentMessagingBridge } from "../messaging/contentMessagingBridge";
+import { MetadataCollector } from "./metadataCollector";
 
 const DISABLED_GROUP_RESPONSE: GroupTabResponse = { success: false, error: "Extension is disabled" };
 
@@ -25,6 +24,7 @@ export class ContentApp {
   private autoGroup = new AutoGroupController();
   private buttonView = new GroupButtonView();
   private bridge: ContentMessagingBridge;
+  private metadataCollector = new MetadataCollector();
 
   constructor() {
     this.bridge = new ContentMessagingBridge({
@@ -76,7 +76,7 @@ export class ContentApp {
   }
 
   private getNormalizedMetadata() {
-    return normalizeVideoMetadata(extractVideoMetadata());
+    return this.metadataCollector.collect();
   }
 
   private computeMetadataHash(metadata: Metadata) {
