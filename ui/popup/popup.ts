@@ -72,12 +72,12 @@ groupButton?.addEventListener("click", () => {
 
     try {
       const rawValue = categoryInput instanceof HTMLInputElement ? categoryInput.value : "";
-      const category = rawValue.trim();
-      const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
+    const category = rawValue.trim();
+    const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
 
     if (response?.success) {
       showNotification(`Grouped as "${response.category}"`, "success");
-      if (categoryInput) categoryInput.value = "";
+      if (categoryInput instanceof HTMLInputElement) categoryInput.value = "";
     } else if (!handleGuard(response)) {
       showNotification(`Error: ${formatError(response)}`, "error");
     }
