@@ -2,7 +2,7 @@
 
 A powerful Chrome extension that intelligently organizes your YouTube tabs by automatically grouping them into categories with smart color assignment and AI-powered detection.
 
-![Version](https://img.shields.io/badge/version-2.0-blue)
+![Version](https://img.shields.io/badge/version-2.1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Chrome](https://img.shields.io/badge/Chrome-88+-green)
 
@@ -394,4 +394,4 @@ Planned features:
 
 ---
 
-Made with  for YouTube lovers | v2.0
+Made with  for YouTube lovers | v2.1.0
