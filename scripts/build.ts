@@ -11,9 +11,9 @@ const DIST_DIR = path.join(ROOT_DIR, "dist");
 
 const ESM_ENTRY_POINTS: Record<string, string> = {
   "background/index": path.join(ROOT_DIR, "src/background/index.ts"),
-  "ui/popup/popup": path.join(ROOT_DIR, "ui/popup/popup.js"),
-  "ui/options/options": path.join(ROOT_DIR, "ui/options/options.js"),
-  "ui/stats/stats": path.join(ROOT_DIR, "ui/stats/stats.js")
+  "ui/popup/popup": path.join(ROOT_DIR, "ui/popup/popup.ts"),
+  "ui/options/options": path.join(ROOT_DIR, "ui/options/options.ts"),
+  "ui/stats/stats": path.join(ROOT_DIR, "ui/stats/stats.ts")
 };
 
 const CONTENT_ENTRY_POINTS: Record<string, string> = {
