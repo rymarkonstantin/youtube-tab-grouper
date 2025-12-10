@@ -1,4 +1,4 @@
-# YouTube Tab Grouper
+﻿# YouTube Tab Grouper
 
 A powerful Chrome extension that intelligently organizes your YouTube tabs by automatically grouping them into categories with smart color assignment and AI-powered detection.
 
@@ -63,7 +63,7 @@ Visit the Chrome Web Store and click "Add to Chrome"
 
 1. Download or clone this repository
 2. Install dependencies: `npm install` (requires Node 18+)
-3. Build the extension: `npm run build` (or `npm run build:watch` while developing) – output is written to `dist/`
+3. Build the extension: `npm run build` (or `npm run build:watch` while developing) â€“ output is written to `dist/`
 4. Open Chrome and go to `chrome://extensions/`
 5. Enable **Developer mode** (top-right corner)
 6. Click **"Load unpacked"**
@@ -76,12 +76,14 @@ Visit the Chrome Web Store and click "Add to Chrome"
 - `npm run build:watch` – rebuild on change for fast iteration
 - `npm run typecheck` – run `tsc --noEmit` (TS sources)
 - `npm run lint` – lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
+- `npm run smoke` – quick smoke checks for message validation and migrations
 
 Dist layout mirrors Manifest V3 modules:
 - `dist/background/index.js` – service worker (built from `src/background/index.ts`)
 - `dist/content/index.js` – content script (from `src/content/index.ts`)
 - `dist/ui/**` – popup/options/stats assets; `.js` bundled, static files copied
 - `dist/images/**` – icons
+
 
 ---
 

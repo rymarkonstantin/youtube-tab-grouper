@@ -1,15 +1,16 @@
 {
   "name": "youtube-tab-grouper",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Chrome extension that groups YouTube tabs by category",
   "private": true,
   "type": "module",
   "scripts": {
     "clean": "rimraf dist",
-    "build": "npm run clean && ts-node --esm scripts/build.ts",
-    "build:watch": "ts-node --esm scripts/build.ts --watch",
+    "build": "npm run clean && node --loader ts-node/esm scripts/build.ts",
+    "build:watch": "node --loader ts-node/esm scripts/build.ts --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.{js,ts}\" \"ui/**/*.{js,ts}\" \"scripts/**/*.{js,ts}\" --max-warnings=0"
+    "lint": "eslint \"src/**/*.{js,ts}\" \"ui/**/*.{js,ts}\" \"scripts/**/*.{js,ts}\" --max-warnings=0",
+    "smoke": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/smoke/run-smoke.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",

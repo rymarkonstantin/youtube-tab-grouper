@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, rm, stat } from "node:fs/promises";
 import { context } from "esbuild";
 import type { BuildContext, BuildOptions } from "esbuild";
 
@@ -36,9 +36,24 @@ async function ensureDist() {
   await mkdir(DIST_DIR, { recursive: true });
 }
 
+async function pathExists(target: string): Promise<boolean> {
+  try {
+    await stat(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function copyStaticAssets() {
   await cp(path.join(ROOT_DIR, "manifest.json"), path.join(DIST_DIR, "manifest.json"));
-  await cp(path.join(ROOT_DIR, "images"), path.join(DIST_DIR, "images"), { recursive: true });
+
+  const imagesDir = path.join(ROOT_DIR, "images");
+  if (await pathExists(imagesDir)) {
+    await cp(imagesDir, path.join(DIST_DIR, "images"), { recursive: true });
+  } else {
+    console.warn("images directory not found; skipping icon copy");
+  }
 
   await cp(path.join(ROOT_DIR, "ui"), path.join(DIST_DIR, "ui"), {
     recursive: true,

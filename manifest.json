@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Tab Grouper",
-  "version": "2.0",
+  "version": "2.1",
   "description": "Intelligently group YouTube tabs by category with AI detection, keyboard shortcuts & analytics",
   
   "permissions": [
