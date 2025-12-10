@@ -1,5 +1,6 @@
-import { AVAILABLE_COLORS, DEFAULT_STATS } from "./constants";
-import { loadState, saveState, loadStats, saveStats } from "./storage";
+import { AVAILABLE_COLORS } from "./constants";
+import { groupStateRepository } from "./repositories/groupStateRepository";
+import { statsRepository } from "./repositories/statsRepository";
 import { chromeApiClient } from "./infra/chromeApiClient";
 import { logError, logWarn, toErrorEnvelope } from "./logger";
 import type { Settings } from "../shared/types";
@@ -60,7 +61,7 @@ const runCategoryExclusive = createMutex();
  * Load persisted group color/id maps into memory.
  */
 export async function initializeGroupingState() {
-  const { groupColorMap: savedColors, groupIdMap: savedIds } = await loadState();
+  const { groupColorMap: savedColors, groupIdMap: savedIds } = await groupStateRepository.get();
   Object.assign(groupColorMap, savedColors || {});
   Object.assign(groupIdMap, savedIds || {});
 }
@@ -145,7 +146,7 @@ async function persistGroupingState(category: string, groupId: number, color: st
   groupIdMap[category] = groupId;
   groupColorMap[category] = color;
   try {
-    await saveState(groupColorMap, groupIdMap);
+    await groupStateRepository.save(groupColorMap, groupIdMap);
   } catch (error) {
     const err = new Error(`Failed to persist grouping state: ${toErrorMessage(error)}`);
     (err as { cause?: unknown }).cause = error;
@@ -154,11 +155,11 @@ async function persistGroupingState(category: string, groupId: number, color: st
 }
 
 async function recordGroupingStats(category: string) {
-  const stats = await loadStats(DEFAULT_STATS);
+  const stats = await statsRepository.get();
   stats.totalTabs = (stats.totalTabs || 0) + 1;
   stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
   try {
-    await saveStats(stats);
+    await statsRepository.save(stats);
   } catch (error) {
     logWarn("grouping:recordGroupingStats failed to persist stats", toErrorMessage(error));
   }
@@ -219,7 +220,7 @@ async function pruneGroupState(groupId: number) {
   if (!mutated) return;
 
   try {
-    await saveState(groupColorMap, groupIdMap);
+    await groupStateRepository.save(groupColorMap, groupIdMap);
   } catch (error) {
     logWarn("grouping:pruneGroupState failed to persist", toErrorMessage(error));
   }
@@ -300,7 +301,7 @@ export async function handleGroupUpdated(group: chrome.tabGroups.TabGroup) {
         if (group.color) groupColorMap[group.title] = group.color;
       }
     }
-    await saveState(groupColorMap, groupIdMap);
+    await groupStateRepository.save(groupColorMap, groupIdMap);
   } catch (error) {
     logWarn("grouping:handleGroupUpdated failed to persist update", toErrorMessage(error));
   }
