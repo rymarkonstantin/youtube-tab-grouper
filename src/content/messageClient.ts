@@ -3,16 +3,19 @@ import { MESSAGE_ACTIONS, validateResponse } from "../shared/messageContracts";
 import { handleMessage, sendMessageSafe } from "../shared/messageTransport";
 import type { GroupTabResponse, Metadata, MessageEnvelope, Settings } from "../shared/types";
 
-interface GroupTabPayload {
+interface GroupTabPayload extends Record<string, unknown> {
   category?: string;
   metadata?: Metadata;
 }
 
 const toGroupTabPayload = (categoryOrPayload: string | GroupTabPayload, metadata?: Metadata): GroupTabPayload => {
   if (categoryOrPayload && typeof categoryOrPayload === "object" && !Array.isArray(categoryOrPayload)) {
-    return categoryOrPayload;
+    return {
+      ...categoryOrPayload,
+      metadata: metadata ?? categoryOrPayload.metadata
+    };
   }
-  return { category: categoryOrPayload, metadata };
+  return { category: categoryOrPayload as string, metadata };
 };
 
 const timeoutResponse = (timeoutMs: number) => ({ success: false, error: `Message timed out after ${timeoutMs}ms` });
