@@ -22,22 +22,25 @@ async function sendPopupMessage(
   { timeoutMs }: { timeoutMs?: number } = {}
 ): Promise<GroupTabResponse & Record<string, unknown>> {
   try {
-    const response = await sendMessageSafe(action, payload, { timeoutMs, validateResponsePayload: true });
-    const { valid, errors } = validateResponse(action, response || {});
+    const response = await sendMessageSafe(action, payload, {
+      timeoutMs,
+      validateResponsePayload: true
+    });
+    const { valid, errors } = validateResponse(action, (response as Record<string, unknown>) || {});
     if (!valid) {
       return { success: false, error: errors.join("; ") || "Invalid response" };
-        }
-        return response;
-    } catch (error) {
+    }
+    return response as GroupTabResponse & Record<string, unknown>;
+  } catch (error) {
     const message = (error as Error)?.message || "Unknown error";
     if (/disabled/i.test(message)) {
       return { success: false, error: "Extension is disabled" };
     }
     if (/timed out/i.test(message) && timeoutMs) {
       return { success: false, error: `Message timed out after ${timeoutMs}ms` };
-        }
-        return { success: false, error: message };
     }
+    return { success: false, error: message };
+  }
 }
 
 function handleGuard(response: GroupTabResponse) {
@@ -65,7 +68,8 @@ groupButton?.addEventListener("click", () => {
     groupButton.disabled = true;
 
     try {
-      const category = (categoryInput as HTMLInputElement | null)?.value.trim() || "";
+      const rawValue = (categoryInput as HTMLInputElement | null)?.value ?? "";
+      const category = typeof rawValue === "string" ? rawValue.trim() : "";
       const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
 
     if (response?.success) {
