@@ -20,12 +20,7 @@ export class AutoGroupController {
     this.timer = setTimeout(() => {
       this.timer = null;
       Promise.resolve(onGroup()).catch((error: unknown) => {
-        const message =
-          error instanceof Error
-            ? error.message
-            : typeof error === "string"
-              ? error
-              : "Unknown error";
+        const message = error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
         console.warn("Auto-group handler failed:", message);
       });
     }, delay);
