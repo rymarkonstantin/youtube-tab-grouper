@@ -294,20 +294,20 @@ youtube-tab-grouper/
 
  src/                       # Core extension logic
     background/index.ts    # Service worker entry
-   content/index.js       # Content script entry
+    content/index.ts       # Content script entry
 
  ui/                        # User interface
     popup/
        popup.html
-       popup.js
+       popup.ts
        popup.css
     options/
        options.html
-       options.js
+       options.ts
        options.css
     stats/
        stats.html
-       stats.js
+       stats.ts
        stats.css
     styles/
         common.css
