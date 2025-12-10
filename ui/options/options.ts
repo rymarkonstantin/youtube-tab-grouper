@@ -77,7 +77,7 @@ async function initializeSettings() {
   if (delayEl) delayEl.value = String(settings.autoGroupDelay || 2500);
 
     // Load hashtags
-  const hashtagsEl = allowedHashtagsTextarea;
+  const hashtagsEl = allowedHashtagsTextarea as HTMLTextAreaElement | null;
   if (hashtagsEl) {
     hashtagsEl.value = (settings.allowedHashtags || []).join(", ");
   }
@@ -288,7 +288,7 @@ function getChannelMappingsFromUI() {
  *  FIX: Now includes categoryKeywords
  */
 async function handleSaveSettings() {
-  if (!saveBtn) return;
+  if (!(saveBtn instanceof HTMLButtonElement)) return;
   try {
     saveBtn.disabled = true;
 
@@ -322,7 +322,7 @@ async function handleSaveSettings() {
  * Reset all settings to defaults
  */
 async function handleResetSettings() {
-  if (!resetBtn) return;
+  if (!(resetBtn instanceof HTMLButtonElement)) return;
   if (!confirm("Are you sure you want to reset all settings to defaults?\n\nThis cannot be undone.")) {
     return;
   }
