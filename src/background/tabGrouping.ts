@@ -2,6 +2,8 @@ import { AVAILABLE_COLORS } from "./constants";
 import { TabGroupingService, tabGroupingService } from "./services/tabGroupingService";
 import type { Settings } from "../shared/types";
 
+// TODO: remove this facade once all imports use TabGroupingService directly.
+
 export const initializeGroupingState = () => tabGroupingService.initialize();
 export const groupTab = (tab: chrome.tabs.Tab, category: string, enabledColors: string[]) =>
   tabGroupingService.groupTab(tab, category, enabledColors);
