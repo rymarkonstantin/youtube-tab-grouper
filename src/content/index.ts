@@ -4,13 +4,18 @@ import { isEnabled, loadConfig } from "./config";
 import { cancelAutoGroup, startAutoGroup } from "./autoGroup";
 import { removeGroupButton, renderGroupButton } from "./dom";
 import { extractVideoMetadata } from "./metadataExtractor";
-import { registerMessageHandlers, sendGroupTab, sendIsTabGrouped } from "./messageClient";
+import { sendGroupTab, sendIsTabGrouped } from "./messageClient";
+import { ContentMessagingBridge } from "./messaging/contentMessagingBridge";
 
 const DISABLED_GROUP_RESPONSE: GroupTabResponse = { success: false, error: "Extension is disabled" };
 
 export function startContent() {
   let config: Settings | null = null;
   let lastGroupedMetadataHash: string | null = null;
+  const bridge = new ContentMessagingBridge({
+    getMetadata: () => normalizeVideoMetadata(extractVideoMetadata()),
+    isEnabled: () => isEnabled(config)
+  });
 
   const getNormalizedMetadata = () => normalizeVideoMetadata(extractVideoMetadata());
   const computeMetadataHash = (metadata: Metadata) => {
@@ -97,10 +102,7 @@ export function startContent() {
         onGroup: triggerAutoGroup
       });
 
-      registerMessageHandlers({
-        getMetadata: getNormalizedMetadata,
-        isEnabled: () => isEnabled(config)
-      });
+      bridge.start();
     } catch (error) {
       console.error("Error initializing YouTube Tab Grouper:", error);
     }
@@ -109,6 +111,7 @@ export function startContent() {
   const cleanup = () => {
     cancelAutoGroup();
     removeGroupButton();
+    bridge.stop();
   };
 
   if (document.readyState === "loading") {
