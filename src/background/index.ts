@@ -21,8 +21,9 @@ import {
   buildIsGroupedResponse,
   buildSettingsResponse
 } from "../shared/messageContracts";
-import { handleMessage, generateRequestId, MESSAGE_VERSION } from "../shared/messageTransport";
+import { generateRequestId, MESSAGE_VERSION } from "../shared/messageTransport";
 import { logDebug, setDebugLogging } from "./logger";
+import { MessageRouter } from "../shared/messaging/messageRouter";
 import type { Settings, Metadata, GroupTabRequest } from "../shared/types";
 
 const toErrorMessage = (error: unknown) => {
@@ -79,7 +80,7 @@ const MESSAGE_ROUTES: Partial<Record<MessageAction, RouteConfig>> = {
   }
 };
 
-const backgroundDispatcher = handleMessage(buildRouteHandlers(MESSAGE_ROUTES), {
+const backgroundRouter = new MessageRouter(buildRouteHandlers(MESSAGE_ROUTES), {
   requireVersion: true,
   onUnknown: (action) => buildErrorResponse(`Unknown action "${action || "undefined"}"`)
 });
@@ -94,10 +95,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       requestId: typeof baseMsg.requestId === "string" ? baseMsg.requestId : generateRequestId("legacy")
     };
     console.warn("[compat] Received legacy groupTab message; translating to v1 envelope (will be removed in next release).");
-    return backgroundDispatcher(translated, sender, sendResponse);
+    return backgroundRouter.listener(translated, sender, sendResponse);
   }
 
-  return backgroundDispatcher(msg, sender, sendResponse);
+  return backgroundRouter.listener(msg, sender, sendResponse);
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {

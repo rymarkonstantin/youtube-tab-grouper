@@ -1,7 +1,7 @@
 import type { Metadata } from "../shared/types";
 import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS } from "../shared/messageContracts";
-import { sendMessageSafe } from "../shared/messageTransport";
+import { defaultMessageClient } from "../shared/messaging/messageClient";
 import { logWarn } from "./logger";
 
 const CONTENT_METADATA_TIMEOUTS_MS = [1200, 2000, 3200];
@@ -10,7 +10,11 @@ const CONTENT_METADATA_BACKOFF_MS = [150, 350];
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 async function requestContentMetadata(tabId: number, timeoutMs: number, fallbackTitle: string): Promise<Metadata> {
-  const response = await sendMessageSafe(MESSAGE_ACTIONS.GET_VIDEO_METADATA, {}, { tabId, timeoutMs });
+  const response = await defaultMessageClient.sendMessage(
+    MESSAGE_ACTIONS.GET_VIDEO_METADATA,
+    {},
+    { tabId, timeoutMs }
+  );
   return normalizeVideoMetadata(response as Partial<Metadata>, { fallbackTitle });
 }
 
