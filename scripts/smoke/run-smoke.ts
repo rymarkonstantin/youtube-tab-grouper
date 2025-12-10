@@ -1,7 +1,7 @@
-import { MESSAGE_ACTIONS, validateRequest } from "../../src/shared/messageContracts";
-import { withStatsDefaults, migrateStatsV0ToV1, STATS_VERSION } from "../../src/shared/stats";
-import { withSettingsDefaults, SETTINGS_VERSION } from "../../src/shared/settings";
-import type { Metadata } from "../../src/shared/types";
+import { MESSAGE_ACTIONS, validateRequest } from "../../src/shared/messageContracts.js";
+import { withStatsDefaults, migrateStatsV0ToV1, STATS_VERSION } from "../../src/shared/stats.js";
+import { withSettingsDefaults, SETTINGS_VERSION } from "../../src/shared/settings.js";
+import type { Metadata } from "../../src/shared/types.js";
 
 function assert(condition: unknown, message: string): void {
   if (!condition) {
@@ -34,7 +34,7 @@ function assertInvalidRequest() {
     action: MESSAGE_ACTIONS.GROUP_TAB,
     version: 1,
     requestId: "test_req",
-    metadata: {} as unknown // missing fields
+    metadata: { title: 42 } as unknown // invalid types should fail validation
   } as Record<string, unknown>;
   const result = validateRequest(MESSAGE_ACTIONS.GROUP_TAB, badPayload);
   assert(!result.valid, "Invalid metadata payload should fail validation");
