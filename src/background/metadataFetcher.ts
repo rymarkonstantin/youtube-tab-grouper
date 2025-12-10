@@ -1,3 +1,4 @@
+// TODO: Rename file to metadataService.ts to match the exported class.
 import type { Metadata } from "../shared/types";
 import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS } from "../shared/messageContracts";
