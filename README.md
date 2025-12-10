@@ -74,12 +74,12 @@ Visit the Chrome Web Store and click "Add to Chrome"
 
 - `npm run build` – bundle background, content, and UI scripts to `dist/`
 - `npm run build:watch` – rebuild on change for fast iteration
-- `npm run typecheck` – run `tsc --noEmit` (JS allowed while migrating)
+- `npm run typecheck` – run `tsc --noEmit` (TS sources)
 - `npm run lint` – lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
 
 Dist layout mirrors Manifest V3 modules:
 - `dist/background/index.js` – service worker (built from `src/background/index.ts`)
-- `dist/content/index.js` – content script (from `src/content/index.js`)
+- `dist/content/index.js` – content script (from `src/content/index.ts`)
 - `dist/ui/**` – popup/options/stats assets; `.js` bundled, static files copied
 - `dist/images/**` – icons
 
@@ -292,20 +292,20 @@ youtube-tab-grouper/
 
  src/                       # Core extension logic
     background/index.ts    # Service worker entry
-   content/index.js       # Content script entry
+    content/index.ts       # Content script entry
 
  ui/                        # User interface
     popup/
        popup.html
-       popup.js
+       popup.ts
        popup.css
     options/
        options.html
-       options.js
+       options.ts
        options.css
     stats/
        stats.html
-       stats.js
+       stats.ts
        stats.css
     styles/
         common.css
