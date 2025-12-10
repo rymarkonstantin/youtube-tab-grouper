@@ -4,6 +4,18 @@ All notable changes to YouTube Tab Grouper will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### Added
+- TypeScript build pipeline across background, content, and UI entries with esbuild outputs under `dist/`
+- Type-safe content/popup/options/stats scripts consuming shared message/settings contracts
+
+### Changed
+- README and Architecture docs describe TS sources, `npm run build` / `npm run build:watch`, and loading `dist` in Chrome
+- Manifest paths validated to stay aligned with emitted bundle locations
+
+---
+
 ## [2.0] - 2024-01-15
 
 ### ✨ Added
