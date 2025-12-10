@@ -62,10 +62,12 @@ export class Logger {
   private emit(level: LogLevel, args: unknown[]) {
     if (!this.shouldLog(level)) return;
     const method = this.console?.[level] ? level : "log";
+    const fn = this.console?.[method as keyof Console];
+    if (typeof fn !== "function") return;
     const parts = [this.timestamp()];
     if (this.prefix) parts.push(this.prefix);
     parts.push(...args);
-    this.console[method](...parts);
+    fn.apply(this.console, parts as unknown[]);
   }
 
   private shouldLog(level: LogLevel) {

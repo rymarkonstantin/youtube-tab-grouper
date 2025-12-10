@@ -43,11 +43,11 @@ export class Container {
   }
 
   resolve<T>(token: Token<T>): T {
-    const registration = this.registry.get(token) as Registration<T> | undefined;
+    const registration = this.registry.get(token);
 
     if (registration) {
       if (registration.value !== undefined) {
-        return registration.value;
+        return registration.value as T;
       }
       if (registration.singleton) {
         if (registration.instance === undefined) {
