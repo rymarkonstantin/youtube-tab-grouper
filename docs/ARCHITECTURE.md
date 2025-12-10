@@ -7,7 +7,7 @@ This document explains the system design and how components interact.
 ## System Overview
 
 - **Service worker** (`src/background/index.ts`): coordinates grouping, color assignment, messaging, and cleanup jobs.
-- **Content script** (`src/content/index.js`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
+- **Content script** (`src/content/index.ts`): injected on YouTube watch pages to read metadata, render the floating button, and trigger grouping.
 - **UI pages** (`ui/popup`, `ui/options`, `ui/stats`): popup controls, settings, and stats dashboard.
 - **Storage**: `chrome.storage.sync` for user settings, `chrome.storage.local` for runtime data such as groups, colors, and statistics.
 - **Chrome features**: uses `tabs`, `tabGroups`, `storage`, `contextMenus`, and keyboard `commands`.
@@ -22,20 +22,20 @@ This document explains the system design and how components interact.
 - **Key functions**: `groupTab`, `batchGroupAllTabs`, `getColorForGroup`, `predictCategory`, `autoCleanupEmptyGroups`.
 - **Storage**: reads/writes settings, group color map, group IDs, and statistics.
 
-### 2. Content Script (`content/index.js`)
+### 2. Content Script (`content/index.ts` → `dist/content/index.js`)
 - **Purpose**: page integration on YouTube.
 - **Responsibilities**: build the floating "Group" button, extract video metadata (title, channel, description, keywords), trigger auto-group after delay, and communicate with the service worker.
 - **Key functions**: `getVideoData`, `extractVideoMetadata`, `createUI`, `initialize`.
 
-### 3. Popup (`ui/popup/popup.js`)
+### 3. Popup (`ui/popup/popup.ts` → `dist/ui/popup/popup.js`)
 - **Purpose**: quick actions from the toolbar.
 - **Responsibilities**: group current tab, batch group all YouTube tabs, display status messages, and link to settings/stats.
 
-### 4. Options Page (`ui/options/options.js`)
+### 4. Options Page (`ui/options/options.ts` → `dist/ui/options/options.js`)
 - **Purpose**: manage configuration.
 - **Responsibilities**: load/save settings, manage hashtag whitelist, color preferences, category keywords, channel mappings, and import/export.
 
-### 5. Statistics (`ui/stats/stats.js`)
+### 5. Statistics (`ui/stats/stats.ts` → `dist/ui/stats/stats.js`)
 - **Purpose**: show usage analytics.
 - **Responsibilities**: read stored stats, render simple charts, and support reset.
 
@@ -85,7 +85,7 @@ Refer to `src/shared/messageContracts.ts` and `docs/MESSAGES.md` for the full me
 
 ### SettingsV1 (`chrome.storage.sync`)
 - Purpose: user preferences shared across devices.
-- Defaults: `src/background/constants.js#DEFAULT_SETTINGS` (mirrored in `src/content/index.js` and `ui/options/options.js`).
+- Defaults: `src/background/constants.ts#DEFAULT_SETTINGS` (mirrored in `src/content/index.ts` and `ui/options/options.ts`).
 - Persisted fields:
   - `autoGroupDelay` (number, ms) default `2500`.
   - `autoCleanupGraceMs` (number, ms) default `300000` (delay before removing empty groups).
@@ -104,7 +104,7 @@ Refer to `src/shared/messageContracts.ts` and `docs/MESSAGES.md` for the full me
 
 ### StatsV1 (`chrome.storage.local`)
 - Purpose: usage counters; stays local to the profile.
-- Defaults: `src/background/constants.js#DEFAULT_STATS`.
+- Defaults: `src/background/constants.ts#DEFAULT_STATS`.
 - Persisted fields:
   - `totalTabs` (number) default `0`.
   - `categoryCount` (record<category, number>) default `{}`.
