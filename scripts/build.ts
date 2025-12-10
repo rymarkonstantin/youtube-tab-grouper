@@ -17,7 +17,7 @@ const ESM_ENTRY_POINTS: Record<string, string> = {
 };
 
 const CONTENT_ENTRY_POINTS: Record<string, string> = {
-  "content/index": path.join(ROOT_DIR, "src/content/index.js")
+  "content/index": path.join(ROOT_DIR, "src/content/index.ts")
 };
 
 const isWatchMode = process.argv.includes("--watch");
