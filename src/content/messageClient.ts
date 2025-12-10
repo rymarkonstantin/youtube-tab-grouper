@@ -1,6 +1,4 @@
-import { normalizeVideoMetadata } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS, validateResponse } from "../shared/messageContracts";
-import { MessageRouter } from "../shared/messaging/messageRouter";
 import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
 import type { GroupTabResponse, Metadata, MessageEnvelope, Settings } from "../shared/types";
 
@@ -97,43 +95,4 @@ export async function sendIsTabGrouped(
   >;
 }
 
-export function replyWithMetadata({
-  getMetadata,
-  isEnabled
-}: {
-  getMetadata?: () => Promise<Metadata> | Metadata;
-  isEnabled?: () => boolean;
-}) {
-  return async () => {
-    const enabled = typeof isEnabled === "function" ? isEnabled() : true;
-    if (!enabled) {
-      return normalizeVideoMetadata();
-    }
-    const raw = typeof getMetadata === "function" ? await getMetadata() : {};
-    return normalizeVideoMetadata(raw);
-  };
-}
-
-export function registerMessageHandlers({
-  getMetadata,
-  isEnabled
-}: {
-  getMetadata?: () => Promise<Metadata> | Metadata;
-  isEnabled?: () => boolean;
-}) {
-  const router = new MessageRouter(
-    {
-      [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: replyWithMetadata({ getMetadata, isEnabled })
-    },
-    {
-      requireVersion: true,
-      onUnknown: (action, msg) => {
-        console.warn(`Unknown content message action: ${action || (msg as { action?: string })?.action || "undefined"}`);
-        return false;
-      }
-    }
-  );
-
-  chrome.runtime.onMessage.addListener(router.listener);
-  return () => chrome.runtime.onMessage.removeListener(router.listener);
-}
+// Messaging bridge moved to src/content/messaging/contentMessagingBridge.ts
