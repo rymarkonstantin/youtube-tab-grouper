@@ -1,13 +1,7 @@
 import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from "./constants";
 import { categoryResolver } from "./services/categoryResolver";
-import {
-  initializeGroupingState,
-  groupTab,
-  autoCleanupEmptyGroups,
-  handleGroupRemoved,
-  handleGroupUpdated,
-  getEnabledColors
-} from "./tabGrouping";
+import { cleanupScheduler } from "./services/cleanupScheduler";
+import { initializeGroupingState, groupTab, getEnabledColors } from "./tabGrouping";
 import { getVideoMetadata } from "./metadataFetcher";
 import { chromeApiClient } from "./infra/chromeApiClient";
 import { settingsRepository } from "./repositories/settingsRepository";
@@ -108,36 +102,12 @@ chrome.commands.onCommand.addListener((command) => {
   void handleCommand(command);
 });
 
-chrome.tabGroups.onRemoved.addListener((group) => {
-  void handleGroupRemoved(group.id);
-});
-
-chrome.tabGroups.onUpdated.addListener((group) => {
-  void (async () => {
-    try {
-      await handleGroupUpdated(group);
-    } catch (error) {
-      console.error("Tab group update error:", error);
-    }
-  })();
-});
-
-setInterval(() => {
-  void settingsRepository
-    .get()
-    .then((settings) => {
-      if (settings.autoCleanupEnabled) {
-        void autoCleanupEmptyGroups(settings.autoCleanupGraceMs);
-      }
-    })
-    .catch((error) => console.error("Auto cleanup check failed:", error));
-}, 60000);
-
 async function bootstrap() {
   try {
     await initializeGroupingState();
     await runMigrations();
     await registerContextMenus();
+    cleanupScheduler.start();
   } catch (error) {
     console.error("Background bootstrap failed:", error);
   }
