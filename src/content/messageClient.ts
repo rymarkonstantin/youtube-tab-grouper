@@ -1,6 +1,7 @@
 import { normalizeVideoMetadata } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS, validateResponse } from "../shared/messageContracts";
-import { handleMessage, sendMessageSafe } from "../shared/messageTransport";
+import { MessageRouter } from "../shared/messaging/messageRouter";
+import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
 import type { GroupTabResponse, Metadata, MessageEnvelope, Settings } from "../shared/types";
 
 interface GroupTabPayload extends Record<string, unknown> {
@@ -27,11 +28,11 @@ const disabledResponse = () => ({ success: false, error: "Extension is disabled"
 export async function sendGroupTab(
   categoryOrPayload: string | GroupTabPayload,
   metadata?: Metadata,
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number; client?: MessageClient } = {}
 ): Promise<GroupTabResponse> {
-  const { timeoutMs } = options;
+  const { timeoutMs, client = defaultMessageClient } = options;
   try {
-    const response = (await sendMessageSafe(
+    const response = (await client.sendMessage(
       MESSAGE_ACTIONS.GROUP_TAB,
       toGroupTabPayload(categoryOrPayload, metadata),
       { timeoutMs, validateResponsePayload: true }
@@ -58,11 +59,11 @@ export async function sendGroupTab(
  * Fetch settings from background.
  */
 export async function sendGetSettings(
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number; client?: MessageClient } = {}
 ): Promise<{ success: boolean; settings?: Settings; error?: string }> {
-  const { timeoutMs } = options;
+  const { timeoutMs, client = defaultMessageClient } = options;
   try {
-    const response = (await sendMessageSafe(
+    const response = (await client.sendMessage(
       MESSAGE_ACTIONS.GET_SETTINGS,
       {},
       { timeoutMs, validateResponsePayload: true }
@@ -88,10 +89,10 @@ export async function sendGetSettings(
  * Check if the active tab is already grouped.
  */
 export async function sendIsTabGrouped(
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number; client?: MessageClient } = {}
 ): Promise<{ grouped: boolean; error?: string } & Partial<MessageEnvelope>> {
-  const { timeoutMs } = options;
-  return sendMessageSafe(MESSAGE_ACTIONS.IS_TAB_GROUPED, {}, { timeoutMs, validateResponsePayload: true }) as Promise<
+  const { timeoutMs, client = defaultMessageClient } = options;
+  return client.sendMessage(MESSAGE_ACTIONS.IS_TAB_GROUPED, {}, { timeoutMs, validateResponsePayload: true }) as Promise<
     { grouped: boolean; error?: string } & Partial<MessageEnvelope>
   >;
 }
@@ -120,7 +121,7 @@ export function registerMessageHandlers({
   getMetadata?: () => Promise<Metadata> | Metadata;
   isEnabled?: () => boolean;
 }) {
-  const listener = handleMessage(
+  const router = new MessageRouter(
     {
       [MESSAGE_ACTIONS.GET_VIDEO_METADATA]: replyWithMetadata({ getMetadata, isEnabled })
     },
@@ -133,6 +134,6 @@ export function registerMessageHandlers({
     }
   );
 
-  chrome.runtime.onMessage.addListener(listener);
-  return () => chrome.runtime.onMessage.removeListener(listener);
+  chrome.runtime.onMessage.addListener(router.listener);
+  return () => chrome.runtime.onMessage.removeListener(router.listener);
 }
