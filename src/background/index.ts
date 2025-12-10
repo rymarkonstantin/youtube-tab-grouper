@@ -1,5 +1,4 @@
 import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from "./constants";
-import { loadSettings, saveSettings, runMigrations } from "./storage";
 import { predictCategory } from "./categoryResolver";
 import {
   initializeGroupingState,
@@ -11,6 +10,8 @@ import {
 } from "./tabGrouping";
 import { getVideoMetadata } from "./metadataFetcher";
 import { chromeApiClient } from "./infra/chromeApiClient";
+import { settingsRepository } from "./repositories/settingsRepository";
+import { runMigrations } from "./infra/migrations";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -121,7 +122,8 @@ chrome.tabGroups.onUpdated.addListener((group) => {
 });
 
 setInterval(() => {
-  void loadSettings()
+  void settingsRepository
+    .get()
     .then((settings) => {
       if (settings.autoCleanupEnabled) {
         void autoCleanupEmptyGroups(settings.autoCleanupGraceMs);
@@ -147,7 +149,7 @@ function buildRouteHandlers(routes: Partial<Record<MessageAction, RouteConfig>>)
       let settings: Settings | null = null;
 
       if (route.requiresEnabled) {
-        settings = await loadSettings();
+        settings = await settingsRepository.get();
         setDebugLogging(settings.debugLogging);
         if (!settings.extensionEnabled) {
           return buildErrorResponse("Extension is disabled");
@@ -217,7 +219,7 @@ async function handleGroupTabMessage(msg: GroupTabRequest, sender: chrome.runtim
     return buildErrorResponse("No active tab found");
   }
 
-  const settings = preloadedSettings || (await loadSettings());
+  const settings = preloadedSettings || (await settingsRepository.get());
   if (!settings.extensionEnabled) {
     return buildErrorResponse("Extension is disabled");
   }
@@ -249,7 +251,7 @@ async function handleBatchGroupMessage(_msg: unknown, _sender: chrome.runtime.Me
 
 async function handleGetSettingsMessage() {
   try {
-    const settings = await loadSettings();
+    const settings = await settingsRepository.get();
     return buildSettingsResponse({ ...settings });
   } catch (error) {
     return buildErrorResponse((error as Error)?.message || "Failed to load settings");
@@ -262,7 +264,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
   }
 
   try {
-    const settings = await loadSettings();
+    const settings = await settingsRepository.get();
     if (!settings.extensionEnabled) {
       return;
     }
@@ -284,7 +286,7 @@ async function handleContextMenuClick(info: chrome.contextMenus.OnClickData, tab
 
 async function handleCommand(command: string) {
   try {
-    const settings = await loadSettings();
+    const settings = await settingsRepository.get();
     const enabledColors = getEnabledColors(settings, AVAILABLE_COLORS);
 
     if (command === "group-current-tab") {
@@ -301,7 +303,7 @@ async function handleCommand(command: string) {
 
     if (command === "toggle-extension") {
       settings.extensionEnabled = !settings.extensionEnabled;
-      await saveSettings(settings);
+      await settingsRepository.save(settings);
     }
   } catch (error) {
     console.error("Command error:", error);
@@ -315,7 +317,7 @@ async function batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverr
       currentWindow: true
     });
 
-    const settings = settingsOverride || (await loadSettings());
+    const settings = settingsOverride || (await settingsRepository.get());
     if (!settings.extensionEnabled) {
       return buildErrorResponse("Extension is disabled");
     }
