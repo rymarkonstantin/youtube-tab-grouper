@@ -9,8 +9,8 @@ import {
   handleGroupUpdated,
   getEnabledColors
 } from "./tabGrouping";
-import { queryTabs } from "./chromeApi";
 import { getVideoMetadata } from "./metadataFetcher";
+import { chromeApiClient } from "./infra/chromeApiClient";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -212,7 +212,7 @@ async function clearContextMenus() {
 }
 
 async function handleGroupTabMessage(msg: GroupTabRequest, sender: chrome.runtime.MessageSender, preloadedSettings?: Settings) {
-  const [tab] = await queryTabs({ active: true, currentWindow: true });
+  const [tab] = await chromeApiClient.queryTabs({ active: true, currentWindow: true });
   if (tab?.id === undefined) {
     return buildErrorResponse("No active tab found");
   }
@@ -231,7 +231,7 @@ async function handleGroupTabMessage(msg: GroupTabRequest, sender: chrome.runtim
 
 async function handleIsTabGroupedMessage() {
   try {
-    const [tab] = await queryTabs({ active: true, currentWindow: true });
+    const [tab] = await chromeApiClient.queryTabs({ active: true, currentWindow: true });
     return buildIsGroupedResponse((tab?.groupId ?? -1) >= 0);
   } catch (error) {
     return buildIsGroupedResponse(false, (error as Error)?.message);
@@ -288,7 +288,7 @@ async function handleCommand(command: string) {
     const enabledColors = getEnabledColors(settings, AVAILABLE_COLORS);
 
     if (command === "group-current-tab") {
-      const [tab] = await queryTabs({ active: true, currentWindow: true });
+      const [tab] = await chromeApiClient.queryTabs({ active: true, currentWindow: true });
       if (tab && isYouTubeUrl(tab.url) && settings.extensionEnabled) {
         const category = await resolveCategory(tab, settings);
         await groupTab(tab, category, enabledColors);
@@ -310,7 +310,7 @@ async function handleCommand(command: string) {
 
 async function batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverride?: string[]) {
   try {
-    const tabs = await queryTabs({
+    const tabs = await chromeApiClient.queryTabs({
       url: "https://www.youtube.com/*",
       currentWindow: true
     });

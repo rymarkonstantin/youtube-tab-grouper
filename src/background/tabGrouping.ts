@@ -1,6 +1,6 @@
 import { AVAILABLE_COLORS, DEFAULT_STATS } from "./constants";
 import { loadState, saveState, loadStats, saveStats } from "./storage";
-import { queryTabs, queryGroups, getTabGroup, groupTabs, updateTabGroup, removeTabGroup } from "./chromeApi";
+import { chromeApiClient } from "./infra/chromeApiClient";
 import { logError, logWarn, toErrorEnvelope } from "./logger";
 import type { Settings } from "../shared/types";
 
@@ -66,7 +66,7 @@ export async function initializeGroupingState() {
 }
 
 async function getNeighborColors(tabId: number, windowId: number): Promise<Set<string>> {
-  const tabs = await queryTabs({ windowId });
+  const tabs = await chromeApiClient.queryTabs({ windowId });
   const groupIds = [
     ...new Set(
       tabs
@@ -78,7 +78,7 @@ async function getNeighborColors(tabId: number, windowId: number): Promise<Set<s
 
   if (groupIds.length === 0) return new Set();
 
-  const groups = await Promise.all(groupIds.map((gid) => getTabGroup(gid)));
+  const groups = await Promise.all(groupIds.map((gid) => chromeApiClient.getTabGroup(gid)));
   return new Set(groups.map((g) => g?.color).filter(isGroupColor));
 }
 
@@ -125,19 +125,19 @@ async function ensureGroupForCategory(tab: chrome.tabs.Tab, category: string, co
     throw new Error("Tab missing id");
   }
 
-  const groups = await queryGroups({ title: category });
+  const groups = await chromeApiClient.queryGroups({ title: category });
   const groupInWindow = groups.find((g) => g.windowId === tab.windowId);
 
   let groupId: number;
   if (groupInWindow) {
     groupId = groupInWindow.id;
-    await groupTabs(tab.id, groupId);
+    await chromeApiClient.groupTabs(tab.id, groupId);
   } else {
-    groupId = await groupTabs(tab.id);
+    groupId = await chromeApiClient.groupTabs(tab.id);
   }
 
   const groupColor: chrome.tabGroups.ColorEnum = color as chrome.tabGroups.ColorEnum;
-  await updateTabGroup(groupId, { title: category, color: groupColor });
+  await chromeApiClient.updateTabGroup(groupId, { title: category, color: groupColor });
   return { groupId, color };
 }
 
@@ -193,7 +193,7 @@ export async function groupTab(tab: chrome.tabs.Tab, category: string, enabledCo
 
 async function isGroupActive(group: chrome.tabGroups.TabGroup) {
   try {
-    const [activeTab] = await queryTabs({ active: true, windowId: group.windowId });
+    const [activeTab] = await chromeApiClient.queryTabs({ active: true, windowId: group.windowId });
     return activeTab?.groupId === group.id;
   } catch (error) {
     logWarn("grouping:isGroupActive check failed; assuming inactive", toErrorMessage(error));
@@ -202,7 +202,7 @@ async function isGroupActive(group: chrome.tabGroups.TabGroup) {
 }
 
 async function isGroupEmpty(groupId: number) {
-  const tabs = await queryTabs({ groupId });
+  const tabs = await chromeApiClient.queryTabs({ groupId });
   return tabs.length === 0;
 }
 
@@ -241,7 +241,7 @@ async function tryCleanupGroup(group: chrome.tabGroups.TabGroup, graceMs = 30000
       return;
     }
 
-    await removeTabGroup(group.id);
+    await chromeApiClient.removeTabGroup(group.id);
     await pruneGroupState(group.id);
     clearPendingCleanup(group.id);
   } catch (error) {
@@ -254,10 +254,10 @@ async function tryCleanupGroup(group: chrome.tabGroups.TabGroup, graceMs = 30000
  */
 export async function autoCleanupEmptyGroups(graceMs = 300000) {
   try {
-    const groups = await queryGroups({});
+    const groups = await chromeApiClient.queryGroups({});
 
     for (const group of groups) {
-      const tabs = await queryTabs({ groupId: group.id });
+      const tabs = await chromeApiClient.queryTabs({ groupId: group.id });
 
       if (tabs.length === 0) {
         await tryCleanupGroup(group, graceMs);
