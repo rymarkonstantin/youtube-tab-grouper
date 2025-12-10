@@ -12,7 +12,9 @@ const groupButton = document.getElementById("groupButton");
 const batchButton = document.getElementById("batchButton");
 const categoryInput = document.getElementById("categoryInput");
 const statusEl = document.getElementById("status");
-const buttons = [groupButton, batchButton].filter(Boolean) as HTMLButtonElement[];
+const buttons: HTMLButtonElement[] = [groupButton, batchButton].filter(
+  (btn): btn is HTMLButtonElement => btn instanceof HTMLButtonElement
+);
 
 const isGuardDisabled = (error: unknown) => typeof error === "string" && /disabled/i.test(error);
 
@@ -65,11 +67,12 @@ function formatError(response: GroupTabResponse & { errors?: string[] }) {
 
 groupButton?.addEventListener("click", () => {
   void (async () => {
+    if (!(groupButton instanceof HTMLButtonElement)) return;
     groupButton.disabled = true;
 
     try {
-      const rawValue = (categoryInput as HTMLInputElement | null)?.value ?? "";
-      const category = typeof rawValue === "string" ? rawValue.trim() : "";
+      const rawValue = categoryInput instanceof HTMLInputElement ? categoryInput.value : "";
+      const category = rawValue.trim();
       const response = await sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
 
     if (response?.success) {
@@ -88,6 +91,7 @@ groupButton?.addEventListener("click", () => {
 
 batchButton?.addEventListener("click", () => {
   void (async () => {
+    if (!(batchButton instanceof HTMLButtonElement)) return;
     batchButton.disabled = true;
 
     try {
