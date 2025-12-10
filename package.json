@@ -1,6 +1,6 @@
 {
   "name": "youtube-tab-grouper",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Chrome extension that groups YouTube tabs by category",
   "private": true,
   "type": "module",
