@@ -64,10 +64,10 @@ export class Logger {
     const method = this.console?.[level] ? level : "log";
     const fn = this.console?.[method as keyof Console];
     if (typeof fn !== "function") return;
-    const parts = [this.timestamp()];
+    const parts: unknown[] = [this.timestamp()];
     if (this.prefix) parts.push(this.prefix);
     parts.push(...args);
-    fn.apply(this.console, parts as unknown[]);
+    fn.apply(this.console, parts);
   }
 
   private shouldLog(level: LogLevel) {
