@@ -90,6 +90,8 @@ export const mapYouTubeCategory = (youtubeCategory: string | number | null) => {
 
 const fromYouTubeCategory: Strategy = (metadata) => mapYouTubeCategory(metadata.youtubeCategory);
 
+// TODO: consider extracting strategies into named exports/registry to make ordering configurable via DI.
+
 export class CategoryResolver {
   private strategies: Strategy[];
   private fallbackCategory: string;
