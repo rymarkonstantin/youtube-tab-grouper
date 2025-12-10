@@ -99,5 +99,6 @@ export class MetadataService {
 export const metadataService = new MetadataService();
 
 // Backward-compatible helper
+// TODO: Remove this alias once all call sites use MetadataService directly.
 export const getVideoMetadata = (tabId: number, options: MetadataOptions = {}) =>
   metadataService.getVideoMetadata(tabId, options);
