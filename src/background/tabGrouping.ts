@@ -2,6 +2,7 @@ import { AVAILABLE_COLORS } from "./constants";
 import { groupStateRepository } from "./repositories/groupStateRepository";
 import { statsRepository } from "./repositories/statsRepository";
 import { chromeApiClient } from "./infra/chromeApiClient";
+import { colorAssigner } from "./services/colorAssigner";
 import { logError, logWarn, toErrorEnvelope } from "./logger";
 import type { Settings } from "../shared/types";
 
@@ -32,31 +33,6 @@ function clearPendingCleanup(groupId: number) {
   pendingCleanup.delete(groupId);
 }
 
-function createMutex() {
-  const locks = new Map<string, Promise<void>>();
-
-  return async function runExclusive<T>(key: string, task: () => Promise<T>): Promise<T> {
-    const previous = locks.get(key) ?? Promise.resolve();
-    let release: () => void = () => undefined;
-    const current = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    locks.set(key, previous.then(() => current));
-
-    await previous;
-    try {
-      return await task();
-    } finally {
-      release();
-      if (locks.get(key) === current) {
-        locks.delete(key);
-      }
-    }
-  };
-}
-
-const runCategoryExclusive = createMutex();
-
 /**
  * Load persisted group color/id maps into memory.
  */
@@ -64,58 +40,7 @@ export async function initializeGroupingState() {
   const { groupColorMap: savedColors, groupIdMap: savedIds } = await groupStateRepository.get();
   Object.assign(groupColorMap, savedColors || {});
   Object.assign(groupIdMap, savedIds || {});
-}
-
-async function getNeighborColors(tabId: number, windowId: number): Promise<Set<string>> {
-  const tabs = await chromeApiClient.queryTabs({ windowId });
-  const groupIds = [
-    ...new Set(
-      tabs
-        .filter((t) => t.id !== tabId && (t.groupId ?? -1) >= 0)
-        .map((t) => t.groupId)
-        .filter((gid): gid is number => typeof gid === "number")
-    )
-  ];
-
-  if (groupIds.length === 0) return new Set();
-
-  const groups = await Promise.all(groupIds.map((gid) => chromeApiClient.getTabGroup(gid)));
-  return new Set(groups.map((g) => g?.color).filter(isGroupColor));
-}
-
-function pickRandomColor(colors: string[] = []) {
-  if (!colors.length) return "";
-  const idx = Math.floor(Math.random() * colors.length);
-  return colors[idx] || "";
-}
-
-const isGroupColor = (value: unknown): value is chrome.tabGroups.ColorEnum =>
-  typeof value === "string" && (AVAILABLE_COLORS as readonly string[]).includes(value);
-
-async function selectColorForCategory(
-  category: string,
-  tabId: number,
-  windowId: number,
-  enabledColors: string[] = []
-) {
-  if (groupColorMap[category]) {
-    return groupColorMap[category];
-  }
-
-  if (!Array.isArray(enabledColors) || enabledColors.length === 0) {
-    throw new Error("No enabled colors available for assignment");
-  }
-
-  const neighborColors = await getNeighborColors(tabId, windowId);
-  const available = enabledColors.filter((color) => !neighborColors.has(color));
-  const color = available.length > 0 ? pickRandomColor(available) : pickRandomColor(enabledColors);
-
-  if (!color) {
-    throw new Error("Unable to assign a color for the category");
-  }
-
-  groupColorMap[category] = color;
-  return color;
+  colorAssigner.setCache(groupColorMap);
 }
 
 async function ensureGroupForCategory(tab: chrome.tabs.Tab, category: string, color: string) {
@@ -175,21 +100,19 @@ export async function groupTab(tab: chrome.tabs.Tab, category: string, enabledCo
   }
   const { id: tabId, windowId } = tab;
 
-  return runCategoryExclusive(category, async () => {
-    try {
-      const color = await selectColorForCategory(category, tabId, windowId, enabledColors);
-      const { groupId } = await ensureGroupForCategory(tab, category, color);
+  try {
+    const color = await colorAssigner.assignColor(category, tabId, windowId, enabledColors);
+    const { groupId } = await ensureGroupForCategory(tab, category, color);
 
-      await persistGroupingState(category, groupId, color);
-      await recordGroupingStats(category);
+    await persistGroupingState(category, groupId, color);
+    await recordGroupingStats(category);
 
-      return { groupId, color };
-    } catch (error) {
-      const wrapped = toErrorEnvelope(error, (error as Error)?.message || "Failed to group tab");
-      logError("grouping:groupTab failed", wrapped.message);
-      throw wrapped;
-    }
-  });
+    return { groupId, color };
+  } catch (error) {
+    const wrapped = toErrorEnvelope(error, (error as Error)?.message || "Failed to group tab");
+    logError("grouping:groupTab failed", wrapped.message);
+    throw wrapped;
+  }
 }
 
 async function isGroupActive(group: chrome.tabGroups.TabGroup) {
