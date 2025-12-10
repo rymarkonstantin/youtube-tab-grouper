@@ -1,0 +1,354 @@
+import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from "../constants";
+import { categoryResolver } from "../services/categoryResolver";
+import { tabGroupingService, TabGroupingService } from "../services/tabGroupingService";
+import { cleanupScheduler } from "../services/cleanupScheduler";
+import { settingsRepository } from "../repositories/settingsRepository";
+import { chromeApiClient } from "../infra/chromeApiClient";
+import { runMigrations } from "../infra/migrations";
+import { getVideoMetadata } from "../metadataFetcher";
+import {
+  MESSAGE_ACTIONS,
+  MessageAction,
+  buildBatchGroupResponse,
+  buildErrorResponse,
+  buildGroupTabResponse,
+  buildIsGroupedResponse,
+  buildSettingsResponse
+} from "../../shared/messageContracts";
+import { MessageRouter } from "../../shared/messaging/messageRouter";
+import { logDebug, setDebugLogging } from "../logger";
+import type { Settings, Metadata, GroupTabRequest } from "../../shared/types";
+
+type RouteHandler = (
+  msg: Record<string, unknown>,
+  sender: chrome.runtime.MessageSender,
+  settings?: Settings
+) => Promise<unknown>;
+
+interface RouteConfig {
+  requiresEnabled: boolean;
+  handler: RouteHandler;
+}
+
+interface BackgroundAppDeps {
+  router?: MessageRouter;
+  settingsRepo?: typeof settingsRepository;
+  groupingService?: typeof tabGroupingService;
+  categoryResolver?: typeof categoryResolver;
+  cleanupScheduler?: typeof cleanupScheduler;
+  chromeApi?: typeof chromeApiClient;
+}
+
+export class BackgroundApp {
+  private router: MessageRouter;
+  private settingsRepo: typeof settingsRepository;
+  private groupingService: typeof tabGroupingService;
+  private categoryResolver: typeof categoryResolver;
+  private cleanupScheduler: typeof cleanupScheduler;
+  private chromeApi: typeof chromeApiClient;
+  private started = false;
+
+  constructor(deps: BackgroundAppDeps = {}) {
+    this.settingsRepo = deps.settingsRepo ?? settingsRepository;
+    this.groupingService = deps.groupingService ?? tabGroupingService;
+    this.categoryResolver = deps.categoryResolver ?? categoryResolver;
+    this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
+    this.chromeApi = deps.chromeApi ?? chromeApiClient;
+
+    const routes = this.buildRouteHandlers();
+    this.router =
+      deps.router ??
+      new MessageRouter(routes, {
+        requireVersion: true,
+        onUnknown: (action) => buildErrorResponse(`Unknown action "${action || "undefined"}"`)
+      });
+  }
+
+  async start() {
+    if (this.started) return;
+    this.started = true;
+
+    await this.groupingService.initialize();
+    await runMigrations();
+    await this.registerContextMenus();
+    this.cleanupScheduler.start();
+
+    chrome.runtime.onMessage.addListener(this.handleMessage);
+    chrome.contextMenus.onClicked.addListener(this.handleContextMenuClick);
+    chrome.commands.onCommand.addListener(this.handleCommand);
+  }
+
+  stop() {
+    if (!this.started) return;
+    this.started = false;
+
+    chrome.runtime.onMessage.removeListener(this.handleMessage);
+    chrome.contextMenus.onClicked.removeListener(this.handleContextMenuClick);
+    chrome.commands.onCommand.removeListener(this.handleCommand);
+    this.cleanupScheduler.stop();
+  }
+
+  private handleMessage = (
+    msg: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (value: unknown) => void
+  ) => {
+    return this.router.listener(msg, sender, sendResponse);
+  };
+
+  private handleContextMenuClick = (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => {
+    void (async () => {
+      if (!tab || !this.isYouTubeUrl(tab.url)) {
+        return;
+      }
+
+      try {
+        const settings = await this.settingsRepo.get();
+        if (!settings.extensionEnabled) {
+          return;
+        }
+
+        const enabledColors = this.getEnabledColors(settings);
+
+        if (info.menuItemId === "groupTab") {
+          const category = await this.resolveCategory(tab, settings);
+          await this.groupingService.groupTab(tab, category, enabledColors);
+        }
+
+        if (info.menuItemId === "groupAllYT") {
+          await this.batchGroupAllTabs(settings, enabledColors);
+        }
+      } catch (error) {
+        console.error("Context menu error:", error);
+      }
+    })();
+  };
+
+  private handleCommand = (command: string) => {
+    void (async () => {
+      try {
+        const settings = await this.settingsRepo.get();
+        const enabledColors = this.getEnabledColors(settings);
+
+        if (command === "group-current-tab") {
+          const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
+          if (tab && this.isYouTubeUrl(tab.url) && settings.extensionEnabled) {
+            const category = await this.resolveCategory(tab, settings);
+            await this.groupingService.groupTab(tab, category, enabledColors);
+          }
+        }
+
+        if (command === "batch-group-all" && settings.extensionEnabled) {
+          await this.batchGroupAllTabs(settings, enabledColors);
+        }
+
+        if (command === "toggle-extension") {
+          settings.extensionEnabled = !settings.extensionEnabled;
+          await this.settingsRepo.save(settings);
+        }
+      } catch (error) {
+        console.error("Command error:", error);
+      }
+    })();
+  };
+
+  private async registerContextMenus() {
+    await new Promise<void>((resolve) => {
+      chrome.contextMenus.removeAll(() => {
+        if (chrome.runtime.lastError) {
+          console.warn("Failed to clear context menus:", chrome.runtime.lastError.message);
+        }
+        resolve();
+      });
+    });
+
+    chrome.contextMenus.create({
+      id: "groupTab",
+      title: "Group This Tab",
+      contexts: ["page"],
+      documentUrlPatterns: ["https://www.youtube.com/*"]
+    });
+
+    chrome.contextMenus.create({
+      id: "groupAllYT",
+      title: "Group All YouTube Tabs",
+      contexts: ["page"]
+    });
+  }
+
+  private async resolveCategory(
+    tab: chrome.tabs.Tab,
+    settings: Settings,
+    metadataOverride: Partial<Metadata> = {},
+    requestedCategory = ""
+  ) {
+    if (tab.id === undefined) {
+      throw new Error("Cannot resolve category for tab without id");
+    }
+
+    const trimmedCategory = requestedCategory?.trim();
+    if (trimmedCategory) {
+      return trimmedCategory;
+    }
+
+    const metadata = await getVideoMetadata(tab.id, {
+      fallbackMetadata: metadataOverride,
+      fallbackTitle: tab?.title || ""
+    });
+
+    return this.categoryResolver.resolve(metadata, {
+      requestedCategory,
+      aiEnabled: settings.aiCategoryDetection,
+      categoryKeywords: settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
+      channelMap: settings.channelCategoryMap || {}
+    });
+  }
+
+  private async batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverride?: string[]) {
+    try {
+      const tabs = await this.chromeApi.queryTabs({
+        url: "https://www.youtube.com/*",
+        currentWindow: true
+      });
+
+      const settings = settingsOverride || (await this.settingsRepo.get());
+      if (!settings.extensionEnabled) {
+        return buildErrorResponse("Extension is disabled");
+      }
+
+      const enabledColors = enabledColorsOverride || this.getEnabledColors(settings);
+
+      let successCount = 0;
+      for (const tab of tabs) {
+        try {
+          const category = await this.resolveCategory(tab, settings);
+          await this.groupingService.groupTab(tab, category, enabledColors);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to group tab ${tab.id}:`, error);
+        }
+      }
+
+      return buildBatchGroupResponse(successCount);
+    } catch (error) {
+      return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
+    }
+  }
+
+  private getEnabledColors(settings: Settings, fallbackColors: readonly string[] = AVAILABLE_COLORS) {
+    return TabGroupingService.getEnabledColors(settings, fallbackColors);
+  }
+
+  private buildRouteHandlers() {
+    const routes: Partial<Record<MessageAction, RouteConfig>> = {
+      [MESSAGE_ACTIONS.GROUP_TAB]: {
+        requiresEnabled: true,
+        handler: this.handleGroupTabMessage
+      },
+      [MESSAGE_ACTIONS.BATCH_GROUP]: {
+        requiresEnabled: true,
+        handler: this.handleBatchGroupMessage
+      },
+      [MESSAGE_ACTIONS.GET_SETTINGS]: {
+        requiresEnabled: false,
+        handler: this.handleGetSettingsMessage
+      },
+      [MESSAGE_ACTIONS.IS_TAB_GROUPED]: {
+        requiresEnabled: false,
+        handler: this.handleIsTabGroupedMessage
+      }
+    };
+
+    return Object.entries(routes).reduce<Partial<Record<MessageAction, RouteHandler>>>((acc, [action, route]) => {
+      if (!route) return acc;
+      acc[action as MessageAction] = async (msg, sender) => {
+        let settings: Settings | null = null;
+
+        if (route.requiresEnabled) {
+          settings = await this.settingsRepo.get();
+          setDebugLogging(settings.debugLogging);
+          if (!settings.extensionEnabled) {
+            return buildErrorResponse("Extension is disabled");
+          }
+        }
+
+        const context = {
+          action,
+          tabId: sender?.tab?.id,
+          windowId: sender?.tab?.windowId
+        };
+
+        logDebug("action:start", context);
+        try {
+          const result = await route.handler(msg, sender, settings ?? undefined);
+          logDebug("action:success", { ...context, result });
+          return result;
+        } catch (error) {
+          logDebug("action:error", { ...context, error: toErrorMessage(error) });
+          throw error;
+        }
+      };
+      return acc;
+    }, {});
+  }
+
+  private handleIsTabGroupedMessage: RouteHandler = async () => {
+    try {
+      const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
+      return buildIsGroupedResponse((tab?.groupId ?? -1) >= 0);
+    } catch (error) {
+      return buildIsGroupedResponse(false, (error as Error)?.message);
+    }
+  };
+
+  private handleGetSettingsMessage: RouteHandler = async () => {
+    try {
+      const settings = await this.settingsRepo.get();
+      return buildSettingsResponse({ ...settings });
+    } catch (error) {
+      return buildErrorResponse((error as Error)?.message || "Failed to load settings");
+    }
+  };
+
+  private handleGroupTabMessage: RouteHandler = async (msg, _sender, preloadedSettings) => {
+    const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
+    if (tab?.id === undefined) {
+      return buildErrorResponse("No active tab found");
+    }
+
+    const settings = preloadedSettings || (await this.settingsRepo.get());
+    if (!settings.extensionEnabled) {
+      return buildErrorResponse("Extension is disabled");
+    }
+
+    const enabledColors = this.getEnabledColors(settings, AVAILABLE_COLORS);
+    const typed = msg as GroupTabRequest;
+    const category = await this.resolveCategory(tab, settings, typed.metadata, typed.category);
+    const result = await this.groupingService.groupTab(tab, category, enabledColors);
+
+    return buildGroupTabResponse({ category, color: result.color });
+  };
+
+  private handleBatchGroupMessage: RouteHandler = async (_msg, _sender, preloadedSettings) => {
+    try {
+      const result = await this.batchGroupAllTabs(preloadedSettings);
+      return result;
+    } catch (error) {
+      return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
+    }
+  };
+
+  private isYouTubeUrl(url = "") {
+    return url.includes("youtube.com");
+  }
+}
+
+const toErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown error";
+  }
+};
