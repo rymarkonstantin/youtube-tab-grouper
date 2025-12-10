@@ -1,5 +1,5 @@
 import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from "./constants";
-import { predictCategory } from "./categoryResolver";
+import { categoryResolver } from "./services/categoryResolver";
 import {
   initializeGroupingState,
   groupTab,
@@ -362,7 +362,7 @@ async function resolveCategory(
     fallbackTitle: tab?.title || ""
   });
 
-  return predictCategory(metadata, {
+  return categoryResolver.resolve(metadata, {
     requestedCategory,
     aiEnabled: settings.aiCategoryDetection,
     categoryKeywords: settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
