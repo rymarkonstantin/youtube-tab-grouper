@@ -2,14 +2,13 @@ import {
   DEFAULT_SETTINGS,
   SETTINGS_VERSION,
   STATS_VERSION,
-  migrateSettingsV0ToV1,
-  migrateStatsV0ToV1,
-  withSettingsDefaults,
-  withStatsDefaults
+  withStatsDefaults,
+  migrateStatsV0ToV1
 } from "../constants";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { statsRepository } from "../repositories/statsRepository";
 import { readAllChromeStorage } from "../repositories/repositoryUtils";
+import { SettingsService } from "../../shared/domain/settingsService";
 import type { Settings, GroupingStats } from "../../shared/types";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -34,6 +33,7 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
 
   let syncData: Record<string, unknown> = {};
   let localData: Record<string, unknown> = {};
+  const settingsService = new SettingsService(defaults);
 
   try {
     [syncData, localData] = await Promise.all([
@@ -49,18 +49,16 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
       })
     ]);
 
-    // Settings migration (sync)
+    const normalizedSettings = settingsService.loadSettings(syncData as Partial<Settings>);
+
     const needsSettingsMigration = !syncData?.version || Number(syncData.version) < SETTINGS_VERSION;
     let migratedSettings: Settings;
     if (needsSettingsMigration) {
-      migratedSettings = migrateSettingsV0ToV1({
-        ...defaults,
-        ...syncData
-      });
+      migratedSettings = normalizedSettings;
       await settingsRepository.reset(migratedSettings);
       results.settingsMigrated = true;
     } else {
-      migratedSettings = withSettingsDefaults(syncData as Partial<Settings>);
+      migratedSettings = normalizedSettings;
       settingsRepository.clearCache();
     }
 
@@ -95,7 +93,7 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
     console.error("Storage migrations failed", error);
     return {
       ...results,
-      settings: withSettingsDefaults(defaults),
+      settings: settingsService.getDefaults(),
       stats: withStatsDefaults({})
     };
   }
