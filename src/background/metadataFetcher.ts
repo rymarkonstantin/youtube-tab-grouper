@@ -1,6 +1,6 @@
 // TODO: Rename file to metadataService.ts to match the exported class.
 import type { Metadata } from "../shared/types";
-import { hasMetadataContent, mergeMetadata, normalizeVideoMetadata } from "../shared/metadataSchema";
+import { buildNormalizedMetadata, hasMetadataContent } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS } from "../shared/messageContracts";
 import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
 import { logWarn } from "./logger";
@@ -50,11 +50,13 @@ export class MetadataService {
     let attempts = 0;
     const attemptCount = timeoutsMs.length;
 
+    const fallbackBase = { ...fallbackMetadata, title: fallbackTitle || fallbackMetadata?.title || "" };
+
     for (const timeoutMs of timeoutsMs) {
       attempts += 1;
       try {
-        const contentMetadata = await this.requestContentMetadata(client, tabId, timeoutMs, fallbackTitle);
-        const merged = mergeMetadata(contentMetadata, fallbackMetadata);
+        const contentMetadata = await this.requestContentMetadata(client, tabId, timeoutMs, fallbackBase.title);
+        const merged = buildNormalizedMetadata(contentMetadata, fallbackBase);
         if (hasMetadataContent(merged)) {
           return merged;
         }
@@ -78,7 +80,7 @@ export class MetadataService {
       logWarn("metadata:service returning fallback metadata after empty content response");
     }
 
-    return normalizeVideoMetadata(fallbackMetadata, { fallbackTitle });
+    return buildNormalizedMetadata(fallbackMetadata, fallbackBase);
   }
 
   private async requestContentMetadata(
@@ -92,7 +94,7 @@ export class MetadataService {
       {},
       { tabId, timeoutMs }
     );
-    return normalizeVideoMetadata(response as Partial<Metadata>, { fallbackTitle });
+    return buildNormalizedMetadata(response as Partial<Metadata>, { title: fallbackTitle });
   }
 }
 
