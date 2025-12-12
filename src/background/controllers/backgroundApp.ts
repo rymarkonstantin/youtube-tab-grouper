@@ -5,10 +5,7 @@ import { settingsRepository } from "../repositories/settingsRepository";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
 import { getVideoMetadata } from "../metadataFetcher";
-import {
-  CategoryResolver,
-  type CategoryResolverConstructor
-} from "../../shared/categoryResolver";
+import { categoryResolver } from "../../shared/categoryResolver";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -41,7 +38,7 @@ interface BackgroundAppDeps {
   groupingService?: typeof tabGroupingService;
   cleanupScheduler?: typeof cleanupScheduler;
   chromeApi?: typeof chromeApiClient;
-  categoryResolver?: CategoryResolverConstructor;
+  categoryResolver?: typeof categoryResolver;
 }
 
 export class BackgroundApp {
@@ -50,7 +47,7 @@ export class BackgroundApp {
   private groupingService: typeof tabGroupingService;
   private cleanupScheduler: typeof cleanupScheduler;
   private chromeApi: typeof chromeApiClient;
-  private categoryResolver: CategoryResolverConstructor;
+  private categoryResolver: typeof categoryResolver;
 
   private started = false;
 
@@ -59,7 +56,7 @@ export class BackgroundApp {
     this.groupingService = deps.groupingService ?? tabGroupingService;
     this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
     this.chromeApi = deps.chromeApi ?? chromeApiClient;
-    this.categoryResolver = deps.categoryResolver ?? CategoryResolver;
+    this.categoryResolver = deps.categoryResolver ?? categoryResolver;
     const { handlers, middleware } = this.buildRouteHandlers();
     this.router =
       deps.router ??
@@ -212,11 +209,11 @@ export class BackgroundApp {
       fallbackTitle: tab?.title || ""
     });
 
-    return new this.categoryResolver({
+    return this.categoryResolver.resolve({
       metadata,
       settings,
       requestedCategory
-    }).resolve();
+    });
   }
 
   private async batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverride?: string[]) {
