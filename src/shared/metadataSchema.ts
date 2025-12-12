@@ -79,6 +79,16 @@ export function mergeMetadata(
   };
 }
 
+export function buildNormalizedMetadata(
+  source: Partial<Metadata> = {},
+  fallbacks: Partial<Metadata> = {}
+): Metadata {
+  const normalizedFallbacks = normalizeVideoMetadata(fallbacks);
+  const merged = mergeMetadata(source, normalizedFallbacks);
+
+  return normalizeVideoMetadata(merged, { fallbackTitle: normalizedFallbacks.title });
+}
+
 export function hasMetadataContent(metadata: Partial<Metadata> = {}): boolean {
   const normalized = normalizeVideoMetadata(metadata);
   return Boolean(
