@@ -18,6 +18,7 @@ import {
 import { generateRequestId, MESSAGE_VERSION } from "../../shared/messageTransport";
 import { MessageRouter } from "../../shared/messaging/messageRouter";
 import { logDebug, setDebugLogging } from "../logger";
+import { toErrorMessage } from "../../shared/utils/errorUtils";
 import type { Settings, Metadata, GroupTabRequest } from "../../shared/types";
 
 type RouteHandler = (
@@ -312,7 +313,7 @@ export class BackgroundApp {
       const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
       return buildIsGroupedResponse((tab?.groupId ?? -1) >= 0);
     } catch (error) {
-      return buildIsGroupedResponse(false, (error as Error)?.message);
+      return buildIsGroupedResponse(false, toErrorMessage(error));
     }
   };
 
@@ -362,14 +363,5 @@ function isLegacyGroupTab(msg: unknown) {
   );
 }
 
-const toErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return "Unknown error";
-  }
-};
 
 // removed standalone handler functions; logic moved into BackgroundApp methods

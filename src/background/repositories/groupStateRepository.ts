@@ -1,4 +1,6 @@
 import type { GroupingState } from "../../shared/types";
+import { toError } from "../../shared/utils/errorUtils";
+import { writeChromeStorage } from "./repositoryUtils";
 
 const DEFAULT_STATE: GroupingState = {
   groupColorMap: {},
@@ -14,23 +16,26 @@ export class GroupStateRepository {
   async get(): Promise<GroupingState> {
     if (this.cache) return this.cache;
 
-    const state = await new Promise<GroupingState>((resolve, reject) => {
+    // GroupStateRepository stores both keys at root level, not nested
+    const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
       try {
-        chrome.storage.local.get(DEFAULT_STATE, (result) => {
+        chrome.storage.local.get(DEFAULT_STATE, (data) => {
           if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
+            reject(toError(chrome.runtime.lastError.message, "storage.local.get"));
             return;
           }
-          const payload = isObject(result) ? result : DEFAULT_STATE;
-          resolve({
-            groupColorMap: (payload.groupColorMap as GroupingState["groupColorMap"]) || {},
-            groupIdMap: (payload.groupIdMap as GroupingState["groupIdMap"]) || {}
-          });
+          resolve(isObject(data) ? data : DEFAULT_STATE);
         });
       } catch (error) {
-        reject(error instanceof Error ? error : new Error(String(error)));
+        reject(toError(error, "storage.local.get"));
       }
     });
+
+    const payload = isObject(result) ? result : DEFAULT_STATE;
+    const state: GroupingState = {
+      groupColorMap: (payload.groupColorMap as GroupingState["groupColorMap"]) || {},
+      groupIdMap: (payload.groupIdMap as GroupingState["groupIdMap"]) || {}
+    };
 
     this.cache = {
       groupColorMap: { ...(state.groupColorMap || {}) },
@@ -44,19 +49,7 @@ export class GroupStateRepository {
       groupColorMap: { ...groupColorMap },
       groupIdMap: { ...groupIdMap }
     };
-    await new Promise<void>((resolve, reject) => {
-      try {
-        chrome.storage.local.set({ groupColorMap, groupIdMap }, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-            return;
-          }
-          resolve();
-        });
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error(String(error)));
-      }
-    });
+    await writeChromeStorage("local", { groupColorMap, groupIdMap });
   }
 
   clearCache() {

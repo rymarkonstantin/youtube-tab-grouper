@@ -6,6 +6,7 @@ import {
   updateSettings
 } from "../../src/shared/settings";
 import type { Settings } from "../../src/shared/types";
+import { showStatus } from "../utils/statusDisplay";
 
 /**
  * YouTube Tab Grouper - Settings Page
@@ -308,11 +309,11 @@ async function handleSaveSettings() {
     };
 
     await updateSettings(settings);
-    showStatus("Settings saved successfully!", "success");
+    showStatus(statusEl, "Settings saved successfully!", "success");
     console.log("Saved settings:", settings);
   } catch (error) {
     console.error("Error saving settings:", error);
-    showStatus("Failed to save settings", "error");
+    showStatus(statusEl, "Failed to save settings", "error");
   } finally {
     saveBtn.disabled = false;
   }
@@ -334,11 +335,11 @@ async function handleResetSettings() {
 
     await initializeSettings();
 
-    showStatus("Settings reset to defaults", "success");
+    showStatus(statusEl, "Settings reset to defaults", "success");
     console.log("Reset to defaults");
   } catch (error) {
     console.error("Error resetting settings:", error);
-    showStatus("Failed to reset settings", "error");
+    showStatus(statusEl, "Failed to reset settings", "error");
   } finally {
     resetBtn.disabled = false;
   }
@@ -366,10 +367,10 @@ async function handleExportSettings() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showStatus("Settings exported", "success");
+    showStatus(statusEl, "Settings exported", "success");
   } catch (error) {
     console.error("Export error:", error);
-    showStatus("Failed to export settings", "error");
+    showStatus(statusEl, "Failed to export settings", "error");
   }
 }
 
@@ -397,12 +398,12 @@ function handleImportSettings() {
       .then(async (settings) => {
         await resetSettings(settings);
         await initializeSettings();
-        showStatus("Settings imported successfully", "success");
+        showStatus(statusEl, "Settings imported successfully", "success");
         console.log("Imported settings");
       })
       .catch((error) => {
         console.error("Import error:", error);
-        showStatus("Failed to import settings", "error");
+        showStatus(statusEl, "Failed to import settings", "error");
       });
   });
 
@@ -413,21 +414,3 @@ function handleImportSettings() {
 // UI UTILITIES
 // ============================================================================
 
-/**
- * Show status message
- */
-function showStatus(message: string, type: 'info' | 'success' | 'error' = 'info') {
-  if (!statusEl) {
-    console.warn("statusEl not found");
-    return;
-  }
-
-  statusEl.textContent = message;
-  statusEl.className = `status ${type}`;
-
-  setTimeout(() => {
-    if (!statusEl) return;
-    statusEl.textContent = "";
-    statusEl.className = "status";
-  }, 4000);
-}

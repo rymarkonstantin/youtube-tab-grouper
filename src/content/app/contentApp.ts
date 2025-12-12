@@ -1,4 +1,5 @@
 import type { GroupTabResponse, Metadata, Settings } from "../../shared/types";
+import { toErrorMessage } from "../../shared/utils/errorUtils";
 import { isEnabled, loadConfig } from "../config";
 import { AutoGroupController } from "./autoGroupController";
 import { GroupButtonView } from "./groupButtonView";
@@ -7,16 +8,6 @@ import { ContentMessagingBridge } from "../messaging/contentMessagingBridge";
 import { MetadataCollector } from "./metadataCollector";
 
 const DISABLED_GROUP_RESPONSE: GroupTabResponse = { success: false, error: "Extension is disabled" };
-
-const toMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return "Unknown error";
-  }
-};
 
 export class ContentApp {
   private config: Settings | null = null;
@@ -71,7 +62,7 @@ export class ContentApp {
 
       this.autoGroup.start(this.config, () => this.triggerAutoGroup());
     } catch (error) {
-      console.error("Error initializing YouTube Tab Grouper:", toMessage(error));
+      console.error("Error initializing YouTube Tab Grouper:", toErrorMessage(error));
     }
   }
 
@@ -83,7 +74,7 @@ export class ContentApp {
     try {
       return JSON.stringify(metadata);
     } catch (error) {
-      console.warn("Failed to compute metadata hash:", toMessage(error));
+      console.warn("Failed to compute metadata hash:", toErrorMessage(error));
       return null;
     }
   }
@@ -96,7 +87,7 @@ export class ContentApp {
     try {
       return await sendGroupTab({ category, metadata });
     } catch (error) {
-      return { success: false, error: toMessage(error) };
+      return { success: false, error: toErrorMessage(error) };
     }
   }
 
@@ -123,7 +114,7 @@ export class ContentApp {
         return null;
       }
     } catch (error) {
-      console.warn("Grouped status check failed:", toMessage(error));
+      console.warn("Grouped status check failed:", toErrorMessage(error));
     }
 
     return this.buttonView.render(() => {

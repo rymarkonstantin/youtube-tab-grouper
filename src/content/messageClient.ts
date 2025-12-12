@@ -1,5 +1,6 @@
-import { MESSAGE_ACTIONS, validateResponse } from "../shared/messageContracts";
+import { MESSAGE_ACTIONS } from "../shared/messageContracts";
 import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
+import { handleMessageResponse } from "../shared/messaging/messageResponseHandler";
 import type { GroupTabResponse, Metadata, MessageEnvelope, Settings } from "../shared/types";
 
 interface GroupTabPayload extends Record<string, unknown> {
@@ -17,8 +18,6 @@ const toGroupTabPayload = (categoryOrPayload: string | GroupTabPayload, metadata
   return { category: categoryOrPayload as string, metadata };
 };
 
-const timeoutResponse = (timeoutMs: number) => ({ success: false, error: `Message timed out after ${timeoutMs}ms` });
-const disabledResponse = () => ({ success: false, error: "Extension is disabled" });
 
 /**
  * Send a groupTab request from the content script.
@@ -30,26 +29,24 @@ export async function sendGroupTab(
 ): Promise<GroupTabResponse> {
   const { timeoutMs, client = defaultMessageClient } = options;
   try {
-    const response = (await client.sendMessage(
+    const response = await client.sendMessage(
       MESSAGE_ACTIONS.GROUP_TAB,
       toGroupTabPayload(categoryOrPayload, metadata),
       { timeoutMs, validateResponsePayload: true }
-    )) as GroupTabResponse;
-
-    const { valid, errors } = validateResponse(MESSAGE_ACTIONS.GROUP_TAB, response || {});
-    if (!valid) {
-      return { success: false, error: errors.join("; ") || "Invalid response" };
-    }
-    return response;
+    );
+    return handleMessageResponse<GroupTabResponse>(
+      MESSAGE_ACTIONS.GROUP_TAB,
+      response,
+      null,
+      { timeoutMs, validateResponse: true }
+    );
   } catch (error) {
-    const message = (error as Error)?.message || "Unknown error";
-    if (/disabled/i.test(message)) {
-      return disabledResponse();
-    }
-    if (/timed out/i.test(message) && timeoutMs) {
-      return timeoutResponse(timeoutMs);
-    }
-    return { success: false, error: message };
+    return handleMessageResponse<GroupTabResponse>(
+      MESSAGE_ACTIONS.GROUP_TAB,
+      null,
+      error,
+      { timeoutMs, validateResponse: false }
+    );
   }
 }
 
@@ -61,25 +58,24 @@ export async function sendGetSettings(
 ): Promise<{ success: boolean; settings?: Settings; error?: string }> {
   const { timeoutMs, client = defaultMessageClient } = options;
   try {
-    const response = (await client.sendMessage(
+    const response = await client.sendMessage(
       MESSAGE_ACTIONS.GET_SETTINGS,
       {},
       { timeoutMs, validateResponsePayload: true }
-    )) as { success: boolean; settings?: Settings; error?: string };
-    const { valid, errors } = validateResponse(MESSAGE_ACTIONS.GET_SETTINGS, response || {});
-    if (!valid) {
-      return { success: false, error: errors.join("; ") || "Invalid response" };
-    }
-    return response;
+    );
+    return handleMessageResponse<{ success: boolean; settings?: Settings; error?: string }>(
+      MESSAGE_ACTIONS.GET_SETTINGS,
+      response,
+      null,
+      { timeoutMs, validateResponse: true }
+    );
   } catch (error) {
-    const message = (error as Error)?.message || "Unknown error";
-    if (/disabled/i.test(message)) {
-      return disabledResponse();
-    }
-    if (/timed out/i.test(message) && timeoutMs) {
-      return timeoutResponse(timeoutMs);
-    }
-    return { success: false, error: message };
+    return handleMessageResponse<{ success: boolean; settings?: Settings; error?: string }>(
+      MESSAGE_ACTIONS.GET_SETTINGS,
+      null,
+      error,
+      { timeoutMs, validateResponse: false }
+    );
   }
 }
 

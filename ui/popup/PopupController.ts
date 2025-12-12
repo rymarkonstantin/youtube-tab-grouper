@@ -1,5 +1,6 @@
-import { MESSAGE_ACTIONS, validateResponse } from "../../src/shared/messageContracts";
+import { MESSAGE_ACTIONS } from "../../src/shared/messageContracts";
 import { defaultMessageClient, MessageClient } from "../../src/shared/messaging/messageClient";
+import { handleMessageResponse } from "../../src/shared/messaging/messageResponseHandler";
 import type { GroupTabResponse } from "../../src/shared/types";
 import { PopupView } from "./PopupView";
 
@@ -61,25 +62,24 @@ export class PopupController {
   ): Promise<GroupTabResponse & Record<string, unknown>> {
     const { timeoutMs } = options;
     try {
-      const response = (await this.client.sendMessage(
+      const response = await this.client.sendMessage(
         action,
         payload,
         { timeoutMs, validateResponsePayload: true }
-      )) as GroupTabResponse & Record<string, unknown>;
-      const { valid, errors } = validateResponse(action, (response as Record<string, unknown>) || {});
-      if (!valid) {
-        return { success: false, error: errors.join("; ") || "Invalid response" };
-      }
-      return response;
+      );
+      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(
+        action,
+        response,
+        null,
+        { timeoutMs, validateResponse: true }
+      );
     } catch (error) {
-      const message = (error as Error)?.message || "Unknown error";
-      if (/disabled/i.test(message)) {
-        return { success: false, error: "Extension is disabled" };
-      }
-      if (/timed out/i.test(message) && timeoutMs) {
-        return { success: false, error: `Message timed out after ${timeoutMs}ms` };
-      }
-      return { success: false, error: message };
+      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(
+        action,
+        null,
+        error,
+        { timeoutMs, validateResponse: false }
+      );
     }
   }
 

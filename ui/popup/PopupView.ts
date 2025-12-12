@@ -1,4 +1,4 @@
-type StatusType = "info" | "success" | "error";
+import { showStatus, type StatusType } from "../utils/statusDisplay";
 
 export class PopupView {
   private groupButton = document.getElementById("groupButton") as HTMLButtonElement | null;
@@ -32,14 +32,6 @@ export class PopupView {
   }
 
   showNotification(message: string, type: StatusType = "info") {
-    if (!this.statusEl) return;
-    this.statusEl.textContent = message;
-    this.statusEl.className = `status ${type}`;
-
-    setTimeout(() => {
-      if (!this.statusEl) return;
-      this.statusEl.textContent = "";
-      this.statusEl.className = "status";
-    }, 4000);
+    showStatus(this.statusEl, message, type);
   }
 }

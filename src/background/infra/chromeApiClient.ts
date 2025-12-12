@@ -1,17 +1,8 @@
 import { logError } from "../logger";
 import { toErrorEnvelope } from "../logger";
+import { toErrorMessage } from "../../shared/utils/errorUtils";
 
 type ChromePromise<T> = Promise<T>;
-
-const toErrorMessage = (context: string, error: unknown) => {
-  if (error instanceof Error) return `${context}: ${error.message}`;
-  if (typeof error === "string") return `${context}: ${error}`;
-  try {
-    return `${context}: ${JSON.stringify(error)}`;
-  } catch {
-    return `${context}: Unknown error`;
-  }
-};
 
 export class ChromeApiClient {
   async queryTabs(query: chrome.tabs.QueryInfo): ChromePromise<chrome.tabs.Tab[]> {
@@ -136,7 +127,7 @@ export class ChromeApiClient {
   }
 
   private wrapUnknown(context: string, error: unknown) {
-    const message = toErrorMessage(context, error);
+    const message = toErrorMessage(error, context);
     const wrapped = toErrorEnvelope(error, message);
     logError(message);
     return wrapped;

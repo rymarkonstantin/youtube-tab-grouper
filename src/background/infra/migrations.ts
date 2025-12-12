@@ -9,20 +9,11 @@ import {
 } from "../constants";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { statsRepository } from "../repositories/statsRepository";
+import { readAllChromeStorage } from "../repositories/repositoryUtils";
 import type { Settings, GroupingStats } from "../../shared/types";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-const toError = (reason: unknown) => {
-  if (reason instanceof Error) return reason;
-  if (typeof reason === "string") return new Error(reason);
-  try {
-    return new Error(JSON.stringify(reason));
-  } catch {
-    return new Error("Unknown error");
-  }
-};
 
 export interface MigrationResult {
   settingsMigrated: boolean;
@@ -46,12 +37,12 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
 
   try {
     [syncData, localData] = await Promise.all([
-      readAllSync().catch((error) => {
+      readAllChromeStorage("sync").catch((error) => {
         console.warn("Storage migrations: failed to read sync; using defaults", (error as Error)?.message || error);
         results.settingsError = error;
         return {};
       }),
-      readAllLocal().catch((error) => {
+      readAllChromeStorage("local").catch((error) => {
         console.warn("Storage migrations: failed to read local; using defaults", (error as Error)?.message || error);
         results.statsError = error;
         return {};
@@ -110,34 +101,3 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
   }
 }
 
-async function readAllSync(): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.sync.get(null, (result) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(result || {});
-        }
-      });
-    } catch (error) {
-      reject(toError(error));
-    }
-  });
-}
-
-async function readAllLocal(): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.storage.local.get(null, (result) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(result || {});
-        }
-      });
-    } catch (error) {
-      reject(toError(error));
-    }
-  });
-}
