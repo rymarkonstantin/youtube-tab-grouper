@@ -1,11 +1,14 @@
-import { AVAILABLE_COLORS, DEFAULT_SETTINGS } from "../constants";
-import { categoryResolver } from "../services/categoryResolver";
+import { AVAILABLE_COLORS } from "../constants";
 import { TabGroupingService, tabGroupingService } from "../services/tabGroupingService";
 import { cleanupScheduler } from "../services/cleanupScheduler";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
 import { getVideoMetadata } from "../metadataFetcher";
+import {
+  CategoryResolver,
+  type CategoryResolverConstructor
+} from "../../shared/categoryResolver";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -36,27 +39,27 @@ interface BackgroundAppDeps {
   router?: MessageRouter;
   settingsRepo?: typeof settingsRepository;
   groupingService?: typeof tabGroupingService;
-  categoryResolver?: typeof categoryResolver;
   cleanupScheduler?: typeof cleanupScheduler;
   chromeApi?: typeof chromeApiClient;
+  categoryResolver?: CategoryResolverConstructor;
 }
 
 export class BackgroundApp {
   private router: MessageRouter;
   private settingsRepo: typeof settingsRepository;
   private groupingService: typeof tabGroupingService;
-  private categoryResolver: typeof categoryResolver;
   private cleanupScheduler: typeof cleanupScheduler;
   private chromeApi: typeof chromeApiClient;
+  private categoryResolver: CategoryResolverConstructor;
 
   private started = false;
 
   constructor(deps: BackgroundAppDeps = {}) {
     this.settingsRepo = deps.settingsRepo ?? settingsRepository;
     this.groupingService = deps.groupingService ?? tabGroupingService;
-    this.categoryResolver = deps.categoryResolver ?? categoryResolver;
     this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
     this.chromeApi = deps.chromeApi ?? chromeApiClient;
+    this.categoryResolver = deps.categoryResolver ?? CategoryResolver;
     const { handlers, middleware } = this.buildRouteHandlers();
     this.router =
       deps.router ??
@@ -209,12 +212,11 @@ export class BackgroundApp {
       fallbackTitle: tab?.title || ""
     });
 
-    return this.categoryResolver.resolve(metadata, {
-      requestedCategory,
-      aiEnabled: settings.aiCategoryDetection,
-      categoryKeywords: settings.categoryKeywords || DEFAULT_SETTINGS.categoryKeywords,
-      channelMap: settings.channelCategoryMap || {}
-    });
+    return new this.categoryResolver({
+      metadata,
+      settings,
+      requestedCategory
+    }).resolve();
   }
 
   private async batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverride?: string[]) {
