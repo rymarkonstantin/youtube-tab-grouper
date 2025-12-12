@@ -5,7 +5,7 @@ import { settingsRepository } from "../repositories/settingsRepository";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
 import { getVideoMetadata } from "../metadataFetcher";
-import { resolveCategory } from "../../shared/categoryResolver";
+import { categoryResolver } from "../../shared/categoryResolver";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -38,6 +38,7 @@ interface BackgroundAppDeps {
   groupingService?: typeof tabGroupingService;
   cleanupScheduler?: typeof cleanupScheduler;
   chromeApi?: typeof chromeApiClient;
+  categoryResolver?: typeof categoryResolver;
 }
 
 export class BackgroundApp {
@@ -46,6 +47,7 @@ export class BackgroundApp {
   private groupingService: typeof tabGroupingService;
   private cleanupScheduler: typeof cleanupScheduler;
   private chromeApi: typeof chromeApiClient;
+  private categoryResolver: typeof categoryResolver;
 
   private started = false;
 
@@ -54,6 +56,7 @@ export class BackgroundApp {
     this.groupingService = deps.groupingService ?? tabGroupingService;
     this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
     this.chromeApi = deps.chromeApi ?? chromeApiClient;
+    this.categoryResolver = deps.categoryResolver ?? categoryResolver;
     const { handlers, middleware } = this.buildRouteHandlers();
     this.router =
       deps.router ??
@@ -206,7 +209,7 @@ export class BackgroundApp {
       fallbackTitle: tab?.title || ""
     });
 
-    return resolveCategory({
+    return this.categoryResolver.resolve({
       metadata,
       settings,
       requestedCategory

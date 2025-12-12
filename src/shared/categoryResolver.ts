@@ -38,69 +38,64 @@ export interface ResolveCategoryInput {
   fallbackCategory?: string;
 }
 
+interface StrategyContext {
+  metadata: Metadata;
+  settings: Settings;
+  requestedCategory: string;
+  fallbackCategory?: string;
+}
+
 export class CategoryResolver {
-  private readonly metadata: Metadata;
-
-  private readonly settings: Settings;
-
-  private readonly requestedCategory: string;
-
-  private readonly fallbackCategory?: string;
-
-  constructor({
+  resolve({
     metadata: rawMetadata = {},
     settings: rawSettings = DEFAULT_SETTINGS,
     requestedCategory = "",
     fallbackCategory
-  }: ResolveCategoryInput) {
-    this.metadata = normalizeVideoMetadata(rawMetadata);
-    this.settings = withSettingsDefaults(rawSettings);
-    this.requestedCategory = requestedCategory;
-    this.fallbackCategory = fallbackCategory;
-  }
+  }: ResolveCategoryInput): string {
+    const context: StrategyContext = {
+      metadata: normalizeVideoMetadata(rawMetadata),
+      settings: withSettingsDefaults(rawSettings),
+      requestedCategory,
+      fallbackCategory
+    };
 
-  static resolve(input: ResolveCategoryInput): string {
-    return new CategoryResolver(input).resolve();
-  }
-
-  resolve(): string {
-    for (const strategy of this.getStrategies()) {
+    for (const strategy of this.getStrategies(context)) {
       const category = strategy();
       if (category) {
         return category;
       }
     }
 
-    return toCategory(this.fallbackCategory) || FALLBACK_CATEGORY;
+    return toCategory(context.fallbackCategory) || FALLBACK_CATEGORY;
   }
 
-  private getStrategies(): (() => string)[] {
+  private getStrategies(context: StrategyContext): (() => string)[] {
     return [
-      () => this.useRequestedCategory(),
-      () => this.useChannelCategory(),
-      () => this.useKeywordScores(),
-      () => this.useYouTubeCategory()
+      () => this.useRequestedCategory(context),
+      () => this.useChannelCategory(context),
+      () => this.useKeywordScores(context),
+      () => this.useYouTubeCategory(context)
     ];
   }
 
-  private useRequestedCategory(): string {
-    return toCategory(this.requestedCategory);
+  private useRequestedCategory({ requestedCategory }: StrategyContext): string {
+    return toCategory(requestedCategory);
   }
 
-  private useChannelCategory(): string {
-    const channel = this.metadata.channel?.trim();
+  private useChannelCategory({ metadata, settings }: StrategyContext): string {
+    const channel = metadata.channel?.trim();
     if (!channel) return "";
 
-    return this.settings.channelCategoryMap[channel] || "";
+    return settings.channelCategoryMap[channel] || "";
   }
 
-  private useKeywordScores(): string {
-    if (!this.settings.aiCategoryDetection) return "";
+  private useKeywordScores({ metadata, settings }: StrategyContext): string {
+    if (!settings.aiCategoryDetection) return "";
 
     const scores: Record<string, number> = {};
-    const text = `${this.metadata.title} ${this.metadata.description} ${(this.metadata.keywords || []).join(" ")}`.toLowerCase();
+    const text = `${metadata.title} ${metadata.description} ${(metadata.keywords || []).join(" ")}`.toLowerCase();
 
-    for (const [category, keywords] of Object.entries(this.settings.categoryKeywords || {})) {
+    for (const [category, keywords] of Object.entries(settings.categoryKeywords || {})) {
       const score = (keywords || []).reduce((sum, keyword) => {
         const regex = new RegExp(`\\b${keyword}\\b`, "gi");
         return sum + (text.match(regex) || []).length;
@@ -124,11 +119,10 @@ export class CategoryResolver {
     return bestCategory;
   }
 
-  private useYouTubeCategory(): string {
-    return mapYouTubeCategory(this.metadata.youtubeCategory);
+  private useYouTubeCategory({ metadata }: StrategyContext): string {
+    return mapYouTubeCategory(metadata.youtubeCategory);
   }
 }
 
-export function resolveCategory(input: ResolveCategoryInput): string {
-  return CategoryResolver.resolve(input);
-}
+export const categoryResolver = new CategoryResolver();
+
