@@ -16,7 +16,7 @@ import {
   buildSettingsResponse
 } from "../../shared/messageContracts";
 import { generateRequestId, MESSAGE_VERSION } from "../../shared/messageTransport";
-import { MessageRouter } from "../../shared/messaging/messageRouter";
+import { HandlerContext, MessageRouter, RouterMiddleware } from "../../shared/messaging/messageRouter";
 import { logDebug, setDebugLogging } from "../logger";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 import type { Settings, Metadata, GroupTabRequest } from "../../shared/types";
@@ -24,7 +24,7 @@ import type { Settings, Metadata, GroupTabRequest } from "../../shared/types";
 type RouteHandler = (
   msg: Record<string, unknown>,
   sender: chrome.runtime.MessageSender,
-  settings?: Settings
+  context: HandlerContext
 ) => Promise<unknown>;
 
 interface RouteConfig {
@@ -57,11 +57,12 @@ export class BackgroundApp {
     this.categoryResolver = deps.categoryResolver ?? categoryResolver;
     this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
     this.chromeApi = deps.chromeApi ?? chromeApiClient;
-    const routes = this.buildRouteHandlers();
+    const { handlers, middleware } = this.buildRouteHandlers();
     this.router =
       deps.router ??
-      new MessageRouter(routes, {
+      new MessageRouter(handlers, {
         requireVersion: true,
+        middleware,
         onUnknown: (action) => buildErrorResponse(`Unknown action "${action || "undefined"}"`)
       });
   }
@@ -275,37 +276,59 @@ export class BackgroundApp {
       }
     };
 
-    return Object.entries(routes).reduce<Partial<Record<MessageAction, RouteHandler>>>((acc, [action, route]) => {
-      if (!route) return acc;
-      acc[action as MessageAction] = async (msg, sender) => {
-        let settings: Settings | null = null;
+    const handlers = Object.entries(routes).reduce<Partial<Record<MessageAction, RouteHandler>>>(
+      (acc, [action, route]) => {
+        if (!route) return acc;
+        acc[action as MessageAction] = route.handler;
+        return acc;
+      },
+      {}
+    );
 
-        if (route.requiresEnabled) {
-          settings = await this.settingsRepo.get();
-          setDebugLogging(settings.debugLogging);
-          if (!settings.extensionEnabled) {
-            return buildErrorResponse("Extension is disabled");
-          }
-        }
+    const middleware = [
+      this.buildSettingsMiddleware(routes),
+      this.buildLoggingMiddleware()
+    ];
 
-        const context = {
-          action,
-          tabId: sender?.tab?.id,
-          windowId: sender?.tab?.windowId
-        };
+    return { handlers, middleware };
+  }
 
-        logDebug("action:start", context);
-        try {
-          const result = await route.handler(msg, sender, settings ?? undefined);
-          logDebug("action:success", { ...context, result });
-          return result;
-        } catch (error) {
-          logDebug("action:error", { ...context, error: toErrorMessage(error) });
-          throw error;
-        }
+  private buildSettingsMiddleware(routes: Partial<Record<MessageAction, RouteConfig>>): RouterMiddleware {
+    return async (context, next) => {
+      const route = routes[context.action as MessageAction];
+      if (!route?.requiresEnabled) {
+        return next();
+      }
+
+      const settings = await this.settingsRepo.get();
+      setDebugLogging(settings.debugLogging);
+      if (!settings.extensionEnabled) {
+        return buildErrorResponse("Extension is disabled");
+      }
+
+      context.state.settings = settings;
+      return next();
+    };
+  }
+
+  private buildLoggingMiddleware(): RouterMiddleware {
+    return async (context, next) => {
+      const logContext = {
+        action: context.action,
+        tabId: context.sender?.tab?.id,
+        windowId: context.sender?.tab?.windowId
       };
-      return acc;
-    }, {});
+
+      logDebug("action:start", logContext);
+      try {
+        const result = await next();
+        logDebug("action:success", { ...logContext, result });
+        return result;
+      } catch (error) {
+        logDebug("action:error", { ...logContext, error: toErrorMessage(error) });
+        throw error;
+      }
+    };
   }
 
   private handleIsTabGroupedMessage: RouteHandler = async () => {
@@ -326,13 +349,13 @@ export class BackgroundApp {
     }
   };
 
-  private handleGroupTabMessage: RouteHandler = async (msg, sender, preloadedSettings) => {
+  private handleGroupTabMessage: RouteHandler = async (msg, sender, context) => {
     const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
     if (tab?.id === undefined) {
       return buildErrorResponse("No active tab found");
     }
 
-    const settings = preloadedSettings || (await this.settingsRepo.get());
+    const settings = (context.state.settings as Settings | undefined) || (await this.settingsRepo.get());
     if (!settings.extensionEnabled) {
       return buildErrorResponse("Extension is disabled");
     }
@@ -344,9 +367,9 @@ export class BackgroundApp {
     return buildGroupTabResponse({ category, color: result.color });
   };
 
-  private handleBatchGroupMessage: RouteHandler = async (_msg, _sender, preloadedSettings) => {
+  private handleBatchGroupMessage: RouteHandler = async (_msg, _sender, context) => {
     try {
-      const result = await this.batchGroupAllTabs(preloadedSettings);
+      const result = await this.batchGroupAllTabs(context.state.settings as Settings | undefined);
       return result;
     } catch (error) {
       return buildErrorResponse((error as Error)?.message || "Batch grouping failed");

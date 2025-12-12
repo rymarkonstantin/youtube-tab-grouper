@@ -30,7 +30,7 @@ export interface MessageResponseOptions {
 export function handleMessageResponse<T extends { success?: boolean; error?: string }>(
   action: MessageAction,
   response: unknown,
-  error: unknown | null,
+  error?: unknown,
   options: MessageResponseOptions = {}
 ): T {
   const { timeoutMs, validateResponse: shouldValidate = true } = options;

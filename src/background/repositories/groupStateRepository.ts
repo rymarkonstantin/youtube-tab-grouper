@@ -10,6 +10,9 @@ const DEFAULT_STATE: GroupingState = {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const isGroupingState = (value: unknown): value is GroupingState =>
+  isObject(value) && typeof value.groupColorMap === "object" && typeof value.groupIdMap === "object";
+
 export class GroupStateRepository {
   private cache: GroupingState | null = null;
 
@@ -17,24 +20,23 @@ export class GroupStateRepository {
     if (this.cache) return this.cache;
 
     // GroupStateRepository stores both keys at root level, not nested
-    const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
+    const result = await new Promise<GroupingState>((resolve, reject) => {
       try {
         chrome.storage.local.get(DEFAULT_STATE, (data) => {
           if (chrome.runtime.lastError) {
             reject(toError(chrome.runtime.lastError.message, "storage.local.get"));
             return;
           }
-          resolve(isObject(data) ? data : DEFAULT_STATE);
+          resolve(isGroupingState(data) ? data : DEFAULT_STATE);
         });
       } catch (error) {
         reject(toError(error, "storage.local.get"));
       }
     });
 
-    const payload = isObject(result) ? result : DEFAULT_STATE;
     const state: GroupingState = {
-      groupColorMap: (payload.groupColorMap as GroupingState["groupColorMap"]) || {},
-      groupIdMap: (payload.groupIdMap as GroupingState["groupIdMap"]) || {}
+      groupColorMap: result.groupColorMap || {},
+      groupIdMap: result.groupIdMap || {}
     };
 
     this.cache = {
