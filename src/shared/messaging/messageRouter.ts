@@ -8,11 +8,28 @@ import {
 import { envelopeResponse, generateRequestId, MESSAGE_VERSION } from "../messageTransport";
 import type { HandleMessageOptions, MessageEnvelope } from "../types";
 
-type Handler = (msg: Record<string, unknown>, sender: chrome.runtime.MessageSender) => unknown;
+export interface HandlerContext {
+  action: string;
+  msg: Record<string, unknown>;
+  sender: chrome.runtime.MessageSender;
+  state: Record<string, unknown>;
+}
+
+export type RouterMiddleware = (
+  context: HandlerContext,
+  next: () => Promise<unknown>
+) => unknown;
+
+type Handler = (
+  msg: Record<string, unknown>,
+  sender: chrome.runtime.MessageSender,
+  context: HandlerContext
+) => unknown;
 
 interface RouterOptions extends HandleMessageOptions {
   requireVersion?: boolean;
   validateResponses?: boolean;
+  middleware?: RouterMiddleware[];
   onUnknown?: (action: string, msg: unknown, sender: unknown) => unknown;
 }
 
@@ -28,6 +45,7 @@ export class MessageRouter {
     this.options = {
       requireVersion: options.requireVersion ?? true,
       validateResponses: options.validateResponses ?? true,
+      middleware: options.middleware ?? [],
       onUnknown: options.onUnknown
     };
   }
@@ -64,7 +82,7 @@ export class MessageRouter {
       return false;
     }
 
-    const { requireVersion = true, validateResponses = true } = this.options;
+    const { requireVersion = true, validateResponses = true, middleware = [] } = this.options;
     const incomingVersion = (payload as unknown as MessageEnvelope)?.version;
 
     if (requireVersion && incomingVersion !== MESSAGE_VERSION) {
@@ -87,8 +105,22 @@ export class MessageRouter {
       return true;
     }
 
+    const context: HandlerContext = {
+      action,
+      msg: payload,
+      sender,
+      state: {}
+    };
+
+    const runMiddleware = (index: number): Promise<unknown> => {
+      if (index < middleware.length) {
+        return Promise.resolve(middleware[index](context, () => runMiddleware(index + 1)));
+      }
+      return Promise.resolve(handler(payload, sender, context));
+    };
+
     Promise.resolve()
-      .then(() => handler(payload, sender))
+      .then(() => runMiddleware(0))
       .then((result) => {
         const responsePayload = isPlainObject(result) ? result : buildErrorResponse("Empty handler response");
 
