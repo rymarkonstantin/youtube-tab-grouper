@@ -1,7 +1,7 @@
-import { tabGroupingService } from "./tabGroupingService";
-import { settingsRepository } from "../repositories/settingsRepository";
-import { logWarn } from "../logger";
 import type { Settings } from "../../shared/types";
+import { logWarn } from "../logger";
+import { settingsRepository } from "../repositories/settingsRepository";
+import { tabGroupingService } from "./tabGroupingService";
 
 interface CleanupSchedulerOptions {
   intervalMs?: number;

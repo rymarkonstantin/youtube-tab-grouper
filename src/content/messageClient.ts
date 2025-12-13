@@ -1,7 +1,7 @@
-import { MESSAGE_ACTIONS } from "../shared/messageContracts";
 import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
+import type { GroupTabResponse, MessageEnvelope, Metadata, Settings } from "../shared/types";
+import { MESSAGE_ACTIONS } from "../shared/messageContracts";
 import { handleMessageResponse } from "../shared/messaging/messageResponseHandler";
-import type { GroupTabResponse, Metadata, MessageEnvelope, Settings } from "../shared/types";
 
 interface GroupTabPayload extends Record<string, unknown> {
   category?: string;

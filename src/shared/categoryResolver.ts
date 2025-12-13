@@ -1,6 +1,6 @@
+import { DEFAULT_SETTINGS, withSettingsDefaults } from "./settings";
 import type { Metadata, Settings } from "./types";
 import { normalizeVideoMetadata } from "./metadataSchema";
-import { DEFAULT_SETTINGS, withSettingsDefaults } from "./settings";
 
 const FALLBACK_CATEGORY = "Other";
 

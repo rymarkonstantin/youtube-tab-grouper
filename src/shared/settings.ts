@@ -1,4 +1,4 @@
-import type { Settings, ChannelCategoryMap, CategoryKeywordsMap } from "./types";
+import type { CategoryKeywordsMap, ChannelCategoryMap, Settings } from "./types";
 
 export const SETTINGS_VERSION = 1;
 

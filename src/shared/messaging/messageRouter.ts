@@ -5,7 +5,7 @@ import {
   validateRequest,
   validateResponse
 } from "../messageContracts";
-import { envelopeResponse, generateRequestId, MESSAGE_VERSION } from "../messageTransport";
+import { MESSAGE_VERSION, envelopeResponse, generateRequestId } from "../messageTransport";
 import type { HandleMessageOptions, MessageEnvelope } from "../types";
 
 export interface HandlerContext {

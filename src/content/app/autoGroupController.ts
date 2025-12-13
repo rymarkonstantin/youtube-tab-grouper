@@ -1,5 +1,5 @@
-import { isEnabled } from "../config";
 import type { Settings } from "../../shared/types";
+import { isEnabled } from "../config";
 
 const toDelay = (value: unknown) => {
   const numeric = Number(value);

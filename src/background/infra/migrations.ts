@@ -1,15 +1,15 @@
+import type { GroupingStats, Settings } from "../../shared/types";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_VERSION,
   STATS_VERSION,
-  withStatsDefaults,
-  migrateStatsV0ToV1
+  migrateStatsV0ToV1,
+  withStatsDefaults
 } from "../constants";
+import { SettingsService } from "../../shared/domain/settingsService";
+import { readAllChromeStorage } from "../repositories/repositoryUtils";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { statsRepository } from "../repositories/statsRepository";
-import { readAllChromeStorage } from "../repositories/repositoryUtils";
-import { SettingsService } from "../../shared/domain/settingsService";
-import type { Settings, GroupingStats } from "../../shared/types";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

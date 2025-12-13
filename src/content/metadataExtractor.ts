@@ -1,5 +1,5 @@
-import type { Metadata } from "../shared/types";
 import { mergeMetadata, normalizeVideoMetadata } from "../shared/metadataSchema";
+import type { Metadata } from "../shared/types";
 import { SELECTORS } from "./constants";
 
 interface YtInitialData {

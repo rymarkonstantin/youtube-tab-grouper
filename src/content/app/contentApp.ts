@@ -1,10 +1,10 @@
 import type { GroupTabResponse, Metadata, Settings } from "../../shared/types";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 import { isEnabled, loadConfig } from "../config";
-import { AutoGroupController } from "./autoGroupController";
-import { GroupButtonView } from "./groupButtonView";
 import { sendGroupTab, sendIsTabGrouped } from "../messageClient";
 import { ContentMessagingBridge } from "../messaging/contentMessagingBridge";
+import { AutoGroupController } from "./autoGroupController";
+import { GroupButtonView } from "./groupButtonView";
 import { MetadataCollector } from "./metadataCollector";
 
 const DISABLED_GROUP_RESPONSE: GroupTabResponse = { success: false, error: "Extension is disabled" };

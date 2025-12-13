@@ -1,5 +1,5 @@
+import { MessageClient, defaultMessageClient } from "../../src/shared/messaging/messageClient";
 import { MESSAGE_ACTIONS } from "../../src/shared/messageContracts";
-import { defaultMessageClient, MessageClient } from "../../src/shared/messaging/messageClient";
 import { handleMessageResponse } from "../../src/shared/messaging/messageResponseHandler";
 import type { GroupTabResponse } from "../../src/shared/types";
 import { PopupView } from "./PopupView";

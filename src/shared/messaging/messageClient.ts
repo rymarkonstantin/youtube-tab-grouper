@@ -1,5 +1,5 @@
 import { MESSAGE_ACTIONS, validateRequest, validateResponse } from "../messageContracts";
-import { envelopeResponse, generateRequestId, MESSAGE_VERSION } from "../messageTransport";
+import { MESSAGE_VERSION, envelopeResponse, generateRequestId } from "../messageTransport";
 import type { SendMessageOptions } from "../types";
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>

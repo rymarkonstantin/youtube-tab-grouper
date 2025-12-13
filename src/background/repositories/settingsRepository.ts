@@ -1,7 +1,7 @@
-import { DEFAULT_SETTINGS } from "../constants";
+import { SettingsService } from "../../shared/domain/settingsService";
 import { getSettings, resetSettings, updateSettings } from "../../shared/settings";
 import type { Settings } from "../../shared/types";
-import { SettingsService } from "../../shared/domain/settingsService";
+import { DEFAULT_SETTINGS } from "../constants";
 
 export class SettingsRepository {
   private cache: Settings | null = null;

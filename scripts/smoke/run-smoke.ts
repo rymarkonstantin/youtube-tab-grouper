@@ -1,6 +1,6 @@
 import { MESSAGE_ACTIONS, validateRequest } from "../../src/shared/messageContracts.js";
-import { withStatsDefaults, migrateStatsV0ToV1, STATS_VERSION } from "../../src/shared/stats.js";
-import { withSettingsDefaults, SETTINGS_VERSION } from "../../src/shared/settings.js";
+import { SETTINGS_VERSION, withSettingsDefaults } from "../../src/shared/settings.js";
+import { STATS_VERSION, migrateStatsV0ToV1, withStatsDefaults } from "../../src/shared/stats.js";
 import type { Metadata } from "../../src/shared/types.js";
 
 function assert(condition: unknown, message: string): void {

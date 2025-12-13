@@ -1,9 +1,9 @@
 import {
   AVAILABLE_COLORS,
-  withSettingsDefaults,
   getSettings,
   resetSettings,
-  updateSettings
+  updateSettings,
+  withSettingsDefaults
 } from "../../src/shared/settings";
 import type { Settings } from "../../src/shared/types";
 import { showStatus } from "../utils/statusDisplay";
