@@ -312,7 +312,8 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Failed to load settings",
-        mapError: (error) => buildErrorResponse((error as Error)?.message || "Failed to load settings")
+        mapError: (error) =>
+          buildSettingsResponse({}, { error: toErrorMessage(error) || "Failed to load settings" })
       }
     );
 
