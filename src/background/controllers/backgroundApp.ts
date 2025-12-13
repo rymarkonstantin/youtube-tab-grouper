@@ -1,5 +1,5 @@
 import { AVAILABLE_COLORS } from "../constants";
-import { TabGroupingService, tabGroupingService } from "../services/tabGroupingService";
+import { tabGroupingService } from "../services/tabGroupingService";
 import { cleanupScheduler } from "../services/cleanupScheduler";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { chromeApiClient } from "../infra/chromeApiClient";
@@ -18,6 +18,7 @@ import { HandlerContext, MessageRouter, RouterMiddleware } from "../../shared/me
 import { logDebug, setDebugLogging } from "../logger";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 import type { Settings, GroupTabRequest } from "../../shared/types";
+import { computeEnabledColors } from "../../shared/settings";
 
 type RouteHandler = (
   msg: Record<string, unknown>,
@@ -116,7 +117,7 @@ export class BackgroundApp {
           return;
         }
 
-        const enabledColors = this.getEnabledColors(settings);
+        const enabledColors = computeEnabledColors(settings);
 
         if (info.menuItemId === "groupTab") {
           const category = await this.groupingService.resolveCategory(tab, settings);
@@ -136,7 +137,7 @@ export class BackgroundApp {
     void (async () => {
       try {
         const settings = await this.settingsRepo.get();
-        const enabledColors = this.getEnabledColors(settings);
+        const enabledColors = computeEnabledColors(settings);
 
         if (command === "group-current-tab") {
           const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
@@ -202,10 +203,6 @@ export class BackgroundApp {
     } catch (error) {
       return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
     }
-  }
-
-  private getEnabledColors(settings: Settings, fallbackColors: readonly string[] = AVAILABLE_COLORS) {
-    return TabGroupingService.getEnabledColors(settings, fallbackColors);
   }
 
   private isYouTubeUrl(url = "") {
@@ -316,7 +313,7 @@ export class BackgroundApp {
       return buildErrorResponse("Extension is disabled");
     }
 
-    const enabledColors = this.getEnabledColors(settings, AVAILABLE_COLORS);
+    const enabledColors = computeEnabledColors(settings, AVAILABLE_COLORS);
     const category = await this.groupingService.resolveCategory(
       tab,
       settings,

@@ -42,6 +42,27 @@ export const DEFAULT_SETTINGS: Settings = {
   version: SETTINGS_VERSION
 };
 
+export function computeEnabledColors(
+  settings: Settings,
+  fallbackColors: readonly string[] = AVAILABLE_COLORS
+): string[] {
+  const enabledColors: string[] = [];
+
+  if (settings.enabledColors && typeof settings.enabledColors === "object") {
+    enabledColors.push(
+      ...Object.entries(settings.enabledColors)
+        .filter(([, enabled]) => Boolean(enabled))
+        .map(([color]) => color)
+    );
+  }
+
+  if (enabledColors.length === 0) {
+    enabledColors.push(...fallbackColors);
+  }
+
+  return enabledColors;
+}
+
 type SettingsUpdater = Partial<Settings> | ((settings: Settings) => Settings);
 
 const isObject = (value: unknown): value is Record<string, unknown> =>

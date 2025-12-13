@@ -1,6 +1,7 @@
 import { AVAILABLE_COLORS } from "./constants";
-import { TabGroupingService, tabGroupingService } from "./services/tabGroupingService";
+import { tabGroupingService } from "./services/tabGroupingService";
 import type { Settings } from "../shared/types";
+import { computeEnabledColors } from "../shared/settings";
 
 // TODO: remove this facade once all imports use TabGroupingService directly.
 
@@ -13,4 +14,4 @@ export const handleGroupUpdated = (group: chrome.tabGroups.TabGroup) =>
   tabGroupingService.handleGroupUpdated(group);
 
 export const getEnabledColors = (settings: Settings, fallbackColors: readonly string[] = AVAILABLE_COLORS) =>
-  TabGroupingService.getEnabledColors(settings, fallbackColors);
+  computeEnabledColors(settings, fallbackColors);

@@ -8,6 +8,7 @@ import { categoryResolver as defaultCategoryResolver } from "../../shared/catego
 import { logError, logWarn, toErrorEnvelope } from "../logger";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 import type { Settings, Metadata } from "../../shared/types";
+import { computeEnabledColors } from "../../shared/settings";
 
 interface TabGroupingDependencies {
   apiClient?: typeof defaultApiClient;
@@ -131,24 +132,6 @@ export class TabGroupingService {
     }
   }
 
-  static getEnabledColors(settings: Settings, fallbackColors: readonly string[] = AVAILABLE_COLORS) {
-    const enabledColors: string[] = [];
-
-    if (settings.enabledColors && typeof settings.enabledColors === "object") {
-      enabledColors.push(
-        ...Object.entries(settings.enabledColors)
-          .filter(([, enabled]) => Boolean(enabled))
-          .map(([color]) => color)
-      );
-    }
-
-    if (enabledColors.length === 0) {
-      enabledColors.push(...fallbackColors);
-    }
-
-    return enabledColors;
-  }
-
   async resolveCategory(
     tab: chrome.tabs.Tab,
     settings: Settings,
@@ -183,7 +166,7 @@ export class TabGroupingService {
       return { count: 0, errors: ["Extension is disabled"] };
     }
 
-    const enabledColors = TabGroupingService.getEnabledColors(settings, this.defaultColors);
+    const enabledColors = computeEnabledColors(settings, this.defaultColors);
     let successCount = 0;
 
     for (const tab of tabs) {
