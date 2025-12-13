@@ -3,15 +3,19 @@ import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
 import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
 import { groupStateRepository as defaultGroupStateRepository } from "../repositories/groupStateRepository";
 import { statsRepository as defaultStatsRepository } from "../repositories/statsRepository";
+import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher";
+import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
 import { logError, logWarn, toErrorEnvelope } from "../logger";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
-import type { Settings } from "../../shared/types";
+import type { Settings, Metadata } from "../../shared/types";
 
 interface TabGroupingDependencies {
   apiClient?: typeof defaultApiClient;
   colorAssigner?: typeof defaultColorAssigner;
   groupStateRepository?: typeof defaultGroupStateRepository;
   statsRepository?: typeof defaultStatsRepository;
+  metadataFetcher?: typeof defaultGetVideoMetadata;
+  categoryResolver?: typeof defaultCategoryResolver;
   defaultColors?: readonly string[];
 }
 
@@ -20,6 +24,8 @@ export class TabGroupingService {
   private colorAssigner: typeof defaultColorAssigner;
   private groupStateRepository: typeof defaultGroupStateRepository;
   private statsRepository: typeof defaultStatsRepository;
+  private metadataFetcher: typeof defaultGetVideoMetadata;
+  private categoryResolver: typeof defaultCategoryResolver;
   private defaultColors: readonly string[];
 
   private groupColorMap: Record<string, string> = {};
@@ -32,12 +38,16 @@ export class TabGroupingService {
     colorAssigner = defaultColorAssigner,
     groupStateRepository = defaultGroupStateRepository,
     statsRepository = defaultStatsRepository,
+    metadataFetcher = defaultGetVideoMetadata,
+    categoryResolver = defaultCategoryResolver,
     defaultColors = AVAILABLE_COLORS
   }: TabGroupingDependencies = {}) {
     this.apiClient = apiClient;
     this.colorAssigner = colorAssigner;
     this.groupStateRepository = groupStateRepository;
     this.statsRepository = statsRepository;
+    this.metadataFetcher = metadataFetcher;
+    this.categoryResolver = categoryResolver;
     this.defaultColors = defaultColors;
   }
 
@@ -137,6 +147,56 @@ export class TabGroupingService {
     }
 
     return enabledColors;
+  }
+
+  async resolveCategory(
+    tab: chrome.tabs.Tab,
+    settings: Settings,
+    metadataOverride: Partial<Metadata> = {},
+    requestedCategory = ""
+  ) {
+    if (tab.id === undefined) {
+      throw new Error("Cannot resolve category for tab without id");
+    }
+
+    const trimmedCategory = requestedCategory?.trim();
+    if (trimmedCategory) {
+      return trimmedCategory;
+    }
+
+    const metadata = await this.metadataFetcher(tab.id, {
+      fallbackMetadata: metadataOverride,
+      fallbackTitle: tab?.title || ""
+    });
+
+    return this.categoryResolver.resolve({
+      metadata,
+      settings,
+      requestedCategory
+    });
+  }
+
+  async groupTabs(tabs: chrome.tabs.Tab[], settings: Settings) {
+    const errors: string[] = [];
+
+    if (!settings.extensionEnabled) {
+      return { count: 0, errors: ["Extension is disabled"] };
+    }
+
+    const enabledColors = TabGroupingService.getEnabledColors(settings, this.defaultColors);
+    let successCount = 0;
+
+    for (const tab of tabs) {
+      try {
+        const category = await this.resolveCategory(tab, settings);
+        await this.groupTab(tab, category, enabledColors);
+        successCount += 1;
+      } catch (error) {
+        errors.push(toErrorMessage(error));
+      }
+    }
+
+    return { count: successCount, errors };
   }
 
   private async ensureGroupForCategory(tab: chrome.tabs.Tab, category: string, color: string) {
