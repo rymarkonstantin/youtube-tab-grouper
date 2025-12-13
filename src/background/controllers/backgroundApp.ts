@@ -1,9 +1,3 @@
-import { AVAILABLE_COLORS } from "../constants";
-import { tabGroupingService } from "../services/tabGroupingService";
-import { cleanupScheduler } from "../services/cleanupScheduler";
-import { settingsRepository } from "../repositories/settingsRepository";
-import { chromeApiClient } from "../infra/chromeApiClient";
-import { runMigrations } from "../infra/migrations";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -13,12 +7,18 @@ import {
   buildIsGroupedResponse,
   buildSettingsResponse
 } from "../../shared/messageContracts";
-import { generateRequestId, MESSAGE_VERSION } from "../../shared/messageTransport";
+import { MESSAGE_VERSION, generateRequestId } from "../../shared/messageTransport";
 import { HandlerContext, MessageRouter, RouterMiddleware } from "../../shared/messaging/messageRouter";
-import { logDebug, setDebugLogging } from "../logger";
-import { toErrorMessage } from "../../shared/utils/errorUtils";
-import type { Settings, GroupTabRequest } from "../../shared/types";
 import { computeEnabledColors } from "../../shared/settings";
+import type { GroupTabRequest, Settings } from "../../shared/types";
+import { toErrorMessage } from "../../shared/utils/errorUtils";
+import { AVAILABLE_COLORS } from "../constants";
+import { chromeApiClient } from "../infra/chromeApiClient";
+import { runMigrations } from "../infra/migrations";
+import { logDebug, setDebugLogging } from "../logger";
+import { settingsRepository } from "../repositories/settingsRepository";
+import { cleanupScheduler } from "../services/cleanupScheduler";
+import { tabGroupingService } from "../services/tabGroupingService";
 
 type RouteHandler = (
   msg: Record<string, unknown>,

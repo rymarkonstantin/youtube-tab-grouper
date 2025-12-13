@@ -22,7 +22,16 @@ module.exports = [
     },
     rules: {
       ...js.configs.recommended.rules,
-      "no-undef": "off"
+      "no-undef": "off",
+      "sort-imports": [
+        "warn",
+        {
+          ignoreCase: false,
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false,
+          allowSeparatedGroups: false
+        }
+      ]
     }
   },
   {
@@ -49,7 +58,16 @@ module.exports = [
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "off",
-      "no-undef": "off"
+      "no-undef": "off",
+      "sort-imports": [
+        "warn",
+        {
+          ignoreCase: false,
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false,
+          allowSeparatedGroups: false
+        }
+      ]
     }
   },
   {
@@ -78,7 +96,16 @@ module.exports = [
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "no-undef": "off"
+      "no-undef": "off",
+      "sort-imports": [
+        "warn",
+        {
+          ignoreCase: false,
+          ignoreDeclarationSort: true,
+          ignoreMemberSort: false,
+          allowSeparatedGroups: false
+        }
+      ]
     }
   }
 ];

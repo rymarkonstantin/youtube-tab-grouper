@@ -1,14 +1,14 @@
+import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
+import { computeEnabledColors } from "../../shared/settings";
+import type { Metadata, Settings } from "../../shared/types";
+import { toErrorMessage } from "../../shared/utils/errorUtils";
 import { AVAILABLE_COLORS } from "../constants";
 import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
-import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
+import { logError, logWarn, toErrorEnvelope } from "../logger";
+import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher";
 import { groupStateRepository as defaultGroupStateRepository } from "../repositories/groupStateRepository";
 import { statsRepository as defaultStatsRepository } from "../repositories/statsRepository";
-import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher";
-import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
-import { logError, logWarn, toErrorEnvelope } from "../logger";
-import { toErrorMessage } from "../../shared/utils/errorUtils";
-import type { Settings, Metadata } from "../../shared/types";
-import { computeEnabledColors } from "../../shared/settings";
+import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
 
 interface TabGroupingDependencies {
   apiClient?: typeof defaultApiClient;

@@ -1,5 +1,5 @@
-import type { Settings } from "../shared/types";
 import { DEFAULT_SETTINGS } from "../shared/settings";
+import type { Settings } from "../shared/types";
 
 export const CONTENT_SETTINGS_DEFAULTS: Settings = {
   ...DEFAULT_SETTINGS

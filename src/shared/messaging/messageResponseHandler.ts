@@ -1,4 +1,4 @@
-import { validateResponse, type MessageAction } from "../messageContracts";
+import { type MessageAction, validateResponse } from "../messageContracts";
 import { toErrorMessage } from "../utils/errorUtils";
 
 export interface MessageResponseOptions {

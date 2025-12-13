@@ -1,4 +1,4 @@
-import { showStatus, type StatusType } from "../utils/statusDisplay";
+import { type StatusType, showStatus } from "../utils/statusDisplay";
 
 export class PopupView {
   private groupButton = document.getElementById("groupButton") as HTMLButtonElement | null;

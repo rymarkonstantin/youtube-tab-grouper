@@ -1,8 +1,8 @@
 // TODO: Rename file to metadataService.ts to match the exported class.
-import type { Metadata } from "../shared/types";
+import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
 import { buildNormalizedMetadata, hasMetadataContent } from "../shared/metadataSchema";
 import { MESSAGE_ACTIONS } from "../shared/messageContracts";
-import { MessageClient, defaultMessageClient } from "../shared/messaging/messageClient";
+import type { Metadata } from "../shared/types";
 import { logWarn } from "./logger";
 
 const DEFAULT_CONTENT_TIMEOUTS_MS = [1200, 2000, 3200];

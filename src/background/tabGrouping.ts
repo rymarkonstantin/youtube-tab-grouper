@@ -1,7 +1,7 @@
+import { computeEnabledColors } from "../shared/settings";
+import type { Settings } from "../shared/types";
 import { AVAILABLE_COLORS } from "./constants";
 import { tabGroupingService } from "./services/tabGroupingService";
-import type { Settings } from "../shared/types";
-import { computeEnabledColors } from "../shared/settings";
 
 // TODO: remove this facade once all imports use TabGroupingService directly.
 
