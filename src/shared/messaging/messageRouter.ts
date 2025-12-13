@@ -140,8 +140,11 @@ export class MessageRouter {
         sendResponse(envelopeResponse(responsePayload, requestId));
       })
       .catch((error) => {
+        const envelope = (error as { envelope?: unknown })?.envelope;
         const message = (error as Error)?.message ?? "Unknown error";
-        sendResponse(envelopeResponse(buildErrorResponse(message), requestId));
+        const responsePayload = isPlainObject(envelope) ? envelope : buildErrorResponse(message);
+
+        sendResponse(envelopeResponse(responsePayload, requestId));
       });
 
     return true;
