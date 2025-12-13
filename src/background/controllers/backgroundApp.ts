@@ -4,8 +4,6 @@ import { cleanupScheduler } from "../services/cleanupScheduler";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
-import { getVideoMetadata } from "../metadataFetcher";
-import { categoryResolver } from "../../shared/categoryResolver";
 import {
   MESSAGE_ACTIONS,
   MessageAction,
@@ -19,7 +17,7 @@ import { generateRequestId, MESSAGE_VERSION } from "../../shared/messageTranspor
 import { HandlerContext, MessageRouter, RouterMiddleware } from "../../shared/messaging/messageRouter";
 import { logDebug, setDebugLogging } from "../logger";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
-import type { Settings, Metadata, GroupTabRequest } from "../../shared/types";
+import type { Settings, GroupTabRequest } from "../../shared/types";
 
 type RouteHandler = (
   msg: Record<string, unknown>,
@@ -38,7 +36,6 @@ interface BackgroundAppDeps {
   groupingService?: typeof tabGroupingService;
   cleanupScheduler?: typeof cleanupScheduler;
   chromeApi?: typeof chromeApiClient;
-  categoryResolver?: typeof categoryResolver;
 }
 
 export class BackgroundApp {
@@ -47,7 +44,6 @@ export class BackgroundApp {
   private groupingService: typeof tabGroupingService;
   private cleanupScheduler: typeof cleanupScheduler;
   private chromeApi: typeof chromeApiClient;
-  private categoryResolver: typeof categoryResolver;
 
   private started = false;
 
@@ -56,7 +52,6 @@ export class BackgroundApp {
     this.groupingService = deps.groupingService ?? tabGroupingService;
     this.cleanupScheduler = deps.cleanupScheduler ?? cleanupScheduler;
     this.chromeApi = deps.chromeApi ?? chromeApiClient;
-    this.categoryResolver = deps.categoryResolver ?? categoryResolver;
     const { handlers, middleware } = this.buildRouteHandlers();
     this.router =
       deps.router ??
@@ -124,12 +119,12 @@ export class BackgroundApp {
         const enabledColors = this.getEnabledColors(settings);
 
         if (info.menuItemId === "groupTab") {
-          const category = await this.resolveCategory(tab, settings);
+          const category = await this.groupingService.resolveCategory(tab, settings);
           await this.groupingService.groupTab(tab, category, enabledColors);
         }
 
         if (info.menuItemId === "groupAllYT") {
-          await this.batchGroupAllTabs(settings, enabledColors);
+          await this.batchGroupAllTabs(settings);
         }
       } catch (error) {
         console.error("Context menu error:", error);
@@ -146,13 +141,13 @@ export class BackgroundApp {
         if (command === "group-current-tab") {
           const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
           if (tab && this.isYouTubeUrl(tab.url) && settings.extensionEnabled) {
-            const category = await this.resolveCategory(tab, settings);
+            const category = await this.groupingService.resolveCategory(tab, settings);
             await this.groupingService.groupTab(tab, category, enabledColors);
           }
         }
 
         if (command === "batch-group-all" && settings.extensionEnabled) {
-          await this.batchGroupAllTabs(settings, enabledColors);
+          await this.batchGroupAllTabs(settings);
         }
 
         if (command === "toggle-extension") {
@@ -189,34 +184,7 @@ export class BackgroundApp {
     });
   }
 
-  private async resolveCategory(
-    tab: chrome.tabs.Tab,
-    settings: Settings,
-    metadataOverride: Partial<Metadata> = {},
-    requestedCategory = ""
-  ) {
-    if (tab.id === undefined) {
-      throw new Error("Cannot resolve category for tab without id");
-    }
-
-    const trimmedCategory = requestedCategory?.trim();
-    if (trimmedCategory) {
-      return trimmedCategory;
-    }
-
-    const metadata = await getVideoMetadata(tab.id, {
-      fallbackMetadata: metadataOverride,
-      fallbackTitle: tab?.title || ""
-    });
-
-    return this.categoryResolver.resolve({
-      metadata,
-      settings,
-      requestedCategory
-    });
-  }
-
-  private async batchGroupAllTabs(settingsOverride?: Settings, enabledColorsOverride?: string[]) {
+  private async batchGroupAllTabs(settingsOverride?: Settings) {
     try {
       const tabs = await this.chromeApi.queryTabs({
         url: "https://www.youtube.com/*",
@@ -224,24 +192,13 @@ export class BackgroundApp {
       });
 
       const settings = settingsOverride || (await this.settingsRepo.get());
-      if (!settings.extensionEnabled) {
-        return buildErrorResponse("Extension is disabled");
+      const { count, errors } = await this.groupingService.groupTabs(tabs, settings);
+
+      if (errors.length && count === 0) {
+        return buildErrorResponse(errors.join("; "));
       }
 
-      const enabledColors = enabledColorsOverride || this.getEnabledColors(settings);
-
-      let successCount = 0;
-      for (const tab of tabs) {
-        try {
-          const category = await this.resolveCategory(tab, settings);
-          await this.groupingService.groupTab(tab, category, enabledColors);
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to group tab ${tab.id}:`, error);
-        }
-      }
-
-      return buildBatchGroupResponse(successCount);
+      return buildBatchGroupResponse(count, errors.length ? { errors } : {});
     } catch (error) {
       return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
     }
@@ -360,7 +317,12 @@ export class BackgroundApp {
     }
 
     const enabledColors = this.getEnabledColors(settings, AVAILABLE_COLORS);
-    const category = await this.resolveCategory(tab, settings, (msg as GroupTabRequest).metadata, (msg as GroupTabRequest).category);
+    const category = await this.groupingService.resolveCategory(
+      tab,
+      settings,
+      (msg as GroupTabRequest).metadata,
+      (msg as GroupTabRequest).category
+    );
     const result = await this.groupingService.groupTab(tab, category, enabledColors);
 
     return buildGroupTabResponse({ category, color: result.color });
