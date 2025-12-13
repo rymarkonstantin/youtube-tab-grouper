@@ -1,7 +1,7 @@
 import type { Settings } from "../../shared/types";
-import { logWarn } from "../logger";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { tabGroupingService } from "./tabGroupingService";
+import { runWithErrorHandling } from "../utils/ErrorHandling";
 
 interface CleanupSchedulerOptions {
   intervalMs?: number;
@@ -49,25 +49,28 @@ export class CleanupScheduler {
   };
 
   private handleGroupUpdated = (group: chrome.tabGroups.TabGroup) => {
-    void (async () => {
-      try {
-        await tabGroupingService.handleGroupUpdated(group);
-      } catch (error) {
-        logWarn("cleanupScheduler:handleGroupUpdated failed", (error as Error)?.message || error);
-      }
-    })();
+    void runWithErrorHandling(
+      "cleanupScheduler:handleGroupUpdated",
+      () => tabGroupingService.handleGroupUpdated(group),
+      {
+        fallbackMessage: "Failed to handle cleanup scheduler group update",
+        mapError: () => undefined,
+      },
+    );
   };
 
-  private async tick() {
-    try {
-      const settings: Settings = await settingsRepository.get();
-      if (!settings.autoCleanupEnabled) return;
+  private async tick(): Promise<void> {
+    return runWithErrorHandling<void>(
+      "cleanupScheduler:tick",
+      async () => {
+        const settings: Settings = await settingsRepository.get();
+        if (!settings.autoCleanupEnabled) return;
 
-      const grace = typeof this.graceMs === "number" ? this.graceMs : settings.autoCleanupGraceMs;
-      await tabGroupingService.autoCleanupEmptyGroups(grace);
-    } catch (error) {
-      logWarn("cleanupScheduler:tick failed", (error as Error)?.message || error);
-    }
+        const grace = typeof this.graceMs === "number" ? this.graceMs : settings.autoCleanupGraceMs;
+        await tabGroupingService.autoCleanupEmptyGroups(grace);
+      },
+      { fallbackMessage: "Failed to perform cleanup scheduler tick", mapError: () => undefined },
+    );
   }
 }
 
