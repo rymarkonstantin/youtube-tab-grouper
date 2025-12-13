@@ -16,6 +16,7 @@ import { AVAILABLE_COLORS } from "../constants";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
 import { logDebug, setDebugLogging } from "../logger";
+import { withErrorHandling } from "../utils/withErrorHandling";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { cleanupScheduler } from "../services/cleanupScheduler";
 import { tabGroupingService } from "../services/tabGroupingService";
@@ -106,60 +107,62 @@ export class BackgroundApp {
   };
 
   private handleContextMenuClick = (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => {
-    void (async () => {
+    void this.contextMenuHandler(info, tab);
+  };
+
+  private handleCommand = (command: string) => {
+    void this.commandHandler(command);
+  };
+
+  private contextMenuHandler = withErrorHandling(
+    async (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => {
       if (!tab || !this.isYouTubeUrl(tab.url)) {
         return;
       }
 
-      try {
-        const settings = await this.settingsRepo.get();
-        if (!settings.extensionEnabled) {
-          return;
-        }
+      const settings = await this.settingsRepo.get();
+      if (!settings.extensionEnabled) {
+        return;
+      }
 
-        const enabledColors = computeEnabledColors(settings);
+      const enabledColors = computeEnabledColors(settings);
 
-        if (info.menuItemId === "groupTab") {
+      if (info.menuItemId === "groupTab") {
+        const category = await this.groupingService.resolveCategory(tab, settings);
+        await this.groupingService.groupTab(tab, category, enabledColors);
+      }
+
+      if (info.menuItemId === "groupAllYT") {
+        await this.batchGroupAllTabs(settings);
+      }
+    },
+    { context: "contextMenu:onClick", mapError: () => undefined }
+  );
+
+  private commandHandler = withErrorHandling(
+    async (command: string) => {
+      const settings = await this.settingsRepo.get();
+      const enabledColors = computeEnabledColors(settings);
+
+      if (command === "group-current-tab") {
+        const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
+        if (tab && this.isYouTubeUrl(tab.url) && settings.extensionEnabled) {
           const category = await this.groupingService.resolveCategory(tab, settings);
           await this.groupingService.groupTab(tab, category, enabledColors);
         }
-
-        if (info.menuItemId === "groupAllYT") {
-          await this.batchGroupAllTabs(settings);
-        }
-      } catch (error) {
-        console.error("Context menu error:", error);
       }
-    })();
-  };
 
-  private handleCommand = (command: string) => {
-    void (async () => {
-      try {
-        const settings = await this.settingsRepo.get();
-        const enabledColors = computeEnabledColors(settings);
-
-        if (command === "group-current-tab") {
-          const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
-          if (tab && this.isYouTubeUrl(tab.url) && settings.extensionEnabled) {
-            const category = await this.groupingService.resolveCategory(tab, settings);
-            await this.groupingService.groupTab(tab, category, enabledColors);
-          }
-        }
-
-        if (command === "batch-group-all" && settings.extensionEnabled) {
-          await this.batchGroupAllTabs(settings);
-        }
-
-        if (command === "toggle-extension") {
-          settings.extensionEnabled = !settings.extensionEnabled;
-          await this.settingsRepo.save(settings);
-        }
-      } catch (error) {
-        console.error("Command error:", error);
+      if (command === "batch-group-all" && settings.extensionEnabled) {
+        await this.batchGroupAllTabs(settings);
       }
-    })();
-  };
+
+      if (command === "toggle-extension") {
+        settings.extensionEnabled = !settings.extensionEnabled;
+        await this.settingsRepo.save(settings);
+      }
+    },
+    { context: "command", mapError: () => undefined }
+  );
 
   private async registerContextMenus() {
     await new Promise<void>((resolve) => {
@@ -185,8 +188,8 @@ export class BackgroundApp {
     });
   }
 
-  private async batchGroupAllTabs(settingsOverride?: Settings) {
-    try {
+  private batchGroupAllTabs = withErrorHandling(
+    async (settingsOverride?: Settings) => {
       const tabs = await this.chromeApi.queryTabs({
         url: "https://www.youtube.com/*",
         currentWindow: true
@@ -200,10 +203,13 @@ export class BackgroundApp {
       }
 
       return buildBatchGroupResponse(count, errors.length ? { errors } : {});
-    } catch (error) {
-      return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
+    },
+    {
+      context: "batchGroupAllTabs",
+      fallbackMessage: "Batch grouping failed",
+      mapError: (error) => error.envelope ?? buildErrorResponse(error.message)
     }
-  }
+  );
 
   private isYouTubeUrl(url = "") {
     return url.includes("youtube.com");
@@ -284,55 +290,67 @@ export class BackgroundApp {
     };
   }
 
-  private handleIsTabGroupedMessage: RouteHandler = async () => {
-    try {
+  private handleIsTabGroupedMessage: RouteHandler = withErrorHandling(
+    async () => {
       const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
       return buildIsGroupedResponse((tab?.groupId ?? -1) >= 0);
-    } catch (error) {
-      return buildIsGroupedResponse(false, toErrorMessage(error));
+    },
+    {
+      context: "route:isTabGrouped",
+      mapError: (error) => buildIsGroupedResponse(false, toErrorMessage(error))
     }
-  };
+  );
 
-  private handleGetSettingsMessage: RouteHandler = async () => {
-    try {
+  private handleGetSettingsMessage: RouteHandler = withErrorHandling(
+    async () => {
       const settings = await this.settingsRepo.get();
       return buildSettingsResponse({ ...settings });
-    } catch (error) {
-      return buildErrorResponse((error as Error)?.message || "Failed to load settings");
+    },
+    {
+      context: "route:getSettings",
+      fallbackMessage: "Failed to load settings",
+      mapError: (error) => error.envelope ?? buildErrorResponse(error.message)
     }
-  };
+  );
 
-  private handleGroupTabMessage: RouteHandler = async (msg, sender, context) => {
-    const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
-    if (tab?.id === undefined) {
-      return buildErrorResponse("No active tab found");
+  private handleGroupTabMessage: RouteHandler = withErrorHandling(
+    async (msg, sender, context) => {
+      const [tab] = await this.chromeApi.queryTabs({ active: true, currentWindow: true });
+      if (tab?.id === undefined) {
+        return buildErrorResponse("No active tab found");
+      }
+
+      const settings = (context.state.settings as Settings | undefined) || (await this.settingsRepo.get());
+      if (!settings.extensionEnabled) {
+        return buildErrorResponse("Extension is disabled");
+      }
+
+      const enabledColors = computeEnabledColors(settings, AVAILABLE_COLORS);
+      const category = await this.groupingService.resolveCategory(
+        tab,
+        settings,
+        (msg as GroupTabRequest).metadata,
+        (msg as GroupTabRequest).category
+      );
+      const result = await this.groupingService.groupTab(tab, category, enabledColors);
+
+      return buildGroupTabResponse({ category, color: result.color });
+    },
+    {
+      context: "route:groupTab",
+      fallbackMessage: "Group tab failed",
+      mapError: (error) => error.envelope ?? buildErrorResponse(error.message)
     }
+  );
 
-    const settings = (context.state.settings as Settings | undefined) || (await this.settingsRepo.get());
-    if (!settings.extensionEnabled) {
-      return buildErrorResponse("Extension is disabled");
+  private handleBatchGroupMessage: RouteHandler = withErrorHandling(
+    async (_msg, _sender, context) => this.batchGroupAllTabs(context.state.settings as Settings | undefined),
+    {
+      context: "route:batchGroup",
+      fallbackMessage: "Batch grouping failed",
+      mapError: (error) => error.envelope ?? buildErrorResponse(error.message)
     }
-
-    const enabledColors = computeEnabledColors(settings, AVAILABLE_COLORS);
-    const category = await this.groupingService.resolveCategory(
-      tab,
-      settings,
-      (msg as GroupTabRequest).metadata,
-      (msg as GroupTabRequest).category
-    );
-    const result = await this.groupingService.groupTab(tab, category, enabledColors);
-
-    return buildGroupTabResponse({ category, color: result.color });
-  };
-
-  private handleBatchGroupMessage: RouteHandler = async (_msg, _sender, context) => {
-    try {
-      const result = await this.batchGroupAllTabs(context.state.settings as Settings | undefined);
-      return result;
-    } catch (error) {
-      return buildErrorResponse((error as Error)?.message || "Batch grouping failed");
-    }
-  };
+  );
 }
 
 function isLegacyGroupTab(msg: unknown) {
