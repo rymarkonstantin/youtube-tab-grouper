@@ -1,17 +1,8 @@
+import { AVAILABLE_COLORS, isGroupColor } from "./domain/colors";
 import type { CategoryKeywordsMap, ChannelCategoryMap, Settings } from "./types";
 
 export const SETTINGS_VERSION = 1;
-
-export const AVAILABLE_COLORS = [
-  "grey",
-  "blue",
-  "red",
-  "yellow",
-  "green",
-  "pink",
-  "purple",
-  "cyan"
-] as const;
+export { AVAILABLE_COLORS } from "./domain/colors";
 
 export const CATEGORY_KEYWORDS: CategoryKeywordsMap = {
   Gaming: ["gameplay", "gaming", "twitch", "esports", "fps", "rpg", "speedrun", "fortnite", "minecraft"],
@@ -51,7 +42,7 @@ export function computeEnabledColors(
   if (settings.enabledColors && typeof settings.enabledColors === "object") {
     enabledColors.push(
       ...Object.entries(settings.enabledColors)
-        .filter(([, enabled]) => Boolean(enabled))
+        .filter(([color, enabled]) => isGroupColor(color) && Boolean(enabled))
         .map(([color]) => color)
     );
   }
