@@ -1,11 +1,12 @@
-import {
-  MESSAGE_ACTIONS,
-  buildErrorResponse,
-  buildValidationErrorResponse,
-  validateRequest,
-  validateResponse
-} from "../messageContracts";
+import { buildErrorResponse } from "../messageContracts";
 import { MESSAGE_VERSION, envelopeResponse, generateRequestId } from "../messageTransport";
+import {
+  isPlainObject,
+  validateAction,
+  validateRequestPayload,
+  validateResponsePayload,
+  validateVersion
+} from "./validators";
 import type { HandleMessageOptions, MessageEnvelope } from "../types";
 
 export interface HandlerContext {
@@ -33,9 +34,6 @@ interface RouterOptions extends HandleMessageOptions {
   onUnknown?: (action: string, msg: unknown, sender: unknown) => unknown;
 }
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 export class MessageRouter {
   private handlers: Partial<Record<string, Handler>>;
   private options: RouterOptions;
@@ -56,7 +54,8 @@ export class MessageRouter {
 
   listener = (msg: unknown, sender: chrome.runtime.MessageSender, sendResponse: (value: unknown) => void) => {
     const payload = isPlainObject(msg) ? msg : {};
-    const action = typeof payload.action === "string" ? payload.action : undefined;
+    const actionResult = validateAction(payload.action);
+    const action = actionResult.ok ? actionResult.value : undefined;
     const requestId = typeof payload.requestId === "string" ? payload.requestId : generateRequestId("resp");
 
     const handler = action ? this.handlers[action] : undefined;
@@ -75,6 +74,10 @@ export class MessageRouter {
           });
         return true;
       }
+      if (actionResult.ok === false) {
+        sendResponse(envelopeResponse(actionResult.response, requestId));
+        return true;
+      }
       return false;
     }
 
@@ -85,29 +88,21 @@ export class MessageRouter {
     const { requireVersion = true, validateResponses = true, middleware = [] } = this.options;
     const incomingVersion = (payload as unknown as MessageEnvelope)?.version;
 
-    if (requireVersion && incomingVersion !== MESSAGE_VERSION) {
-      sendResponse(
-        envelopeResponse(
-          buildErrorResponse(
-            incomingVersion === undefined
-              ? "Message version is required"
-              : `Unsupported message version ${String(incomingVersion)}; expected ${MESSAGE_VERSION}`
-          ),
-          requestId
-        )
-      );
+    const versionResult = validateVersion(incomingVersion, requireVersion);
+    if (versionResult.ok === false) {
+      sendResponse(envelopeResponse(versionResult.response, requestId));
       return true;
     }
 
-    const requestValidation = validateRequest(action as (typeof MESSAGE_ACTIONS)[keyof typeof MESSAGE_ACTIONS], payload);
-    if (!requestValidation.valid) {
-      sendResponse(envelopeResponse(buildValidationErrorResponse(action as never, requestValidation.errors), requestId));
+    const requestValidation = validateRequestPayload(action, payload);
+    if (requestValidation.ok === false) {
+      sendResponse(envelopeResponse(requestValidation.response, requestId));
       return true;
     }
 
     const context: HandlerContext = {
       action,
-      msg: payload,
+      msg: requestValidation.value,
       sender,
       state: {}
     };
@@ -116,7 +111,7 @@ export class MessageRouter {
       if (index < middleware.length) {
         return Promise.resolve(middleware[index](context, () => runMiddleware(index + 1)));
       }
-      return Promise.resolve(handler(payload, sender, context));
+      return Promise.resolve(handler(requestValidation.value, sender, context));
     };
 
     Promise.resolve()
@@ -125,14 +120,9 @@ export class MessageRouter {
         const responsePayload = isPlainObject(result) ? result : buildErrorResponse("Empty handler response");
 
         if (validateResponses) {
-          const responseValidation = validateResponse(
-            action as (typeof MESSAGE_ACTIONS)[keyof typeof MESSAGE_ACTIONS],
-            responsePayload
-          );
-          if (!responseValidation.valid) {
-            sendResponse(
-              envelopeResponse(buildValidationErrorResponse(action as never, responseValidation.errors), requestId)
-            );
+          const responseValidation = validateResponsePayload(action, responsePayload);
+          if (responseValidation.ok === false) {
+            sendResponse(envelopeResponse(responseValidation.response, requestId));
             return;
           }
         }
