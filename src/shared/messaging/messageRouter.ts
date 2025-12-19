@@ -1,5 +1,5 @@
 import { buildErrorResponse } from "../messageContracts";
-import { MESSAGE_VERSION, envelopeResponse, generateRequestId } from "../messageTransport";
+import { envelopeResponse, generateRequestId } from "../messageTransport";
 import {
   isPlainObject,
   validateAction,
