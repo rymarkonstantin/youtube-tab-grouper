@@ -1,10 +1,5 @@
-import { DEFAULT_SETTINGS, withSettingsDefaults } from "./settings";
-import type { Metadata, Settings } from "./types";
-import { normalizeVideoMetadata } from "./metadataSchema";
-
-const FALLBACK_CATEGORY = "Other";
-
-const toCategory = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+import { resolveCategoryPipeline, toCategory } from "./categoryResolver/pipeline";
+import type { CategoryStrategy, ResolveCategoryInput, StrategyContext } from "./categoryResolver/pipeline";
 
 export const mapYouTubeCategory = (youtubeCategory: string | number | null) => {
   if (!youtubeCategory) return "";
@@ -31,50 +26,30 @@ export const mapYouTubeCategory = (youtubeCategory: string | number | null) => {
   return categoryMap[String(youtubeCategory)] || "";
 };
 
-export interface ResolveCategoryInput {
-  metadata?: Partial<Metadata>;
-  settings?: Partial<Settings>;
-  requestedCategory?: string;
-  fallbackCategory?: string;
-}
-
-interface StrategyContext {
-  metadata: Metadata;
-  settings: Settings;
-  requestedCategory: string;
-  fallbackCategory?: string;
-}
-
 export class CategoryResolver {
   resolve({
-    metadata: rawMetadata = {},
-    settings: rawSettings = DEFAULT_SETTINGS,
-    requestedCategory = "",
+    metadata,
+    settings,
+    requestedCategory,
     fallbackCategory
-  }: ResolveCategoryInput): string {
-    const context: StrategyContext = {
-      metadata: normalizeVideoMetadata(rawMetadata),
-      settings: withSettingsDefaults(rawSettings),
-      requestedCategory,
-      fallbackCategory
-    };
-
-    for (const strategy of this.getStrategies(context)) {
-      const category = strategy();
-      if (category) {
-        return category;
-      }
-    }
-
-    return toCategory(context.fallbackCategory) || FALLBACK_CATEGORY;
+  }: ResolveCategoryInput = {}): string {
+    return resolveCategoryPipeline(
+      {
+        metadata,
+        settings,
+        requestedCategory,
+        fallbackCategory
+      },
+      this.getStrategies()
+    );
   }
 
-  private getStrategies(context: StrategyContext): (() => string)[] {
+  private getStrategies(): CategoryStrategy[] {
     return [
-      () => this.useRequestedCategory(context),
-      () => this.useChannelCategory(context),
-      () => this.useKeywordScores(context),
-      () => this.useYouTubeCategory(context)
+      (context) => this.useRequestedCategory(context),
+      (context) => this.useChannelCategory(context),
+      (context) => this.useKeywordScores(context),
+      (context) => this.useYouTubeCategory(context)
     ];
   }
 
@@ -126,3 +101,11 @@ export class CategoryResolver {
 
 export const categoryResolver = new CategoryResolver();
 
+export {
+  createStrategyContext,
+  resolveCategoryPipeline,
+  runCategoryPipeline,
+  toCategory,
+  FALLBACK_CATEGORY
+} from "./categoryResolver/pipeline";
+export type { ResolveCategoryInput, StrategyContext, CategoryStrategy } from "./categoryResolver/pipeline";
