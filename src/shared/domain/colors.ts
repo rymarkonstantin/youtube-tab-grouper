@@ -26,6 +26,6 @@ export function isGroupColor(value: unknown): value is GroupColor {
   return typeof value === "string" && (AVAILABLE_COLORS as readonly string[]).includes(value);
 }
 
-export function getColorHex(color: GroupColor | string): string | undefined {
+export function getColorHex(color: unknown): string | undefined {
   return isGroupColor(color) ? COLOR_HEX[color] : undefined;
 }
