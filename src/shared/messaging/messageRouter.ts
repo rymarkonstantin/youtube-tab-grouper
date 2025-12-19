@@ -54,7 +54,12 @@ export class MessageRouter {
       requireVersion: this.options.requireVersion
     });
 
-    const action = requestValidation.ok ? requestValidation.value.action : undefined;
+    if (requestValidation.ok === false) {
+      sendResponse(envelopeResponse(requestValidation.response, requestId));
+      return true;
+    }
+
+    const action = requestValidation.value.action;
     const handler = action ? this.handlers[action] : undefined;
     if (!handler) {
       const { onUnknown } = this.options;
@@ -71,10 +76,6 @@ export class MessageRouter {
           });
         return true;
       }
-      if (requestValidation.ok === false) {
-        sendResponse(envelopeResponse(requestValidation.response, requestId));
-        return true;
-      }
       return false;
     }
 
@@ -83,11 +84,6 @@ export class MessageRouter {
     }
 
     const { validateResponses = true, middleware = [] } = this.options;
-
-    if (requestValidation.ok === false) {
-      sendResponse(envelopeResponse(requestValidation.response, requestId));
-      return true;
-    }
 
     const context: HandlerContext = {
       action,
