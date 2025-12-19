@@ -1,5 +1,4 @@
-import { AVAILABLE_COLORS } from "../constants";
-import { isGroupColor } from "../../shared/domain/colors";
+import { AVAILABLE_COLORS, isGroupColor } from "../../shared/domain/colors";
 import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
 
 type Cache = Record<string, string>;
@@ -24,8 +23,9 @@ export class ColorAssigner {
 
   constructor(options: ColorAssignerOptions = {}) {
     this.apiClient = options.apiClient ?? defaultApiClient;
-    this.cache = options.cache ?? {};
-    this.defaultColors = options.defaultColors ?? AVAILABLE_COLORS;
+    this.cache = this.normalizeCache(options.cache ?? {});
+    const defaults = (options.defaultColors ?? AVAILABLE_COLORS).filter(isGroupColor);
+    this.defaultColors = defaults.length > 0 ? defaults : AVAILABLE_COLORS;
   }
 
   /**
@@ -42,17 +42,10 @@ export class ColorAssigner {
         return this.cache[category];
       }
 
-      if (!Array.isArray(enabledColors) || enabledColors.length === 0) {
-        throw new Error("No enabled colors available for assignment");
-      }
-
+      const palette = this.resolvePalette(enabledColors);
       const neighborColors = await this.getNeighborColors(tabId, windowId);
-      const available = enabledColors.filter((color) => !neighborColors.has(color));
-      const color = available.length > 0 ? pickRandomColor(available) : pickRandomColor(enabledColors);
-
-      if (!color) {
-        throw new Error("Unable to assign a color for the category");
-      }
+      const available = palette.filter((color) => !neighborColors.has(color));
+      const color = available.length > 0 ? pickRandomColor(available) : pickRandomColor(palette);
 
       this.cache[category] = color;
       return color;
@@ -64,7 +57,7 @@ export class ColorAssigner {
   }
 
   setCache(cache: Cache) {
-    this.cache = cache;
+    this.cache = this.normalizeCache(cache);
   }
 
   private async getNeighborColors(tabId: number, windowId: number): Promise<Set<string>> {
@@ -82,6 +75,18 @@ export class ColorAssigner {
 
     const groups = await Promise.all(groupIds.map((gid) => this.apiClient.getTabGroup(gid)));
     return new Set(groups.map((g) => g?.color).filter(isGroupColor));
+  }
+
+  private resolvePalette(enabledColors: string[]): string[] {
+    if (Array.isArray(enabledColors)) {
+      const filtered = enabledColors.filter(isGroupColor);
+      if (filtered.length > 0) return filtered;
+    }
+    return [...this.defaultColors];
+  }
+
+  private normalizeCache(cache: Cache): Cache {
+    return Object.fromEntries(Object.entries(cache).filter(([, color]) => isGroupColor(color)));
   }
 
   private async runExclusive<T>(key: string, task: () => Promise<T>): Promise<T> {
