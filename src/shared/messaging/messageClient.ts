@@ -1,9 +1,13 @@
-import { MESSAGE_ACTIONS, validateRequest, validateResponse } from "../messageContracts";
-import { MESSAGE_VERSION, envelopeResponse, generateRequestId } from "../messageTransport";
+import { MESSAGE_ACTIONS } from "../messageContracts";
+import { envelopeResponse, generateRequestId } from "../messageTransport";
+import {
+  isPlainObject,
+  validateAction,
+  validateRequestPayload,
+  validateResponsePayload,
+  validateVersion
+} from "./validators";
 import type { SendMessageOptions } from "../types";
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 export interface MessageClientOptions {
   requireVersion?: boolean;
@@ -32,19 +36,24 @@ export class MessageClient {
       timeoutMs = this.defaultTimeoutMs,
       requestId = generateRequestId(),
       requireVersion = this.requireVersion,
-      validateResponsePayload = this.validateResponsePayload
+      validateResponsePayload: shouldValidateResponsePayload = this.validateResponsePayload
     } = options;
 
     if (!Object.values(MESSAGE_ACTIONS).includes(action)) {
       return Promise.reject(new Error(`Unknown action "${action}"`));
     }
 
-    const requestValidation = validateRequest(action, payload);
-    if (!requestValidation.valid) {
-      return Promise.reject(new Error(requestValidation.errors.join("; ")));
+    const actionValidation = validateAction(action);
+    if (actionValidation.ok === false) {
+      return Promise.reject(actionValidation.error);
     }
 
-    const message = envelopeResponse({ ...payload, action }, requestId);
+    const requestValidation = validateRequestPayload(actionValidation.value, payload);
+    if (requestValidation.ok === false) {
+      return Promise.reject(requestValidation.error);
+    }
+
+    const message = envelopeResponse({ ...requestValidation.value, action }, requestId);
 
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -71,23 +80,17 @@ export class MessageClient {
           return;
         }
 
-        if (requireVersion && isPlainObject(response)) {
-          const receivedVersion = response.version;
-          if (receivedVersion !== MESSAGE_VERSION) {
-            const receivedLabel =
-              typeof receivedVersion === "number" || typeof receivedVersion === "string"
-                ? String(receivedVersion)
-                : "unknown";
-            finalize(reject, new Error(`Message version mismatch: expected ${MESSAGE_VERSION}, got ${receivedLabel}`));
-            return;
-          }
+        const versionResult = validateVersion(isPlainObject(response) ? response.version : undefined, requireVersion);
+        if (versionResult.ok === false) {
+          finalize(reject, versionResult.error);
+          return;
         }
 
-        if (validateResponsePayload) {
+        if (shouldValidateResponsePayload) {
           const responsePayload = isPlainObject(response) ? response : {};
-          const responseValidation = validateResponse(action, responsePayload);
-          if (!responseValidation.valid) {
-            finalize(reject, new Error(responseValidation.errors.join("; ")));
+          const responseValidation = validateResponsePayload(actionValidation.value, responsePayload);
+          if (responseValidation.ok === false) {
+            finalize(reject, responseValidation.error);
             return;
           }
         }

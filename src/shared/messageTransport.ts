@@ -1,15 +1,16 @@
+import { MESSAGE_ACTIONS, MessageAction, buildErrorResponse } from "./messageContracts";
+import { MESSAGE_VERSION } from "./messaging/constants";
 import {
-  MESSAGE_ACTIONS,
-  MessageAction,
-  buildErrorResponse,
-  buildValidationErrorResponse,
-  validateRequest,
-  validateResponse
-} from "./messageContracts";
+  isPlainObject,
+  validateAction,
+  validateRequestPayload,
+  validateResponsePayload,
+  validateVersion
+} from "./messaging/validators";
 import type { HandleMessageOptions, MessageEnvelope, SendMessageOptions } from "./types";
 
-export const MESSAGE_VERSION = 1;
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;
+export { MESSAGE_VERSION } from "./messaging/constants";
 
 export function generateRequestId(prefix = "req") {
   const rand = Math.random().toString(36).slice(2, 8);
@@ -18,8 +19,6 @@ export function generateRequestId(prefix = "req") {
 }
 
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 type Handler = (msg: Record<string, unknown>, sender: chrome.runtime.MessageSender) => unknown;
 
@@ -36,16 +35,6 @@ export function envelopeResponse(payload: Record<string, unknown> = {}, requestI
   return withEnvelope(payload, requestId || generateRequestId("resp"));
 }
 
-function buildVersionError(expected: number, received: unknown, requestId?: string) {
-  const receivedLabel =
-    typeof received === "string" || typeof received === "number" ? String(received) : "unknown";
-  const message =
-    received === undefined
-      ? "Message version is required"
-      : `Unsupported message version ${receivedLabel}; expected ${expected}`;
-  return withEnvelope(buildErrorResponse(message, { expectedVersion: expected }), requestId || generateRequestId("resp"));
-}
-
 export function handleMessage(
   handlers: Partial<Record<MessageAction, Handler>> = {},
   options: HandleMessageOptions = {}
@@ -54,7 +43,8 @@ export function handleMessage(
 
   return (msg: unknown, sender: chrome.runtime.MessageSender, sendResponse: (value: unknown) => void) => {
     const payload = isPlainObject(msg) ? msg : {};
-    const action = typeof payload.action === "string" ? (payload.action as MessageAction) : undefined;
+    const actionResult = validateAction(payload.action);
+    const action = actionResult.ok ? actionResult.value : undefined;
     const requestId = typeof payload.requestId === "string" ? payload.requestId : generateRequestId("resp");
 
     if (!action || !(action in handlers)) {
@@ -71,19 +61,24 @@ export function handleMessage(
           });
         return true;
       }
+      if (actionResult.ok === false) {
+        sendResponse(envelopeResponse(actionResult.response, requestId));
+        return true;
+      }
       return false;
     }
 
     const incomingVersion = payload.version;
 
-    if (requireVersion && incomingVersion !== MESSAGE_VERSION) {
-      sendResponse(buildVersionError(MESSAGE_VERSION, incomingVersion, requestId));
+    const versionResult = validateVersion(incomingVersion, requireVersion);
+    if (versionResult.ok === false) {
+      sendResponse(envelopeResponse(versionResult.response, requestId));
       return true;
     }
 
-    const requestValidation = validateRequest(action, payload);
-    if (!requestValidation.valid) {
-      sendResponse(envelopeResponse(buildValidationErrorResponse(action, requestValidation.errors), requestId));
+    const requestValidation = validateRequestPayload(action, payload);
+    if (requestValidation.ok === false) {
+      sendResponse(envelopeResponse(requestValidation.response, requestId));
       return true;
     }
 
@@ -93,14 +88,14 @@ export function handleMessage(
     }
 
     Promise.resolve()
-      .then(() => handler(payload, sender))
+      .then(() => handler(requestValidation.value, sender))
       .then((result) => {
         const responsePayload = isPlainObject(result) ? result : buildErrorResponse("Empty handler response");
 
         if (validateResponses) {
-          const responseValidation = validateResponse(action, responsePayload);
-          if (!responseValidation.valid) {
-            sendResponse(envelopeResponse(buildValidationErrorResponse(action, responseValidation.errors), requestId));
+          const responseValidation = validateResponsePayload(action, responsePayload);
+          if (responseValidation.ok === false) {
+            sendResponse(envelopeResponse(responseValidation.response, requestId));
             return;
           }
         }
@@ -126,19 +121,24 @@ export function sendMessageSafe(
     timeoutMs = DEFAULT_MESSAGE_TIMEOUT_MS,
     requestId = generateRequestId(),
     requireVersion = true,
-    validateResponsePayload = true
+    validateResponsePayload: shouldValidateResponsePayload = true
   } = options;
 
   if (!Object.values(MESSAGE_ACTIONS).includes(action)) {
     return Promise.reject(new Error(`Unknown action "${action}"`));
   }
 
-  const requestValidation = validateRequest(action, payload);
-  if (!requestValidation.valid) {
-    return Promise.reject(new Error(requestValidation.errors.join("; ")));
+  const actionResult = validateAction(action);
+  if (actionResult.ok === false) {
+    return Promise.reject(actionResult.error);
   }
 
-  const message = withEnvelope({ ...payload, action }, requestId);
+  const requestValidation = validateRequestPayload(actionResult.value, payload);
+  if (requestValidation.ok === false) {
+    return Promise.reject(requestValidation.error);
+  }
+
+  const message = withEnvelope({ ...requestValidation.value, action }, requestId);
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -165,23 +165,18 @@ export function sendMessageSafe(
         return;
       }
 
-      if (requireVersion && isPlainObject(response)) {
-        const receivedVersion = response.version;
-        if (receivedVersion !== MESSAGE_VERSION) {
-          const receivedLabel =
-            typeof receivedVersion === "number" || typeof receivedVersion === "string"
-              ? String(receivedVersion)
-              : "unknown";
-          finalize(reject, new Error(`Message version mismatch: expected ${MESSAGE_VERSION}, got ${receivedLabel}`));
-          return;
-        }
+      const responseVersion = isPlainObject(response) ? response.version : undefined;
+      const versionResult = validateVersion(responseVersion, requireVersion);
+      if (versionResult.ok === false) {
+        finalize(reject, versionResult.error);
+        return;
       }
 
-      if (validateResponsePayload) {
+      if (shouldValidateResponsePayload) {
         const responsePayload = isPlainObject(response) ? response : {};
-        const responseValidation = validateResponse(action, responsePayload);
-        if (!responseValidation.valid) {
-          finalize(reject, new Error(responseValidation.errors.join("; ")));
+        const responseValidation = validateResponsePayload(actionResult.value, responsePayload);
+        if (responseValidation.ok === false) {
+          finalize(reject, responseValidation.error);
           return;
         }
       }
