@@ -18,9 +18,10 @@ export interface TabGroupingPorts {
   metadata: MetadataFetcherPort;
   categoryResolver: CategoryResolverPort;
   colorAssigner: ColorAssignerPort;
-  groupState: GroupStateRepositoryPort;
-  stats: StatsRepositoryPort;
+  groupState: GroupStateCoordinatorPort;
+  stats: StatsTrackerPort;
   lockManager: LockManagerPort;
+  cleanupCoordinator: CleanupCoordinatorPort;
   defaultColors?: readonly string[];
 }
 
@@ -55,11 +56,28 @@ export interface GroupStateRepositoryPort {
   save(groupColorMap: Record<string, string>, groupIdMap: Record<string, number>): Promise<void>;
 }
 
+export interface GroupStateCoordinatorPort {
+  initialize(): Promise<void>;
+  persist(category: string, groupId: number, color: string): Promise<void>;
+  pruneGroup(groupId: number): Promise<void>;
+  applyGroupUpdate(group: chrome.tabGroups.TabGroup): Promise<void>;
+}
+
 export interface StatsRepositoryPort {
   get(): Promise<GroupingStats>;
   save(next: Partial<GroupingStats> | GroupingStats): Promise<GroupingStats>;
 }
 
+export interface StatsTrackerPort {
+  recordGrouping(category: string): Promise<void>;
+}
+
 export interface LockManagerPort {
   runExclusive<T>(key: string, task: () => Promise<T>): Promise<T>;
+}
+
+export interface CleanupCoordinatorPort {
+  markPending(groupId: number): number | undefined;
+  clearPending(groupId: number): void;
+  getTimestamp(groupId: number): number | undefined;
 }
