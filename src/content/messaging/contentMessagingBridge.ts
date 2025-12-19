@@ -1,7 +1,7 @@
+import { adaptContentResolveCategoryInput } from "../../shared/categoryResolver/adapters";
 import { MESSAGE_ACTIONS } from "../../shared/messageContracts";
 import { MessageRouter } from "../../shared/messaging/messageRouter";
 import type { Metadata } from "../../shared/types";
-import { normalizeVideoMetadata } from "../../shared/metadataSchema";
 
 export interface ContentMessagingBridgeOptions {
   getMetadata?: () => Promise<Metadata> | Metadata;
@@ -44,10 +44,10 @@ export class ContentMessagingBridge {
   private handleGetVideoMetadata = async () => {
     const enabled = typeof this.isEnabled === "function" ? this.isEnabled() : true;
     if (!enabled) {
-      return normalizeVideoMetadata();
+      return adaptContentResolveCategoryInput().input.metadata;
     }
     const raw = typeof this.getMetadata === "function" ? await this.getMetadata() : {};
-    return normalizeVideoMetadata(raw);
+    return adaptContentResolveCategoryInput({ metadata: raw }).input.metadata;
   };
 }
 

@@ -1,5 +1,6 @@
 import type { GroupTabResponse, Metadata, Settings } from "../../shared/types";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
+import { adaptContentResolveCategoryInput } from "../../shared/categoryResolver/adapters";
 import { isEnabled, loadConfig } from "../config";
 import { sendGroupTab, sendIsTabGrouped } from "../messageClient";
 import { ContentMessagingBridge } from "../messaging/contentMessagingBridge";
@@ -67,7 +68,20 @@ export class ContentApp {
   }
 
   private getNormalizedMetadata() {
-    return this.metadataCollector.collect();
+    return this.buildResolveCategoryPayload().metadata;
+  }
+
+  private buildResolveCategoryPayload(requestedCategory = "") {
+    const rawMetadata = this.metadataCollector.collect();
+    const { input } = adaptContentResolveCategoryInput({
+      metadata: rawMetadata,
+      requestedCategory
+    });
+
+    return {
+      metadata: input.metadata,
+      category: input.requestedCategory
+    };
   }
 
   private computeMetadataHash(metadata: Metadata) {
@@ -92,9 +106,9 @@ export class ContentApp {
   }
 
   private async handleManualGroup() {
-    const metadata = this.getNormalizedMetadata();
+    const { metadata, category } = this.buildResolveCategoryPayload();
     const metadataHash = this.computeMetadataHash(metadata);
-    const response = await this.requestGroupTab("", metadata);
+    const response = await this.requestGroupTab(category, metadata);
     if (response?.success) {
       this.buttonView.remove();
       this.lastGroupedMetadataHash = metadataHash;
@@ -123,14 +137,14 @@ export class ContentApp {
   }
 
   private async triggerAutoGroup() {
-    const metadata = this.getNormalizedMetadata();
+    const { metadata, category } = this.buildResolveCategoryPayload();
     const metadataHash = this.computeMetadataHash(metadata);
 
     if (metadataHash && metadataHash === this.lastGroupedMetadataHash) {
       return;
     }
 
-    const response = await this.requestGroupTab("", metadata);
+    const response = await this.requestGroupTab(category, metadata);
     if (response?.success) {
       this.buttonView.remove();
       this.lastGroupedMetadataHash = metadataHash;
