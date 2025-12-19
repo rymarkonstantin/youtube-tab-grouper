@@ -7,17 +7,22 @@ import { AVAILABLE_COLORS } from "../constants";
 import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
 import { logError, logWarn, toErrorEnvelope } from "../logger";
 import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher";
+import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
 import { groupStateRepository as defaultGroupStateRepository } from "../repositories/groupStateRepository";
 import { statsRepository as defaultStatsRepository } from "../repositories/statsRepository";
-import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
+import { CleanupCoordinator } from "./cleanupCoordinator";
+import { GroupStateCoordinator } from "./groupStateCoordinator";
+import { InMemoryLockManager } from "./inMemoryLockManager";
+import { StatsTracker } from "./statsTracker";
 import type {
   CategoryResolverPort,
   ChromeTabGroupingPort,
+  CleanupCoordinatorPort,
   ColorAssignerPort,
-  GroupStateRepositoryPort,
+  GroupStateCoordinatorPort,
   LockManagerPort,
   MetadataFetcherPort,
-  StatsRepositoryPort,
+  StatsTrackerPort,
   TabGroupingPorts
 } from "../ports/tabGrouping";
 
@@ -30,16 +35,13 @@ import type {
 export class TabGroupingService {
   private apiClient: ChromeTabGroupingPort;
   private colorAssigner: ColorAssignerPort;
-  private groupStateRepository: GroupStateRepositoryPort;
-  private statsRepository: StatsRepositoryPort;
+  private groupStateCoordinator: GroupStateCoordinatorPort;
+  private statsTracker: StatsTrackerPort;
   private metadataFetcher: MetadataFetcherPort;
   private categoryResolver: CategoryResolverPort;
   private lockManager: LockManagerPort;
+  private cleanupCoordinator: CleanupCoordinatorPort;
   private defaultColors: readonly string[];
-
-  private groupColorMap: Record<string, string> = {};
-  private groupIdMap: Record<string, number> = {};
-  private pendingCleanup = new Map<number, number>();
 
   constructor({
     chrome,
@@ -49,23 +51,22 @@ export class TabGroupingService {
     metadata,
     categoryResolver,
     lockManager,
+    cleanupCoordinator,
     defaultColors = AVAILABLE_COLORS
   }: TabGroupingPorts) {
     this.apiClient = chrome;
     this.colorAssigner = colorAssigner;
-    this.groupStateRepository = groupState;
-    this.statsRepository = stats;
+    this.groupStateCoordinator = groupState;
+    this.statsTracker = stats;
     this.metadataFetcher = metadata;
     this.categoryResolver = categoryResolver;
     this.lockManager = lockManager;
+    this.cleanupCoordinator = cleanupCoordinator;
     this.defaultColors = defaultColors;
   }
 
   async initialize() {
-    const { groupColorMap, groupIdMap } = await this.groupStateRepository.get();
-    this.groupColorMap = { ...(groupColorMap || {}) };
-    this.groupIdMap = { ...(groupIdMap || {}) };
-    this.colorAssigner.setCache(this.groupColorMap);
+    await this.groupStateCoordinator.initialize();
   }
 
   async groupTab(tab: chrome.tabs.Tab, category: string, enabledColors: string[]) {
@@ -80,8 +81,8 @@ export class TabGroupingService {
         const color = await this.colorAssigner.assignColor(category, tabId, windowId, enabledColors);
         const { groupId } = await this.ensureGroupForCategory(tab, category, color);
 
-        await this.persistGroupingState(category, groupId, color);
-        await this.recordGroupingStats(category);
+        await this.groupStateCoordinator.persist(category, groupId, color);
+        await this.statsTracker.recordGrouping(category);
 
         return { groupId, color };
       } catch (error) {
@@ -102,7 +103,7 @@ export class TabGroupingService {
         if (tabs.length === 0) {
           await this.tryCleanupGroup(group, graceMs);
         } else {
-          this.clearPendingCleanup(group.id);
+          this.cleanupCoordinator.clearPending(group.id);
         }
       }
     } catch (error) {
@@ -112,8 +113,8 @@ export class TabGroupingService {
 
   async handleGroupRemoved(groupId: number) {
     try {
-      this.clearPendingCleanup(groupId);
-      await this.pruneGroupState(groupId);
+      this.cleanupCoordinator.clearPending(groupId);
+      await this.groupStateCoordinator.pruneGroup(groupId);
     } catch (error) {
       logWarn("grouping:handleGroupRemoved failed to persist cleanup", toErrorMessage(error));
     }
@@ -125,17 +126,8 @@ export class TabGroupingService {
     }
 
     try {
-      this.clearPendingCleanup(group.id);
-      for (const [name, id] of Object.entries(this.groupIdMap)) {
-        if (id === group.id && group.title && group.title !== name) {
-          delete this.groupIdMap[name];
-          delete this.groupColorMap[name];
-          this.groupIdMap[group.title] = group.id;
-          if (group.color) this.groupColorMap[group.title] = group.color;
-        }
-      }
-      await this.groupStateRepository.save(this.groupColorMap, this.groupIdMap);
-      this.colorAssigner.setCache(this.groupColorMap);
+      this.cleanupCoordinator.clearPending(group.id);
+      await this.groupStateCoordinator.applyGroupUpdate(group);
     } catch (error) {
       logWarn("grouping:handleGroupUpdated failed to persist update", toErrorMessage(error));
     }
@@ -226,30 +218,6 @@ export class TabGroupingService {
     return { groupId, color };
   }
 
-  private async persistGroupingState(category: string, groupId: number, color: string) {
-    this.groupIdMap[category] = groupId;
-    this.groupColorMap[category] = color;
-    try {
-      await this.groupStateRepository.save(this.groupColorMap, this.groupIdMap);
-      this.colorAssigner.setCache(this.groupColorMap);
-    } catch (error) {
-      const err = new Error(`Failed to persist grouping state: ${toErrorMessage(error)}`);
-      (err as { cause?: unknown }).cause = error;
-      throw err;
-    }
-  }
-
-  private async recordGroupingStats(category: string) {
-    const stats = await this.statsRepository.get();
-    stats.totalTabs = (stats.totalTabs || 0) + 1;
-    stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
-    try {
-      await this.statsRepository.save(stats);
-    } catch (error) {
-      logWarn("grouping:recordGroupingStats failed to persist stats", toErrorMessage(error));
-    }
-  }
-
   private async isGroupActive(group: chrome.tabGroups.TabGroup) {
     try {
       const [activeTab] = await this.apiClient.queryTabs({ active: true, windowId: group.windowId });
@@ -265,42 +233,12 @@ export class TabGroupingService {
     return tabs.length === 0;
   }
 
-  private async pruneGroupState(groupId: number) {
-    let mutated = false;
-    for (const [name, id] of Object.entries(this.groupIdMap)) {
-      if (id === groupId) {
-        delete this.groupIdMap[name];
-        delete this.groupColorMap[name];
-        mutated = true;
-      }
-    }
-
-    if (!mutated) return;
-
-    try {
-      await this.groupStateRepository.save(this.groupColorMap, this.groupIdMap);
-      this.colorAssigner.setCache(this.groupColorMap);
-    } catch (error) {
-      logWarn("grouping:pruneGroupState failed to persist", toErrorMessage(error));
-    }
-  }
-
-  private markPendingCleanup(groupId: number) {
-    if (!this.pendingCleanup.has(groupId)) {
-      this.pendingCleanup.set(groupId, Date.now());
-    }
-    return this.pendingCleanup.get(groupId);
-  }
-
-  private clearPendingCleanup(groupId: number) {
-    this.pendingCleanup.delete(groupId);
-  }
-
   private async tryCleanupGroup(group: chrome.tabGroups.TabGroup, graceMs = 300000) {
     try {
-      this.markPendingCleanup(group.id);
+      this.cleanupCoordinator.markPending(group.id);
 
-      const elapsed = Date.now() - (this.pendingCleanup.get(group.id) || 0);
+      const pendingAt = this.cleanupCoordinator.getTimestamp(group.id) || 0;
+      const elapsed = Date.now() - pendingAt;
       if (elapsed < Math.max(0, graceMs)) {
         return;
       }
@@ -308,39 +246,15 @@ export class TabGroupingService {
       const [empty, active] = await Promise.all([this.isGroupEmpty(group.id), this.isGroupActive(group)]);
 
       if (active || !empty) {
-        this.clearPendingCleanup(group.id);
+        this.cleanupCoordinator.clearPending(group.id);
         return;
       }
 
       await this.apiClient.removeTabGroup(group.id);
-      await this.pruneGroupState(group.id);
-      this.clearPendingCleanup(group.id);
+      await this.groupStateCoordinator.pruneGroup(group.id);
+      this.cleanupCoordinator.clearPending(group.id);
     } catch (error) {
       logWarn("grouping:tryCleanupGroup failed", toErrorMessage(error));
-    }
-  }
-
-}
-
-class InMemoryLockManager implements LockManagerPort {
-  private locks = new Map<string, Promise<void>>();
-
-  async runExclusive<T>(key: string, task: () => Promise<T>): Promise<T> {
-    const previous = this.locks.get(key) ?? Promise.resolve();
-    let release: () => void = () => undefined;
-    const current = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    this.locks.set(key, previous.then(() => current));
-
-    await previous;
-    try {
-      return await task();
-    } finally {
-      release();
-      if (this.locks.get(key) === current) {
-        this.locks.delete(key);
-      }
     }
   }
 }
@@ -348,10 +262,11 @@ class InMemoryLockManager implements LockManagerPort {
 export const tabGroupingService = new TabGroupingService({
   chrome: defaultApiClient,
   colorAssigner: defaultColorAssigner,
-  groupState: defaultGroupStateRepository,
-  stats: defaultStatsRepository,
+  groupState: new GroupStateCoordinator(defaultGroupStateRepository, defaultColorAssigner),
+  stats: new StatsTracker(defaultStatsRepository),
   metadata: defaultGetVideoMetadata,
   categoryResolver: defaultCategoryResolver,
   lockManager: new InMemoryLockManager(),
+  cleanupCoordinator: new CleanupCoordinator(),
   defaultColors: AVAILABLE_COLORS
 });
