@@ -1,6 +1,6 @@
 import type { Settings } from "../../shared/types";
 import { settingsRepository } from "../repositories/settingsRepository";
-import { tabGroupingService } from "./tabGroupingService";
+import { tabGroupingService } from "../tabGrouping";
 import { runWithErrorHandling } from "../utils/ErrorHandling";
 
 interface CleanupSchedulerOptions {
