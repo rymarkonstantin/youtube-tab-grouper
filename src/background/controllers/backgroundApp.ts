@@ -182,7 +182,8 @@ export class BackgroundApp {
     chrome.contextMenus.create({
       id: "groupAllYT",
       title: "Group All YouTube Tabs",
-      contexts: ["page"]
+      contexts: ["page"],
+      documentUrlPatterns: ["https://www.youtube.com/*"]
     });
   }
 
