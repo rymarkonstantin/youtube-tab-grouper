@@ -18,7 +18,7 @@ import { runMigrations } from "../infra/migrations";
 import { logDebug, setDebugLogging } from "../logger";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { cleanupScheduler } from "../services/cleanupScheduler";
-import { tabGroupingService } from "../services/tabGroupingService";
+import { tabGroupingService } from "../tabGrouping";
 import { runWithErrorHandling } from "../utils/ErrorHandling";
 
 type RouteHandler = (

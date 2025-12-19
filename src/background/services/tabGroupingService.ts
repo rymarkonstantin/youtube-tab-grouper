@@ -1,19 +1,9 @@
-import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
 import { adaptBackgroundResolveCategoryInput } from "../../shared/categoryResolver/adapters";
 import { computeEnabledColors } from "../../shared/settings";
 import type { Metadata, Settings } from "../../shared/types";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 import { AVAILABLE_COLORS } from "../constants";
-import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
 import { logError, logWarn, toErrorEnvelope } from "../logger";
-import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher";
-import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
-import { groupStateRepository as defaultGroupStateRepository } from "../repositories/groupStateRepository";
-import { statsRepository as defaultStatsRepository } from "../repositories/statsRepository";
-import { CleanupCoordinator } from "./cleanupCoordinator";
-import { GroupStateCoordinator } from "./groupStateCoordinator";
-import { InMemoryLockManager } from "./inMemoryLockManager";
-import { StatsTracker } from "./statsTracker";
 import type {
   CategoryResolverPort,
   ChromeTabGroupingPort,
@@ -258,15 +248,3 @@ export class TabGroupingService {
     }
   }
 }
-
-export const tabGroupingService = new TabGroupingService({
-  chrome: defaultApiClient,
-  colorAssigner: defaultColorAssigner,
-  groupState: new GroupStateCoordinator(defaultGroupStateRepository, defaultColorAssigner),
-  stats: new StatsTracker(defaultStatsRepository),
-  metadata: defaultGetVideoMetadata,
-  categoryResolver: defaultCategoryResolver,
-  lockManager: new InMemoryLockManager(),
-  cleanupCoordinator: new CleanupCoordinator(),
-  defaultColors: AVAILABLE_COLORS
-});
