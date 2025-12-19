@@ -1,4 +1,5 @@
-import { type MessageAction, validateResponse } from "../messageContracts";
+import { type MessageAction } from "../messageContracts";
+import { validateIncomingResponse } from "./validators";
 import { toErrorMessage } from "../utils/errorUtils";
 
 export interface MessageResponseOptions {
@@ -53,13 +54,16 @@ export function handleMessageResponse<T extends { success?: boolean; error?: str
     return { success: false, error: message } as T;
   }
 
-  // Validate response if enabled
   if (shouldValidate && response) {
-    const validation = validateResponse(action, response);
-    if (!validation.valid) {
+    const validation = validateIncomingResponse(action, response, {
+      requireVersion: false,
+      validatePayload: true
+    });
+
+    if (validation.ok === false) {
       return {
         success: false,
-        error: validation.errors.join("; ") || "Invalid response"
+        error: validation.error.message || "Invalid response"
       } as T;
     }
   }

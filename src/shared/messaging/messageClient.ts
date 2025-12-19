@@ -1,12 +1,6 @@
 import { MESSAGE_ACTIONS } from "../messageContracts";
 import { envelopeResponse, generateRequestId } from "../messageTransport";
-import {
-  isPlainObject,
-  validateAction,
-  validateRequestPayload,
-  validateResponsePayload,
-  validateVersion
-} from "./validators";
+import { isPlainObject, validateIncomingResponse, validateOutgoingRequest } from "./validators";
 import type { SendMessageOptions } from "../types";
 
 export interface MessageClientOptions {
@@ -39,21 +33,15 @@ export class MessageClient {
       validateResponsePayload: shouldValidateResponsePayload = this.validateResponsePayload
     } = options;
 
-    if (!Object.values(MESSAGE_ACTIONS).includes(action)) {
-      return Promise.reject(new Error(`Unknown action "${action}"`));
+    const outgoingValidation = validateOutgoingRequest(action, payload);
+    if (outgoingValidation.ok === false) {
+      return Promise.reject(outgoingValidation.error);
     }
 
-    const actionValidation = validateAction(action);
-    if (actionValidation.ok === false) {
-      return Promise.reject(actionValidation.error);
-    }
-
-    const requestValidation = validateRequestPayload(actionValidation.value, payload);
-    if (requestValidation.ok === false) {
-      return Promise.reject(requestValidation.error);
-    }
-
-    const message = envelopeResponse({ ...requestValidation.value, action }, requestId);
+    const message = envelopeResponse(
+      { ...outgoingValidation.value.payload, action: outgoingValidation.value.action },
+      requestId
+    );
 
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -80,22 +68,17 @@ export class MessageClient {
           return;
         }
 
-        const versionResult = validateVersion(isPlainObject(response) ? response.version : undefined, requireVersion);
-        if (versionResult.ok === false) {
-          finalize(reject, versionResult.error);
+        const validation = validateIncomingResponse(outgoingValidation.value.action, response, {
+          requireVersion,
+          validatePayload: shouldValidateResponsePayload
+        });
+
+        if (validation.ok === false) {
+          finalize(reject, validation.error);
           return;
         }
 
-        if (shouldValidateResponsePayload) {
-          const responsePayload = isPlainObject(response) ? response : {};
-          const responseValidation = validateResponsePayload(actionValidation.value, responsePayload);
-          if (responseValidation.ok === false) {
-            finalize(reject, responseValidation.error);
-            return;
-          }
-        }
-
-        finalize(resolve, response);
+        finalize(resolve, isPlainObject(response) ? { ...validation.value } : response);
       };
 
       try {

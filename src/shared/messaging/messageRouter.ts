@@ -1,13 +1,7 @@
 import { buildErrorResponse } from "../messageContracts";
 import { envelopeResponse, generateRequestId } from "../messageTransport";
-import {
-  isPlainObject,
-  validateAction,
-  validateRequestPayload,
-  validateResponsePayload,
-  validateVersion
-} from "./validators";
-import type { HandleMessageOptions, MessageEnvelope } from "../types";
+import { isPlainObject, validateIncomingRequest, validateIncomingResponse } from "./validators";
+import type { HandleMessageOptions } from "../types";
 
 export interface HandlerContext {
   action: string;
@@ -54,10 +48,13 @@ export class MessageRouter {
 
   listener = (msg: unknown, sender: chrome.runtime.MessageSender, sendResponse: (value: unknown) => void) => {
     const payload = isPlainObject(msg) ? msg : {};
-    const actionResult = validateAction(payload.action);
-    const action = actionResult.ok ? actionResult.value : undefined;
     const requestId = typeof payload.requestId === "string" ? payload.requestId : generateRequestId("resp");
 
+    const requestValidation = validateIncomingRequest(payload, {
+      requireVersion: this.options.requireVersion
+    });
+
+    const action = requestValidation.ok ? requestValidation.value.action : undefined;
     const handler = action ? this.handlers[action] : undefined;
     if (!handler) {
       const { onUnknown } = this.options;
@@ -74,8 +71,8 @@ export class MessageRouter {
           });
         return true;
       }
-      if (actionResult.ok === false) {
-        sendResponse(envelopeResponse(actionResult.response, requestId));
+      if (requestValidation.ok === false) {
+        sendResponse(envelopeResponse(requestValidation.response, requestId));
         return true;
       }
       return false;
@@ -85,16 +82,8 @@ export class MessageRouter {
       return false;
     }
 
-    const { requireVersion = true, validateResponses = true, middleware = [] } = this.options;
-    const incomingVersion = (payload as unknown as MessageEnvelope)?.version;
+    const { validateResponses = true, middleware = [] } = this.options;
 
-    const versionResult = validateVersion(incomingVersion, requireVersion);
-    if (versionResult.ok === false) {
-      sendResponse(envelopeResponse(versionResult.response, requestId));
-      return true;
-    }
-
-    const requestValidation = validateRequestPayload(action, payload);
     if (requestValidation.ok === false) {
       sendResponse(envelopeResponse(requestValidation.response, requestId));
       return true;
@@ -102,7 +91,7 @@ export class MessageRouter {
 
     const context: HandlerContext = {
       action,
-      msg: requestValidation.value,
+      msg: requestValidation.ok ? requestValidation.value.payload : payload,
       sender,
       state: {}
     };
@@ -111,7 +100,7 @@ export class MessageRouter {
       if (index < middleware.length) {
         return Promise.resolve(middleware[index](context, () => runMiddleware(index + 1)));
       }
-      return Promise.resolve(handler(requestValidation.value, sender, context));
+      return Promise.resolve(handler(context.msg, sender, context));
     };
 
     Promise.resolve()
@@ -120,7 +109,10 @@ export class MessageRouter {
         const responsePayload = isPlainObject(result) ? result : buildErrorResponse("Empty handler response");
 
         if (validateResponses) {
-          const responseValidation = validateResponsePayload(action, responsePayload);
+          const responseValidation = validateIncomingResponse(action, responsePayload, {
+            requireVersion: false,
+            validatePayload: true
+          });
           if (responseValidation.ok === false) {
             sendResponse(envelopeResponse(responseValidation.response, requestId));
             return;

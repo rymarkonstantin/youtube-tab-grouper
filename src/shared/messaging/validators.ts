@@ -25,6 +25,15 @@ export interface ValidationSuccess<T> {
 
 export type ValidationResult<T> = ValidationSuccess<T> | ValidationFailure;
 
+export interface ResponseValidationOptions {
+  requireVersion?: boolean;
+  validatePayload?: boolean;
+}
+
+export interface RequestValidationOptions {
+  requireVersion?: boolean;
+}
+
 export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -87,4 +96,69 @@ export function validateResponsePayload(
   }
 
   return toValidationFailure(buildValidationErrorResponse(action, validation.errors));
+}
+
+export function validateOutgoingRequest(
+  action: unknown,
+  payload: unknown = {}
+): ValidationResult<{ action: MessageAction; payload: Record<string, unknown> }> {
+  const actionResult = validateAction(action);
+  if (actionResult.ok === false) {
+    return actionResult;
+  }
+
+  const requestValidation = validateRequestPayload(actionResult.value, payload);
+  if (requestValidation.ok === false) {
+    return requestValidation;
+  }
+
+  return { ok: true, value: { action: actionResult.value, payload: requestValidation.value } };
+}
+
+export function validateIncomingRequest(
+  msg: unknown,
+  options: RequestValidationOptions = {}
+): ValidationResult<{ action: MessageAction; payload: Record<string, unknown> }> {
+  const { requireVersion = true } = options;
+  const payload = isPlainObject(msg) ? msg : {};
+
+  const actionResult = validateAction(payload.action);
+  if (actionResult.ok === false) {
+    return actionResult;
+  }
+
+  const versionResult = validateVersion(payload.version, requireVersion);
+  if (versionResult.ok === false) {
+    return versionResult;
+  }
+
+  const requestValidation = validateRequestPayload(actionResult.value, payload);
+  if (requestValidation.ok === false) {
+    return requestValidation;
+  }
+
+  return { ok: true, value: { action: actionResult.value, payload: requestValidation.value } };
+}
+
+export function validateIncomingResponse(
+  action: MessageAction,
+  response: unknown,
+  options: ResponseValidationOptions = {}
+): ValidationResult<Record<string, unknown>> {
+  const { requireVersion = true, validatePayload = true } = options;
+  const payload = isPlainObject(response) ? response : {};
+
+  const versionResult = validateVersion(payload.version, requireVersion);
+  if (versionResult.ok === false) {
+    return versionResult;
+  }
+
+  if (validatePayload) {
+    const responseValidation = validateResponsePayload(action, payload);
+    if (responseValidation.ok === false) {
+      return responseValidation;
+    }
+  }
+
+  return { ok: true, value: payload };
 }
