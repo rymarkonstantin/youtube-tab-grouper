@@ -1,4 +1,4 @@
-import { AVAILABLE_COLORS, COLOR_HEX } from "../../src/shared/domain/colors";
+import { AVAILABLE_COLORS, type GroupColor, getColorHex } from "../../src/shared/domain/colors";
 import { getSettings, resetSettings, updateSettings, withSettingsDefaults } from "../../src/shared/settings";
 import type { Settings } from "../../src/shared/types";
 import { showStatus } from "../utils/statusDisplay";
@@ -108,7 +108,7 @@ function displayColorToggles(enabledColors: Record<string, boolean>) {
 
     const span = document.createElement("span");
     span.className = "color-box";
-    span.style.backgroundColor = COLOR_HEX[color];
+    span.style.backgroundColor = getColorHex(color) ?? "";
     span.title = color;
 
     label.appendChild(checkbox);
@@ -121,11 +121,15 @@ function displayColorToggles(enabledColors: Record<string, boolean>) {
  * Collect enabled colors from UI
  */
 function getEnabledColorsFromUI() {
-  const enabledColors: Record<string, boolean> = {};
+  const enabledColors: Partial<Record<GroupColor, boolean>> = AVAILABLE_COLORS.reduce((acc, color) => {
+    acc[color] = false;
+    return acc;
+  }, {} as Partial<Record<GroupColor, boolean>>);
   document.querySelectorAll<HTMLInputElement>('.color-toggle input[type="checkbox"]').forEach((checkbox) => {
-    enabledColors[checkbox.value] = checkbox.checked;
+    const color = checkbox.value as GroupColor;
+    enabledColors[color] = checkbox.checked;
   });
-  return enabledColors;
+  return enabledColors as Record<string, boolean>;
 }
 
 // ============================================================================
