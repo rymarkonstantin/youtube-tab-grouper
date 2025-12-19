@@ -1,7 +1,5 @@
-import {
-  categoryResolver as defaultCategoryResolver,
-  normalizeResolveCategoryMetadata
-} from "../../shared/categoryResolver";
+import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
+import { adaptBackgroundResolveCategoryInput } from "../../shared/categoryResolver/adapters";
 import { computeEnabledColors } from "../../shared/settings";
 import type { Metadata, Settings } from "../../shared/types";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
@@ -145,37 +143,32 @@ export class TabGroupingService {
       throw new Error("Cannot resolve category for tab without id");
     }
 
-    const trimmedCategory = requestedCategory?.trim();
-    if (trimmedCategory) {
-      return trimmedCategory;
+    const fallbackMetadata = metadataOverride || {};
+    const initialAdapter = adaptBackgroundResolveCategoryInput({
+      tab,
+      settings,
+      metadata: metadataOverride,
+      requestedCategory
+    });
+
+    if (initialAdapter.input.requestedCategory) {
+      return initialAdapter.input.requestedCategory;
     }
 
-    const fallbackMetadata = metadataOverride || {};
-    const fallbackTitle = tab?.title || "";
-    const fallbackDescription = fallbackMetadata.description || "";
     const metadata = await this.metadataFetcher(tab.id, {
       fallbackMetadata,
-      fallbackTitle
+      fallbackTitle: initialAdapter.normalizeOptions.fallbackTitle
     });
 
-    const normalizedMetadata = normalizeResolveCategoryMetadata(metadata, {
+    const adapted = adaptBackgroundResolveCategoryInput({
+      tab,
+      settings,
+      metadata,
       fallbackMetadata,
-      fallbackTitle,
-      fallbackDescription
+      requestedCategory
     });
 
-    return this.categoryResolver.resolve(
-      {
-        metadata: normalizedMetadata,
-        settings,
-        requestedCategory
-      },
-      {
-        fallbackMetadata,
-        fallbackTitle,
-        fallbackDescription
-      }
-    );
+    return this.categoryResolver.resolve(adapted.input, adapted.normalizeOptions);
   }
 
   async groupTabs(tabs: chrome.tabs.Tab[], settings: Settings) {
