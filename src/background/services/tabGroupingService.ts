@@ -10,46 +10,54 @@ import { getVideoMetadata as defaultGetVideoMetadata } from "../metadataFetcher"
 import { groupStateRepository as defaultGroupStateRepository } from "../repositories/groupStateRepository";
 import { statsRepository as defaultStatsRepository } from "../repositories/statsRepository";
 import { colorAssigner as defaultColorAssigner } from "./colorAssigner";
+import type {
+  CategoryResolverPort,
+  ChromeTabGroupingPort,
+  ColorAssignerPort,
+  GroupStateRepositoryPort,
+  LockManagerPort,
+  MetadataFetcherPort,
+  StatsRepositoryPort,
+  TabGroupingPorts
+} from "../ports/tabGrouping";
 
-interface TabGroupingDependencies {
-  apiClient?: typeof defaultApiClient;
-  colorAssigner?: typeof defaultColorAssigner;
-  groupStateRepository?: typeof defaultGroupStateRepository;
-  statsRepository?: typeof defaultStatsRepository;
-  metadataFetcher?: typeof defaultGetVideoMetadata;
-  categoryResolver?: typeof defaultCategoryResolver;
-  defaultColors?: readonly string[];
-}
-
+/**
+ * Coordinates tab grouping using injected ports. Callers are expected to pass tabs that include both
+ * `id` and `windowId` values and to supply port implementations that reject on failure so the service
+ * can handle errors consistently. The lock manager should serialize work per category to prevent
+ * duplicate grouping while storage ports persist the latest grouping and stats snapshots.
+ */
 export class TabGroupingService {
-  private apiClient: typeof defaultApiClient;
-  private colorAssigner: typeof defaultColorAssigner;
-  private groupStateRepository: typeof defaultGroupStateRepository;
-  private statsRepository: typeof defaultStatsRepository;
-  private metadataFetcher: typeof defaultGetVideoMetadata;
-  private categoryResolver: typeof defaultCategoryResolver;
+  private apiClient: ChromeTabGroupingPort;
+  private colorAssigner: ColorAssignerPort;
+  private groupStateRepository: GroupStateRepositoryPort;
+  private statsRepository: StatsRepositoryPort;
+  private metadataFetcher: MetadataFetcherPort;
+  private categoryResolver: CategoryResolverPort;
+  private lockManager: LockManagerPort;
   private defaultColors: readonly string[];
 
   private groupColorMap: Record<string, string> = {};
   private groupIdMap: Record<string, number> = {};
   private pendingCleanup = new Map<number, number>();
-  private locks = new Map<string, Promise<void>>();
 
   constructor({
-    apiClient = defaultApiClient,
-    colorAssigner = defaultColorAssigner,
-    groupStateRepository = defaultGroupStateRepository,
-    statsRepository = defaultStatsRepository,
-    metadataFetcher = defaultGetVideoMetadata,
-    categoryResolver = defaultCategoryResolver,
+    chrome,
+    colorAssigner,
+    groupState,
+    stats,
+    metadata,
+    categoryResolver,
+    lockManager,
     defaultColors = AVAILABLE_COLORS
-  }: TabGroupingDependencies = {}) {
-    this.apiClient = apiClient;
+  }: TabGroupingPorts) {
+    this.apiClient = chrome;
     this.colorAssigner = colorAssigner;
-    this.groupStateRepository = groupStateRepository;
-    this.statsRepository = statsRepository;
-    this.metadataFetcher = metadataFetcher;
+    this.groupStateRepository = groupState;
+    this.statsRepository = stats;
+    this.metadataFetcher = metadata;
     this.categoryResolver = categoryResolver;
+    this.lockManager = lockManager;
     this.defaultColors = defaultColors;
   }
 
@@ -67,7 +75,7 @@ export class TabGroupingService {
     }
     const { id: tabId, windowId } = tab;
 
-    return this.runExclusive(category, async () => {
+    return this.lockManager.runExclusive(category, async () => {
       try {
         const color = await this.colorAssigner.assignColor(category, tabId, windowId, enabledColors);
         const { groupId } = await this.ensureGroupForCategory(tab, category, color);
@@ -312,7 +320,12 @@ export class TabGroupingService {
     }
   }
 
-  private async runExclusive<T>(key: string, task: () => Promise<T>): Promise<T> {
+}
+
+class InMemoryLockManager implements LockManagerPort {
+  private locks = new Map<string, Promise<void>>();
+
+  async runExclusive<T>(key: string, task: () => Promise<T>): Promise<T> {
     const previous = this.locks.get(key) ?? Promise.resolve();
     let release: () => void = () => undefined;
     const current = new Promise<void>((resolve) => {
@@ -332,4 +345,13 @@ export class TabGroupingService {
   }
 }
 
-export const tabGroupingService = new TabGroupingService();
+export const tabGroupingService = new TabGroupingService({
+  chrome: defaultApiClient,
+  colorAssigner: defaultColorAssigner,
+  groupState: defaultGroupStateRepository,
+  stats: defaultStatsRepository,
+  metadata: defaultGetVideoMetadata,
+  categoryResolver: defaultCategoryResolver,
+  lockManager: new InMemoryLockManager(),
+  defaultColors: AVAILABLE_COLORS
+});
