@@ -1,5 +1,10 @@
 import { resolveCategoryPipeline, toCategory } from "./categoryResolver/pipeline";
-import type { CategoryStrategy, ResolveCategoryInput, StrategyContext } from "./categoryResolver/pipeline";
+import type {
+  CategoryStrategy,
+  ResolveCategoryInput,
+  ResolveCategoryNormalizationOptions,
+  StrategyContext
+} from "./categoryResolver/pipeline";
 
 export const mapYouTubeCategory = (youtubeCategory: string | number | null) => {
   if (!youtubeCategory) return "";
@@ -32,7 +37,7 @@ export class CategoryResolver {
     settings,
     requestedCategory,
     fallbackCategory
-  }: ResolveCategoryInput = {}): string {
+  }: ResolveCategoryInput = {}, normalizeOptions: ResolveCategoryNormalizationOptions = {}): string {
     return resolveCategoryPipeline(
       {
         metadata,
@@ -40,7 +45,8 @@ export class CategoryResolver {
         requestedCategory,
         fallbackCategory
       },
-      this.getStrategies()
+      this.getStrategies(),
+      normalizeOptions
     );
   }
 
@@ -106,6 +112,12 @@ export {
   resolveCategoryPipeline,
   runCategoryPipeline,
   toCategory,
-  FALLBACK_CATEGORY
+  FALLBACK_CATEGORY,
+  normalizeResolveCategoryMetadata
 } from "./categoryResolver/pipeline";
-export type { ResolveCategoryInput, StrategyContext, CategoryStrategy } from "./categoryResolver/pipeline";
+export type {
+  ResolveCategoryInput,
+  ResolveCategoryNormalizationOptions,
+  StrategyContext,
+  CategoryStrategy
+} from "./categoryResolver/pipeline";
