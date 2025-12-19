@@ -1,10 +1,5 @@
-import {
-  AVAILABLE_COLORS,
-  getSettings,
-  resetSettings,
-  updateSettings,
-  withSettingsDefaults
-} from "../../src/shared/settings";
+import { AVAILABLE_COLORS, COLOR_HEX } from "../../src/shared/domain/colors";
+import { getSettings, resetSettings, updateSettings, withSettingsDefaults } from "../../src/shared/settings";
 import type { Settings } from "../../src/shared/types";
 import { showStatus } from "../utils/statusDisplay";
 
@@ -19,12 +14,6 @@ import { showStatus } from "../utils/statusDisplay";
  * - Channel-to-category mappings
  * - Import/export functionality
  */
-
-/** Hex color codes for display */
-const COLOR_HEX = {
-    grey: "#9aa0a6", blue: "#4285F4", red: "#ea4335", yellow: "#fbbc04",
-    green: "#34a853", pink: "#f538a0", purple: "#a142f4", cyan: "#24c6eb"
-};
 
 // ============================================================================
 // DOM ELEMENTS
@@ -413,4 +402,3 @@ function handleImportSettings() {
 // ============================================================================
 // UI UTILITIES
 // ============================================================================
-

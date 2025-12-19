@@ -1,4 +1,5 @@
 import { AVAILABLE_COLORS } from "../constants";
+import { isGroupColor } from "../../shared/domain/colors";
 import { chromeApiClient as defaultApiClient } from "../infra/chromeApiClient";
 
 type Cache = Record<string, string>;
@@ -14,9 +15,6 @@ function pickRandomColor(colors: string[] = []) {
   const idx = Math.floor(Math.random() * colors.length);
   return colors[idx] || "";
 }
-
-const isGroupColor = (value: unknown): value is chrome.tabGroups.ColorEnum =>
-  typeof value === "string" && (AVAILABLE_COLORS as readonly string[]).includes(value);
 
 export class ColorAssigner {
   private apiClient: typeof defaultApiClient;
