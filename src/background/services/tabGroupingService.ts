@@ -1,4 +1,7 @@
-import { categoryResolver as defaultCategoryResolver } from "../../shared/categoryResolver";
+import {
+  categoryResolver as defaultCategoryResolver,
+  normalizeResolveCategoryMetadata
+} from "../../shared/categoryResolver";
 import { computeEnabledColors } from "../../shared/settings";
 import type { Metadata, Settings } from "../../shared/types";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
@@ -147,16 +150,32 @@ export class TabGroupingService {
       return trimmedCategory;
     }
 
+    const fallbackMetadata = metadataOverride || {};
+    const fallbackTitle = tab?.title || "";
+    const fallbackDescription = fallbackMetadata.description || "";
     const metadata = await this.metadataFetcher(tab.id, {
-      fallbackMetadata: metadataOverride,
-      fallbackTitle: tab?.title || ""
+      fallbackMetadata,
+      fallbackTitle
     });
 
-    return this.categoryResolver.resolve({
-      metadata,
-      settings,
-      requestedCategory
+    const normalizedMetadata = normalizeResolveCategoryMetadata(metadata, {
+      fallbackMetadata,
+      fallbackTitle,
+      fallbackDescription
     });
+
+    return this.categoryResolver.resolve(
+      {
+        metadata: normalizedMetadata,
+        settings,
+        requestedCategory
+      },
+      {
+        fallbackMetadata,
+        fallbackTitle,
+        fallbackDescription
+      }
+    );
   }
 
   async groupTabs(tabs: chrome.tabs.Tab[], settings: Settings) {

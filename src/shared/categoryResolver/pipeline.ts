@@ -1,4 +1,4 @@
-import { normalizeVideoMetadata } from "../metadataSchema";
+import { buildNormalizedMetadata } from "../metadataSchema";
 import { DEFAULT_SETTINGS, withSettingsDefaults } from "../settings";
 import type { Metadata, Settings } from "../types";
 
@@ -22,13 +22,30 @@ export interface StrategyContext {
 
 export type CategoryStrategy = (context: StrategyContext) => string;
 
+export interface ResolveCategoryNormalizationOptions {
+  fallbackMetadata?: Partial<Metadata>;
+  fallbackTitle?: string;
+  fallbackDescription?: string;
+}
+
+export const normalizeResolveCategoryMetadata = (
+  metadata: Partial<Metadata> = {},
+  { fallbackMetadata = {}, fallbackTitle = "", fallbackDescription = "" }: ResolveCategoryNormalizationOptions = {}
+): Metadata =>
+  buildNormalizedMetadata(metadata, {
+    ...fallbackMetadata,
+    title: fallbackTitle || fallbackMetadata.title || "",
+    description: fallbackDescription || fallbackMetadata.description || ""
+  });
+
 export const createStrategyContext = ({
   metadata: rawMetadata = {},
   settings: rawSettings = DEFAULT_SETTINGS,
   requestedCategory = "",
   fallbackCategory
-}: ResolveCategoryInput): StrategyContext => ({
-  metadata: normalizeVideoMetadata(rawMetadata),
+}: ResolveCategoryInput = {},
+normalizeOptions: ResolveCategoryNormalizationOptions = {}): StrategyContext => ({
+  metadata: normalizeResolveCategoryMetadata(rawMetadata, normalizeOptions),
   settings: withSettingsDefaults(rawSettings),
   requestedCategory,
   fallbackCategory
@@ -50,8 +67,9 @@ export const runCategoryPipeline = (
 
 export const resolveCategoryPipeline = (
   input: ResolveCategoryInput,
-  strategies: CategoryStrategy[]
+  strategies: CategoryStrategy[],
+  normalizeOptions: ResolveCategoryNormalizationOptions = {}
 ): string => {
-  const context = createStrategyContext(input);
+  const context = createStrategyContext(input, normalizeOptions);
   return runCategoryPipeline(context, strategies);
 };
