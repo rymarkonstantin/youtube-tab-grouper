@@ -3,6 +3,10 @@ const js = require("@eslint/js");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const prettierConfig = require("eslint-config-prettier/flat");
+const prettierConfigs = Array.isArray(prettierConfig)
+  ? prettierConfig
+  : [prettierConfig];
 
 module.exports = [
   {
@@ -107,5 +111,6 @@ module.exports = [
         }
       ]
     }
-  }
+  },
+  ...prettierConfigs
 ];
