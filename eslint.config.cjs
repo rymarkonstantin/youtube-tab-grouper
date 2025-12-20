@@ -3,6 +3,7 @@ const js = require("@eslint/js");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const prettier = require("eslint-config-prettier");
 
 module.exports = [
   {
@@ -31,7 +32,8 @@ module.exports = [
           ignoreMemberSort: false,
           allowSeparatedGroups: false
         }
-      ]
+      ],
+      ...prettier.rules
     }
   },
   {
@@ -67,7 +69,8 @@ module.exports = [
           ignoreMemberSort: false,
           allowSeparatedGroups: false
         }
-      ]
+      ],
+      ...prettier.rules
     }
   },
   {
@@ -105,7 +108,8 @@ module.exports = [
           ignoreMemberSort: false,
           allowSeparatedGroups: false
         }
-      ]
+      ],
+      ...prettier.rules
     }
   }
 ];
