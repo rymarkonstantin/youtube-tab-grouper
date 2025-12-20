@@ -1,10 +1,12 @@
-import { type StatusType, showStatus } from "../utils/statusDisplay";
+import { type StatusType } from "../utils/statusDisplay";
+import { createStatusRenderer, type StatusRenderOptions } from "../utils/statusRenderer";
 
 export class PopupView {
   private groupButton = document.getElementById("groupButton") as HTMLButtonElement | null;
   private batchButton = document.getElementById("batchButton") as HTMLButtonElement | null;
   private categoryInput = document.getElementById("categoryInput") as HTMLInputElement | null;
   private statusEl = document.getElementById("status");
+  private statusRenderer = createStatusRenderer(this.statusEl);
 
   bindGroup(handler: () => Promise<void> | void) {
     this.groupButton?.addEventListener("click", () => {
@@ -32,6 +34,10 @@ export class PopupView {
   }
 
   showNotification(message: string, type: StatusType = "info") {
-    showStatus(this.statusEl, message, type);
+    this.statusRenderer.show(message, type);
+  }
+
+  renderStatus(status: unknown, options?: StatusRenderOptions) {
+    this.statusRenderer.render(status, options);
   }
 }

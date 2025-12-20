@@ -1,7 +1,7 @@
 import { AVAILABLE_COLORS, type GroupColor, getColorHex } from "../../src/shared/domain/colors";
 import { getSettings, resetSettings, updateSettings, withSettingsDefaults } from "../../src/shared/settings";
 import type { Settings } from "../../src/shared/types";
-import { showStatus } from "../utils/statusDisplay";
+import { createStatusRenderer } from "../utils/statusRenderer";
 
 /**
  * YouTube Tab Grouper - Settings Page
@@ -33,6 +33,7 @@ const resetBtn = document.getElementById("resetBtn");
 const exportBtn = document.getElementById("exportBtn");
 const importBtn = document.getElementById("importBtn");
 const statusEl = document.getElementById("status");
+const statusRenderer = createStatusRenderer(statusEl);
 
 // ============================================================================
 // EVENT LISTENERS
@@ -314,11 +315,11 @@ async function handleSaveSettings() {
     };
 
     await updateSettings(settings);
-    showStatus(statusEl, "Settings saved successfully!", "success");
+    statusRenderer.render({ success: true }, { successMessage: "Settings saved successfully!" });
     console.log("Saved settings:", settings);
   } catch (error) {
     console.error("Error saving settings:", error);
-    showStatus(statusEl, "Failed to save settings", "error");
+    statusRenderer.render(error, { errorFallback: "Failed to save settings" });
   } finally {
     saveBtn.disabled = false;
   }
@@ -340,11 +341,11 @@ async function handleResetSettings() {
 
     await initializeSettings();
 
-    showStatus(statusEl, "Settings reset to defaults", "success");
+    statusRenderer.render({ success: true }, { successMessage: "Settings reset to defaults" });
     console.log("Reset to defaults");
   } catch (error) {
     console.error("Error resetting settings:", error);
-    showStatus(statusEl, "Failed to reset settings", "error");
+    statusRenderer.render(error, { errorFallback: "Failed to reset settings" });
   } finally {
     resetBtn.disabled = false;
   }
@@ -372,10 +373,10 @@ async function handleExportSettings() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    showStatus(statusEl, "Settings exported", "success");
+    statusRenderer.render({ success: true }, { successMessage: "Settings exported" });
   } catch (error) {
     console.error("Export error:", error);
-    showStatus(statusEl, "Failed to export settings", "error");
+    statusRenderer.render(error, { errorFallback: "Failed to export settings" });
   }
 }
 
@@ -403,12 +404,12 @@ function handleImportSettings() {
       .then(async (settings) => {
         await resetSettings(settings);
         await initializeSettings();
-        showStatus(statusEl, "Settings imported successfully", "success");
+        statusRenderer.render({ success: true }, { successMessage: "Settings imported successfully" });
         console.log("Imported settings");
       })
       .catch((error) => {
         console.error("Import error:", error);
-        showStatus(statusEl, "Failed to import settings", "error");
+        statusRenderer.render(error, { errorFallback: "Failed to import settings" });
       });
   });
 

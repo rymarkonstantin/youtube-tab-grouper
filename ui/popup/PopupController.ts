@@ -1,10 +1,11 @@
 import { MessageClient, defaultMessageClient } from "../../src/shared/messaging/messageClient";
 import { MESSAGE_ACTIONS } from "../../src/shared/messageContracts";
-import { handleMessageResponse } from "../../src/shared/messaging/messageResponseHandler";
+import { handleMessageResponse, type ErrorishResponse } from "../../src/shared/messaging/messageResponseHandler";
 import type { GroupTabResponse } from "../../src/shared/types";
 import { PopupView } from "./PopupView";
 
 const isGuardDisabled = (error: unknown) => typeof error === "string" && /disabled/i.test(error);
+type PopupResponse = GroupTabResponse & ErrorishResponse & Record<string, unknown>;
 
 export class PopupController {
   private view: PopupView;
@@ -26,13 +27,13 @@ export class PopupController {
       const category = this.view.getCategory();
       const response = await this.sendPopupMessage(MESSAGE_ACTIONS.GROUP_TAB, { category });
       if (response?.success) {
-        this.view.showNotification(`Grouped as "${response.category}"`, "success");
+        this.view.renderStatus(response, { successMessage: `Grouped as "${response.category}"` });
         this.view.clearCategory();
       } else if (!this.handleGuard(response)) {
-        this.view.showNotification(`Error: ${this.formatError(response)}`, "error");
+        this.view.renderStatus(response, { errorFallback: "Failed to group tab" });
       }
     } catch (error) {
-      this.view.showNotification(`Error: ${(error as Error)?.message || "Unknown error"}`, "error");
+      this.view.renderStatus(error, { errorFallback: "Failed to group tab" });
     } finally {
       this.view.setLoading(false);
     }
@@ -44,12 +45,12 @@ export class PopupController {
       const response = await this.sendPopupMessage(MESSAGE_ACTIONS.BATCH_GROUP);
       if (response?.success) {
         const count = typeof response.count === "number" ? response.count : Number(response.count) || 0;
-        this.view.showNotification(`Grouped ${count} tabs`, "success");
+        this.view.renderStatus(response, { successMessage: `Grouped ${count} tabs` });
       } else if (!this.handleGuard(response)) {
-        this.view.showNotification(`Error: ${this.formatError(response)}`, "error");
+        this.view.renderStatus(response, { errorFallback: "Failed to group tabs" });
       }
     } catch (error) {
-      this.view.showNotification(`Error: ${(error as Error)?.message || "Unknown error"}`, "error");
+      this.view.renderStatus(error, { errorFallback: "Failed to group tabs" });
     } finally {
       this.view.setLoading(false);
     }
@@ -59,38 +60,37 @@ export class PopupController {
     action: (typeof MESSAGE_ACTIONS)[keyof typeof MESSAGE_ACTIONS],
     payload: Record<string, unknown> = {},
     options: { timeoutMs?: number } = {}
-  ): Promise<GroupTabResponse & Record<string, unknown>> {
+  ): Promise<PopupResponse> {
     const { timeoutMs } = options;
     try {
       const response = await this.client.sendMessage(action, payload, { timeoutMs, validateResponsePayload: true });
-      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(action, response, null, {
+      return handleMessageResponse<PopupResponse>(action, response, null, {
         timeoutMs,
         validateResponse: true
       });
     } catch (error) {
-      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(action, null, error, {
+      return handleMessageResponse<PopupResponse>(action, null, error, {
         timeoutMs,
         validateResponse: false
       });
     }
   }
 
-  private handleGuard(response: GroupTabResponse) {
-    if (response?.success === false && isGuardDisabled(response.error)) {
+  private handleGuard(response: PopupResponse) {
+    if (response?.success === false && isGuardDisabled(this.getErrorMessage(response))) {
       this.view.setLoading(true);
-      this.view.showNotification(`Error: ${response.error}`, "error");
+      this.view.renderStatus(
+        { ...response, error: this.getErrorMessage(response) },
+        { errorFallback: "Extension is disabled" }
+      );
       return true;
     }
     return false;
   }
 
-  private formatError(response: GroupTabResponse & { errors?: string[] }) {
+  private getErrorMessage(response?: PopupResponse) {
     if (!response) return "Unknown error";
-    const base = response.error || "Unknown error";
-    if (Array.isArray(response.errors) && response.errors.length > 0) {
-      return `${base} (${response.errors.join("; ")})`;
-    }
-    return base;
+    return response.errorEnvelope?.message || response.error || "Unknown error";
   }
 }
 

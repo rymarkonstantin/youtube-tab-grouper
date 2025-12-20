@@ -1,11 +1,23 @@
 import { type MessageAction } from "../messageContracts";
 import { validateIncomingResponse } from "./validators";
-import { toErrorMessage } from "../utils/errorUtils";
+import {
+  ERROR_CODES,
+  type ErrorEnvelope,
+  toErrorEnvelope,
+  toErrorMessage
+} from "../utils/errorUtils";
 
 export interface MessageResponseOptions {
   timeoutMs?: number;
   validateResponse?: boolean;
 }
+
+export type ErrorishResponse = {
+  success?: boolean;
+  error?: string;
+  errorEnvelope?: ErrorEnvelope;
+  errors?: string[];
+};
 
 /**
  * Handle message response with validation and error normalization.
@@ -28,7 +40,7 @@ export interface MessageResponseOptions {
  *   return handleMessageResponse(MESSAGE_ACTIONS.GROUP_TAB, null, error, { timeoutMs: 5000 });
  * }
  */
-export function handleMessageResponse<T extends { success?: boolean; error?: string }>(
+export function handleMessageResponse<T extends ErrorishResponse>(
   action: MessageAction,
   response: unknown,
   error?: unknown,
@@ -36,22 +48,29 @@ export function handleMessageResponse<T extends { success?: boolean; error?: str
 ): T {
   const { timeoutMs, validateResponse: shouldValidate = true } = options;
 
+  const buildErrorPayload = (message: string, envelope?: ErrorEnvelope, extras: Record<string, unknown> = {}) =>
+    ({
+      success: false,
+      error: message,
+      ...(envelope ? { errorEnvelope: envelope } : {}),
+      ...extras
+    } as T);
+
   // Handle thrown errors
   if (error) {
-    const message = toErrorMessage(error);
+    const normalized = toErrorEnvelope(error, { domain: "messaging", message: toErrorMessage(error) });
+    let envelopeMessage = normalized.envelope.message;
+    let code = normalized.envelope.code;
 
-    if (/disabled/i.test(message)) {
-      return { success: false, error: "Extension is disabled" } as T;
+    if (/disabled/i.test(envelopeMessage)) {
+      envelopeMessage = "Extension is disabled";
+    } else if (/timed out/i.test(envelopeMessage) && timeoutMs) {
+      envelopeMessage = `Message timed out after ${timeoutMs}ms`;
+      code = ERROR_CODES.TIMEOUT;
     }
 
-    if (/timed out/i.test(message) && timeoutMs) {
-      return {
-        success: false,
-        error: `Message timed out after ${timeoutMs}ms`
-      } as T;
-    }
-
-    return { success: false, error: message } as T;
+    const envelope: ErrorEnvelope = { ...normalized.envelope, message: envelopeMessage, code };
+    return buildErrorPayload(envelopeMessage, envelope);
   }
 
   if (shouldValidate && response) {
@@ -61,12 +80,26 @@ export function handleMessageResponse<T extends { success?: boolean; error?: str
     });
 
     if (validation.ok === false) {
-      return {
-        success: false,
-        error: validation.error.message || "Invalid response"
-      } as T;
+      const envelope = toErrorEnvelope(validation.error, {
+        domain: "messaging",
+        code: ERROR_CODES.VALIDATION,
+        message: validation.error.message || "Invalid response",
+        details: validation.response
+      }).envelope;
+      return buildErrorPayload(envelope.message, envelope, { errors: validation.response.errors });
     }
   }
 
-  return response as T;
+  const normalizedResponse = response as ErrorishResponse;
+  if (
+    normalizedResponse &&
+    typeof normalizedResponse === "object" &&
+    normalizedResponse.success === false &&
+    normalizedResponse.errorEnvelope &&
+    !normalizedResponse.error
+  ) {
+    normalizedResponse.error = normalizedResponse.errorEnvelope.message;
+  }
+
+  return normalizedResponse as T;
 }
