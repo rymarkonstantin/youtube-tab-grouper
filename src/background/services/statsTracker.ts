@@ -1,19 +1,24 @@
 import { logWarn } from "../logger";
-import type { StatsRepositoryPort, StatsTrackerPort } from "../ports/tabGrouping";
+import type { StatsTrackerPort } from "../ports/tabGrouping";
+import type { StatsService } from "../../shared/stats";
 import { toErrorMessage } from "../../shared/utils/errorUtils";
 
 export class StatsTracker implements StatsTrackerPort {
-  constructor(private repository: StatsRepositoryPort) {}
+  constructor(private service: StatsService) {}
 
-  async recordGrouping(category: string) {
-    const stats = await this.repository.get();
-    stats.totalTabs = (stats.totalTabs || 0) + 1;
-    stats.categoryCount[category] = (stats.categoryCount[category] || 0) + 1;
-
+  async recordGroupingSuccess(category: string, durationMs?: number) {
     try {
-      await this.repository.save(stats);
+      await this.service.recordGroupingResult({ category, durationMs, success: true });
     } catch (error) {
-      logWarn("grouping:recordGroupingStats failed to persist stats", toErrorMessage(error));
+      logWarn("grouping:recordGroupingSuccess failed to persist stats", toErrorMessage(error));
+    }
+  }
+
+  async recordGroupingFailure(durationMs?: number) {
+    try {
+      await this.service.recordGroupingResult({ durationMs, success: false });
+    } catch (error) {
+      logWarn("grouping:recordGroupingFailure failed to persist stats", toErrorMessage(error));
     }
   }
 }

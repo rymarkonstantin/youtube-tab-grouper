@@ -69,7 +69,8 @@ export interface StatsRepositoryPort {
 }
 
 export interface StatsTrackerPort {
-  recordGrouping(category: string): Promise<void>;
+  recordGroupingSuccess(category: string, durationMs?: number): Promise<void>;
+  recordGroupingFailure(durationMs?: number): Promise<void>;
 }
 
 export interface LockManagerPort {

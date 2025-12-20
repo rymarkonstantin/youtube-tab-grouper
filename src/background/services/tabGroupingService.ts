@@ -67,15 +67,17 @@ export class TabGroupingService {
     const { id: tabId, windowId } = tab;
 
     return this.lockManager.runExclusive(category, async () => {
+      const startedAt = Date.now();
       try {
         const color = await this.colorAssigner.assignColor(category, tabId, windowId, enabledColors);
         const { groupId } = await this.ensureGroupForCategory(tab, category, color);
 
         await this.groupStateCoordinator.persist(category, groupId, color);
-        await this.statsTracker.recordGrouping(category);
+        await this.statsTracker.recordGroupingSuccess(category, Date.now() - startedAt);
 
         return { groupId, color };
       } catch (error) {
+        await this.statsTracker.recordGroupingFailure(Date.now() - startedAt);
         const wrapped = toErrorEnvelope(error, (error as Error)?.message || "Failed to group tab");
         logError("grouping:groupTab failed", wrapped.message);
         throw wrapped;
