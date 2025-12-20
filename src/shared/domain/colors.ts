@@ -1,13 +1,4 @@
-export const AVAILABLE_COLORS = [
-  "grey",
-  "blue",
-  "red",
-  "yellow",
-  "green",
-  "pink",
-  "purple",
-  "cyan"
-] as const;
+export const AVAILABLE_COLORS = ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan"] as const;
 
 export type GroupColor = (typeof AVAILABLE_COLORS)[number];
 

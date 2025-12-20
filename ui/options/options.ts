@@ -5,7 +5,7 @@ import { showStatus } from "../utils/statusDisplay";
 
 /**
  * YouTube Tab Grouper - Settings Page
- * 
+ *
  * Manages user preferences:
  * - General settings (enable/disable, delays)
  * - Color preferences
@@ -38,11 +38,21 @@ const statusEl = document.getElementById("status");
 // EVENT LISTENERS
 // ============================================================================
 
-document.addEventListener("DOMContentLoaded", () => { void initializeSettings(); });
-saveBtn?.addEventListener("click", () => { void handleSaveSettings(); });
-resetBtn?.addEventListener("click", () => { void handleResetSettings(); });
-exportBtn?.addEventListener("click", () => { void handleExportSettings(); });
-importBtn?.addEventListener("click", () => { void handleImportSettings(); });
+document.addEventListener("DOMContentLoaded", () => {
+  void initializeSettings();
+});
+saveBtn?.addEventListener("click", () => {
+  void handleSaveSettings();
+});
+resetBtn?.addEventListener("click", () => {
+  void handleResetSettings();
+});
+exportBtn?.addEventListener("click", () => {
+  void handleExportSettings();
+});
+importBtn?.addEventListener("click", () => {
+  void handleImportSettings();
+});
 addMappingBtn?.addEventListener("click", addChannelMapping);
 
 // ============================================================================
@@ -55,7 +65,7 @@ addMappingBtn?.addEventListener("click", addChannelMapping);
 async function initializeSettings() {
   const settings = await getSettings();
 
-    // Load general settings
+  // Load general settings
   const enabledEl = extensionEnabledCheckbox as HTMLInputElement | null;
   const aiEl = aiCategoryDetectionCheckbox as HTMLInputElement | null;
   const cleanupEl = autoCleanupEnabledCheckbox as HTMLInputElement | null;
@@ -66,19 +76,19 @@ async function initializeSettings() {
   if (cleanupEl) cleanupEl.checked = settings.autoCleanupEnabled !== false;
   if (delayEl) delayEl.value = String(settings.autoGroupDelay || 2500);
 
-    // Load hashtags
+  // Load hashtags
   const hashtagsEl = allowedHashtagsTextarea as HTMLTextAreaElement | null;
   if (hashtagsEl) {
     hashtagsEl.value = (settings.allowedHashtags || []).join(", ");
   }
 
-    // Load color toggles
+  // Load color toggles
   displayColorToggles(settings.enabledColors);
 
-    // Load category keywords
+  // Load category keywords
   displayCategoryKeywords(settings.categoryKeywords);
 
-    // Load channel mappings
+  // Load channel mappings
   displayChannelMappings(settings.channelCategoryMap || {});
 }
 
@@ -121,10 +131,13 @@ function displayColorToggles(enabledColors: Record<string, boolean>) {
  * Collect enabled colors from UI
  */
 function getEnabledColorsFromUI() {
-  const enabledColors: Partial<Record<GroupColor, boolean>> = AVAILABLE_COLORS.reduce((acc, color) => {
-    acc[color] = false;
-    return acc;
-  }, {} as Partial<Record<GroupColor, boolean>>);
+  const enabledColors: Partial<Record<GroupColor, boolean>> = AVAILABLE_COLORS.reduce(
+    (acc, color) => {
+      acc[color] = false;
+      return acc;
+    },
+    {} as Partial<Record<GroupColor, boolean>>
+  );
   document.querySelectorAll<HTMLInputElement>('.color-toggle input[type="checkbox"]').forEach((checkbox) => {
     const color = checkbox.value as GroupColor;
     enabledColors[color] = checkbox.checked;
@@ -291,11 +304,10 @@ async function handleSaveSettings() {
       aiCategoryDetection: (aiCategoryDetectionCheckbox as HTMLInputElement | null)?.checked ?? true,
       autoCleanupEnabled: (autoCleanupEnabledCheckbox as HTMLInputElement | null)?.checked ?? true,
       autoGroupDelay: Number((autoGroupDelayInput as HTMLInputElement | null)?.value) || 2500,
-      allowedHashtags:
-        ((allowedHashtagsTextarea as HTMLTextAreaElement | null)?.value || "")
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0),
+      allowedHashtags: ((allowedHashtagsTextarea as HTMLTextAreaElement | null)?.value || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0),
       enabledColors: getEnabledColorsFromUI(),
       categoryKeywords: getCategoryKeywordsFromUI(),
       channelCategoryMap: getChannelMappingsFromUI()

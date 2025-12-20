@@ -33,12 +33,9 @@ export function isVideoMetadata(value: unknown): value is Partial<Metadata> {
 
   const { title, channel, description, keywords, youtubeCategory } = value;
 
-  const stringsAreValid = [title, channel, description].every(
-    (field) => field === undefined || isString(field)
-  );
+  const stringsAreValid = [title, channel, description].every((field) => field === undefined || isString(field));
 
-  const keywordsAreValid =
-    keywords === undefined || (Array.isArray(keywords) && keywords.every(isString));
+  const keywordsAreValid = keywords === undefined || (Array.isArray(keywords) && keywords.every(isString));
 
   const categoryIsValid =
     youtubeCategory === undefined ||
@@ -63,10 +60,7 @@ export function normalizeVideoMetadata(
   };
 }
 
-export function mergeMetadata(
-  preferred: Partial<Metadata> = {},
-  fallback: Partial<Metadata> = {}
-): Metadata {
+export function mergeMetadata(preferred: Partial<Metadata> = {}, fallback: Partial<Metadata> = {}): Metadata {
   const base = normalizeVideoMetadata(fallback);
   const prioritized = normalizeVideoMetadata(preferred);
 
@@ -79,10 +73,7 @@ export function mergeMetadata(
   };
 }
 
-export function buildNormalizedMetadata(
-  source: Partial<Metadata> = {},
-  fallbacks: Partial<Metadata> = {}
-): Metadata {
+export function buildNormalizedMetadata(source: Partial<Metadata> = {}, fallbacks: Partial<Metadata> = {}): Metadata {
   const normalizedFallbacks = normalizeVideoMetadata(fallbacks);
   const merged = mergeMetadata(source, normalizedFallbacks);
 
@@ -93,9 +84,9 @@ export function hasMetadataContent(metadata: Partial<Metadata> = {}): boolean {
   const normalized = normalizeVideoMetadata(metadata);
   return Boolean(
     normalized.title ||
-      normalized.channel ||
-      normalized.description ||
-      (normalized.keywords && normalized.keywords.length > 0) ||
-      normalized.youtubeCategory !== null
+    normalized.channel ||
+    normalized.description ||
+    (normalized.keywords && normalized.keywords.length > 0) ||
+    normalized.youtubeCategory !== null
   );
 }

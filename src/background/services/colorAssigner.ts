@@ -31,12 +31,7 @@ export class ColorAssigner {
   /**
    * Assign a color for a category, inspecting neighbor groups and caching results.
    */
-  async assignColor(
-    category: string,
-    tabId: number,
-    windowId: number,
-    enabledColors: string[] = []
-  ): Promise<string> {
+  async assignColor(category: string, tabId: number, windowId: number, enabledColors: string[] = []): Promise<string> {
     return this.runExclusive(category, async () => {
       if (this.cache[category]) {
         return this.cache[category];
@@ -95,7 +90,10 @@ export class ColorAssigner {
     const current = new Promise<void>((resolve) => {
       release = resolve;
     });
-    this.locks.set(key, previous.then(() => current));
+    this.locks.set(
+      key,
+      previous.then(() => current)
+    );
 
     await previous;
     try {

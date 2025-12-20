@@ -10,6 +10,8 @@
     "build:watch": "node --loader ts-node/esm scripts/build.ts --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{js,ts}\" \"ui/**/*.{js,ts}\" \"scripts/**/*.{js,ts}\" --max-warnings=0",
+    "format": "prettier --write \"src\" \"ui\" \"scripts\" \"manifest.json\" \"tsconfig.json\" \"eslint.config.cjs\" \"package.json\" \"README.md\"",
+    "format:check": "prettier --check \"src\" \"ui\" \"scripts\" \"manifest.json\" \"tsconfig.json\" \"eslint.config.cjs\" \"package.json\" \"README.md\"",
     "smoke": "node --loader ts-node/esm --experimental-specifier-resolution=node scripts/smoke/run-smoke.ts"
   },
   "devDependencies": {
@@ -21,6 +23,7 @@
     "@typescript-eslint/parser": "^8.14.0",
     "esbuild": "^0.23.0",
     "eslint": "^9.12.0",
+    "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.3"

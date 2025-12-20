@@ -18,7 +18,6 @@ const toGroupTabPayload = (categoryOrPayload: string | GroupTabPayload, metadata
   return { category: categoryOrPayload as string, metadata };
 };
 
-
 /**
  * Send a groupTab request from the content script.
  */
@@ -34,19 +33,15 @@ export async function sendGroupTab(
       toGroupTabPayload(categoryOrPayload, metadata),
       { timeoutMs, validateResponsePayload: true }
     );
-    return handleMessageResponse<GroupTabResponse>(
-      MESSAGE_ACTIONS.GROUP_TAB,
-      response,
-      null,
-      { timeoutMs, validateResponse: true }
-    );
+    return handleMessageResponse<GroupTabResponse>(MESSAGE_ACTIONS.GROUP_TAB, response, null, {
+      timeoutMs,
+      validateResponse: true
+    });
   } catch (error) {
-    return handleMessageResponse<GroupTabResponse>(
-      MESSAGE_ACTIONS.GROUP_TAB,
-      null,
-      error,
-      { timeoutMs, validateResponse: false }
-    );
+    return handleMessageResponse<GroupTabResponse>(MESSAGE_ACTIONS.GROUP_TAB, null, error, {
+      timeoutMs,
+      validateResponse: false
+    });
   }
 }
 
@@ -86,9 +81,11 @@ export async function sendIsTabGrouped(
   options: { timeoutMs?: number; client?: MessageClient } = {}
 ): Promise<{ grouped: boolean; error?: string } & Partial<MessageEnvelope>> {
   const { timeoutMs, client = defaultMessageClient } = options;
-  return client.sendMessage(MESSAGE_ACTIONS.IS_TAB_GROUPED, {}, { timeoutMs, validateResponsePayload: true }) as Promise<
-    { grouped: boolean; error?: string } & Partial<MessageEnvelope>
-  >;
+  return client.sendMessage(
+    MESSAGE_ACTIONS.IS_TAB_GROUPED,
+    {},
+    { timeoutMs, validateResponsePayload: true }
+  ) as Promise<{ grouped: boolean; error?: string } & Partial<MessageEnvelope>>;
 }
 
 // Messaging bridge moved to src/content/messaging/contentMessagingBridge.ts

@@ -1,6 +1,6 @@
 import { BUTTON } from "./constants";
 
-const STYLE_ID = 'yt-grouper-style';
+const STYLE_ID = "yt-grouper-style";
 
 const buildStyles = () => `
 #${BUTTON.id} {
@@ -29,7 +29,7 @@ const buildStyles = () => `
 
 function ensureStyles() {
   if (document.getElementById(STYLE_ID)) return;
-  const styleTag = document.createElement('style');
+  const styleTag = document.createElement("style");
   styleTag.id = STYLE_ID;
   styleTag.textContent = buildStyles();
   document.head.appendChild(styleTag);
@@ -49,10 +49,10 @@ export function renderGroupButton({ onClick }: { onClick?: () => void } = {}) {
     return existing;
   }
 
-  const button = document.createElement('button');
+  const button = document.createElement("button");
   button.id = BUTTON.id;
   button.textContent = BUTTON.label;
-  button.setAttribute('title', BUTTON.title);
+  button.setAttribute("title", BUTTON.title);
   button.onclick = onClick || null;
 
   document.body.appendChild(button);

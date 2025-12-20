@@ -6,7 +6,10 @@ export class GroupStateCoordinator implements GroupStateCoordinatorPort {
   private groupColorMap: Record<string, string> = {};
   private groupIdMap: Record<string, number> = {};
 
-  constructor(private repository: GroupStateRepositoryPort, private colorAssigner: ColorAssignerPort) {}
+  constructor(
+    private repository: GroupStateRepositoryPort,
+    private colorAssigner: ColorAssignerPort
+  ) {}
 
   async initialize() {
     const { groupColorMap, groupIdMap } = await this.repository.get();

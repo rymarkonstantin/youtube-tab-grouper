@@ -38,23 +38,22 @@ export const normalizeResolveCategoryMetadata = (
     description: fallbackDescription || fallbackMetadata.description || ""
   });
 
-export const createStrategyContext = ({
-  metadata: rawMetadata = {},
-  settings: rawSettings = DEFAULT_SETTINGS,
-  requestedCategory = "",
-  fallbackCategory
-}: ResolveCategoryInput = {},
-normalizeOptions: ResolveCategoryNormalizationOptions = {}): StrategyContext => ({
+export const createStrategyContext = (
+  {
+    metadata: rawMetadata = {},
+    settings: rawSettings = DEFAULT_SETTINGS,
+    requestedCategory = "",
+    fallbackCategory
+  }: ResolveCategoryInput = {},
+  normalizeOptions: ResolveCategoryNormalizationOptions = {}
+): StrategyContext => ({
   metadata: normalizeResolveCategoryMetadata(rawMetadata, normalizeOptions),
   settings: withSettingsDefaults(rawSettings),
   requestedCategory,
   fallbackCategory
 });
 
-export const runCategoryPipeline = (
-  context: StrategyContext,
-  strategies: CategoryStrategy[]
-): string => {
+export const runCategoryPipeline = (context: StrategyContext, strategies: CategoryStrategy[]): string => {
   for (const strategy of strategies) {
     const category = toCategory(strategy(context));
     if (category) {

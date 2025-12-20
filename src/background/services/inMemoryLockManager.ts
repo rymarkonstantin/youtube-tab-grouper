@@ -9,7 +9,10 @@ export class InMemoryLockManager implements LockManagerPort {
     const current = new Promise<void>((resolve) => {
       release = resolve;
     });
-    this.locks.set(key, previous.then(() => current));
+    this.locks.set(
+      key,
+      previous.then(() => current)
+    );
 
     await previous;
     try {

@@ -1,49 +1,49 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>YouTube Tab Grouper - Statistics</title>
-    <link rel="stylesheet" href="../styles/common.css">
-    <link rel="stylesheet" href="stats.css">
-</head>
-<body>
+    <link rel="stylesheet" href="../styles/common.css" />
+    <link rel="stylesheet" href="stats.css" />
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1> Grouping Statistics</h1>
-            <button id="backBtn" class="back-btn"> Back</button>
-        </div>
+      <div class="header">
+        <h1>Grouping Statistics</h1>
+        <button id="backBtn" class="back-btn">Back</button>
+      </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon"></div>
-                <h3>Total Grouped</h3>
-                <p id="totalTabs" class="stat-value">0</p>
-                <p class="stat-unit">tabs</p>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"></div>
-                <h3>Categories</h3>
-                <p id="totalCategories" class="stat-value">0</p>
-                <p class="stat-unit">categories</p>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"></div>
-                <h3>Top Category</h3>
-                <p id="topCategory" class="stat-value">-</p>
-                <p class="stat-unit" id="topCount">0 tabs</p>
-            </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"></div>
+          <h3>Total Grouped</h3>
+          <p id="totalTabs" class="stat-value">0</p>
+          <p class="stat-unit">tabs</p>
         </div>
+        <div class="stat-card">
+          <div class="stat-icon"></div>
+          <h3>Categories</h3>
+          <p id="totalCategories" class="stat-value">0</p>
+          <p class="stat-unit">categories</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"></div>
+          <h3>Top Category</h3>
+          <p id="topCategory" class="stat-value">-</p>
+          <p class="stat-unit" id="topCount">0 tabs</p>
+        </div>
+      </div>
 
-        <div class="chart-container">
-            <h2> Categories Breakdown</h2>
-            <div id="categoryChart" class="simple-chart"></div>
-        </div>
+      <div class="chart-container">
+        <h2>Categories Breakdown</h2>
+        <div id="categoryChart" class="simple-chart"></div>
+      </div>
 
-        <div class="actions">
-            <button id="resetStats" class="btn btn-danger"> Reset Statistics</button>
-        </div>
+      <div class="actions">
+        <button id="resetStats" class="btn btn-danger">Reset Statistics</button>
+      </div>
     </div>
 
     <script type="module" src="stats.js"></script>
-</body>
+  </body>
 </html>

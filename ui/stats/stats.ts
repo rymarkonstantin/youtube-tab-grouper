@@ -14,7 +14,9 @@ const chartContainerEl = document.getElementById("categoryChart");
 const resetStatsBtn = document.getElementById("resetStats");
 const backBtn = document.getElementById("backBtn");
 
-document.addEventListener("DOMContentLoaded", () => { void loadAndDisplayStats(); });
+document.addEventListener("DOMContentLoaded", () => {
+  void loadAndDisplayStats();
+});
 
 resetStatsBtn?.addEventListener("click", () => {
   void (async () => {
@@ -54,7 +56,7 @@ async function loadAndDisplayStats() {
 }
 
 async function loadStats() {
-    return getStats();
+  return getStats();
 }
 
 function displayChart(categoryCount: GroupingStats["categoryCount"]) {

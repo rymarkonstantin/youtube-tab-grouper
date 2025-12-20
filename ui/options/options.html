@@ -1,81 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>YouTube Tab Grouper - Settings</title>
-    <link rel="stylesheet" href="../styles/common.css">
-    <link rel="stylesheet" href="options.css">
-</head>
-<body>
+    <link rel="stylesheet" href="../styles/common.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
     <div class="settings-container">
-        <header class="settings-header">
-            <h1> YouTube Tab Grouper Settings</h1>
-        </header>
+      <header class="settings-header">
+        <h1>YouTube Tab Grouper Settings</h1>
+      </header>
 
-        <!-- General Settings -->
-        <section class="settings-section">
-            <h2> General Settings</h2>
-            
-            <label class="setting-item">
-                <input type="checkbox" id="extensionEnabled">
-                <span>Enable Extension</span>
-            </label>
+      <!-- General Settings -->
+      <section class="settings-section">
+        <h2>General Settings</h2>
 
-            <label class="setting-item">
-                <input type="checkbox" id="aiCategoryDetection">
-                <span>AI Category Detection</span>
-            </label>
+        <label class="setting-item">
+          <input type="checkbox" id="extensionEnabled" />
+          <span>Enable Extension</span>
+        </label>
 
-            <label class="setting-item">
-                <input type="checkbox" id="autoCleanupEnabled">
-                <span>Auto Cleanup Empty Groups</span>
-            </label>
+        <label class="setting-item">
+          <input type="checkbox" id="aiCategoryDetection" />
+          <span>AI Category Detection</span>
+        </label>
 
-            <label class="setting-item">
-                <span>Auto Group Delay (ms)</span>
-                <input type="number" id="autoGroupDelay" min="100" max="10000">
-            </label>
-        </section>
+        <label class="setting-item">
+          <input type="checkbox" id="autoCleanupEnabled" />
+          <span>Auto Cleanup Empty Groups</span>
+        </label>
 
-        <!-- Allowed Hashtags -->
-        <section class="settings-section">
-            <h2># Allowed Hashtags</h2>
-            <textarea id="allowedHashtags" placeholder="Enter hashtags separated by commas"></textarea>
-        </section>
+        <label class="setting-item">
+          <span>Auto Group Delay (ms)</span>
+          <input type="number" id="autoGroupDelay" min="100" max="10000" />
+        </label>
+      </section>
 
-        <!-- Color Preferences -->
-        <section class="settings-section">
-            <h2> Group Colors</h2>
-            <div id="colorToggles" class="color-toggles"></div>
-        </section>
+      <!-- Allowed Hashtags -->
+      <section class="settings-section">
+        <h2># Allowed Hashtags</h2>
+        <textarea id="allowedHashtags" placeholder="Enter hashtags separated by commas"></textarea>
+      </section>
 
-        <!--  NEW: Category Keywords -->
-        <section class="settings-section">
-            <h2> Category Keywords</h2>
-            <p class="hint">Customize keywords for each category to improve AI detection</p>
-            <div id="keywordsEditor" class="keywords-editor"></div>
-        </section>
+      <!-- Color Preferences -->
+      <section class="settings-section">
+        <h2>Group Colors</h2>
+        <div id="colorToggles" class="color-toggles"></div>
+      </section>
 
-        <!-- Channel Mapping -->
-        <section class="settings-section">
-            <h2> Channel  Category Mapping</h2>
-            <p class="hint">Assign specific categories to channels (takes priority over AI detection)</p>
-            <div id="channelMappings" class="mappings-list"></div>
-            <button id="addMappingBtn" class="btn btn-secondary">+ Add Channel Mapping</button>
-        </section>
+      <!--  NEW: Category Keywords -->
+      <section class="settings-section">
+        <h2>Category Keywords</h2>
+        <p class="hint">Customize keywords for each category to improve AI detection</p>
+        <div id="keywordsEditor" class="keywords-editor"></div>
+      </section>
 
-        <!-- Action Buttons -->
-        <section class="settings-section settings-actions">
-            <button id="saveBtn" class="btn btn-primary"> Save Settings</button>
-            <button id="resetBtn" class="btn btn-warning"> Reset to Default</button>
-            <button id="exportBtn" class="btn btn-secondary"> Export Settings</button>
-            <button id="importBtn" class="btn btn-secondary"> Import Settings</button>
-        </section>
+      <!-- Channel Mapping -->
+      <section class="settings-section">
+        <h2>Channel Category Mapping</h2>
+        <p class="hint">Assign specific categories to channels (takes priority over AI detection)</p>
+        <div id="channelMappings" class="mappings-list"></div>
+        <button id="addMappingBtn" class="btn btn-secondary">+ Add Channel Mapping</button>
+      </section>
 
-        <!-- Status Message -->
-        <div id="status" class="status"></div>
+      <!-- Action Buttons -->
+      <section class="settings-section settings-actions">
+        <button id="saveBtn" class="btn btn-primary">Save Settings</button>
+        <button id="resetBtn" class="btn btn-warning">Reset to Default</button>
+        <button id="exportBtn" class="btn btn-secondary">Export Settings</button>
+        <button id="importBtn" class="btn btn-secondary">Import Settings</button>
+      </section>
+
+      <!-- Status Message -->
+      <div id="status" class="status"></div>
     </div>
 
     <script type="module" src="options.js"></script>
-</body>
+  </body>
 </html>

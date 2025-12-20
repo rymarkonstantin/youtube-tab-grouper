@@ -10,16 +10,9 @@ export interface HandlerContext {
   state: Record<string, unknown>;
 }
 
-export type RouterMiddleware = (
-  context: HandlerContext,
-  next: () => Promise<unknown>
-) => unknown;
+export type RouterMiddleware = (context: HandlerContext, next: () => Promise<unknown>) => unknown;
 
-type Handler = (
-  msg: Record<string, unknown>,
-  sender: chrome.runtime.MessageSender,
-  context: HandlerContext
-) => unknown;
+type Handler = (msg: Record<string, unknown>, sender: chrome.runtime.MessageSender, context: HandlerContext) => unknown;
 
 interface RouterOptions extends HandleMessageOptions {
   requireVersion?: boolean;

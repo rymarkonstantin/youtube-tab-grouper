@@ -17,7 +17,12 @@ declare global {
 }
 
 const splitKeywords = (value: unknown = ""): string[] =>
-  typeof value === "string" ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
+  typeof value === "string"
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
 const getDocumentTitle = () => document.title.replace("- YouTube", "").trim();
 
 function readDomMetadata(): Partial<Metadata> {

@@ -3,27 +3,20 @@
   "name": "YouTube Tab Grouper",
   "version": "2.1",
   "description": "Intelligently group YouTube tabs by category with AI detection, keyboard shortcuts & analytics",
-  
-  "permissions": [
-    "tabs",
-    "tabGroups",
-    "storage",
-    "contextMenus"
-  ],
-  
-  "host_permissions": [
-    "https://www.youtube.com/*"
-  ],
-  
+
+  "permissions": ["tabs", "tabGroups", "storage", "contextMenus"],
+
+  "host_permissions": ["https://www.youtube.com/*"],
+
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
-  
+
   "background": {
     "service_worker": "background/index.js",
     "type": "module"
   },
-  
+
   "action": {
     "default_popup": "ui/popup/popup.html",
     "default_title": "YouTube Tab Grouper",
@@ -33,9 +26,9 @@
       "128": "images/icon-128.png"
     }
   },
-  
+
   "options_page": "ui/options/options.html",
-  
+
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
@@ -43,7 +36,7 @@
       "css": ["ui/styles/common.css"]
     }
   ],
-  
+
   "commands": {
     "group-current-tab": {
       "suggested_key": {
