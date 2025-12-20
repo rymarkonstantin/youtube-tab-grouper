@@ -29,6 +29,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 ## 🛠️ Development Setup
 
 ### Prerequisites
+
 - Chrome 88+
 - Basic JavaScript knowledge
 - Git
@@ -36,6 +37,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 ### Setup Steps
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/yourusername/youtube-tab-grouper.git
 cd youtube-tab-grouper
@@ -52,6 +54,7 @@ cd youtube-tab-grouper
    - Chrome will auto-reload changes
 
 ### Project Structure
+
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure explanation
 
 ---
@@ -65,6 +68,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed structure explanation
 - Add **error handling** for all promises
 
 Example:
+
 ```javascript
 /**
  * Group a tab into a category
@@ -74,9 +78,15 @@ Example:
  * @returns {Promise<Object>} {groupId, color}
  */
 async function groupTab(tab, category) {
-    // implementation
+  // implementation
 }
 ```
+
+---
+
+## Pre-commit Formatting
+
+Before each commit, Husky runs `lint-staged` to apply Prettier to staged JavaScript, TypeScript, JSON, and Markdown files. Expect formatting changes to be applied automatically when you commit.
 
 ---
 
@@ -114,6 +124,7 @@ Before submitting:
 - Group related changes together
 
 Examples:
+
 ```
 ✨ Add statistics dashboard
 🐛 Fix color assignment race condition
@@ -126,6 +137,7 @@ Examples:
 ## 🎯 Pull Request Process
 
 1. **Create a feature branch**
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
@@ -141,6 +153,7 @@ git checkout -b feature/your-feature-name
    - Verify browser console
 
 4. **Push and create PR**
+
 ```bash
 git push origin feature/your-feature-name
 ```
@@ -154,13 +167,13 @@ git push origin feature/your-feature-name
 
 ## 📚 File Locations
 
-| Type | Location |
-|------|----------|
-| Core logic | `src/` |
-| UI pages | `ui/popup/`, `ui/options/`, `ui/stats/` |
-| Styles | `ui/styles/common.css` |
-| Icons | `images/` |
-| Configuration | `manifest.json` |
+| Type          | Location                                |
+| ------------- | --------------------------------------- |
+| Core logic    | `src/`                                  |
+| UI pages      | `ui/popup/`, `ui/options/`, `ui/stats/` |
+| Styles        | `ui/styles/common.css`                  |
+| Icons         | `images/`                               |
+| Configuration | `manifest.json`                         |
 
 ---
 
