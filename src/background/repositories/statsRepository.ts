@@ -1,16 +1,17 @@
 import { DEFAULT_STATS, migrateStatsV0ToV1, withStatsDefaults } from "../constants";
 import { getStats, resetStats, updateStats } from "../../shared/stats";
+import type { StatsSnapshot } from "../../shared/stats";
 import type { GroupingStats } from "../../shared/types";
 
 export class StatsRepository {
-  private cache: GroupingStats | null = null;
+  private cache: StatsSnapshot | null = null;
   private defaults: GroupingStats;
 
   constructor(defaults: GroupingStats = DEFAULT_STATS) {
     this.defaults = defaults;
   }
 
-  async get(): Promise<GroupingStats> {
+  async get(): Promise<StatsSnapshot> {
     if (this.cache) return this.cache;
     const stats = await getStats(withStatsDefaults(this.defaults));
     const migrated = migrateStatsV0ToV1(stats);
@@ -18,13 +19,13 @@ export class StatsRepository {
     return migrated;
   }
 
-  async save(next: Partial<GroupingStats> | GroupingStats): Promise<GroupingStats> {
+  async save(next: Partial<GroupingStats> | GroupingStats): Promise<StatsSnapshot> {
     const updated = await updateStats(next as GroupingStats);
     this.cache = updated;
     return updated;
   }
 
-  async reset(defaults: GroupingStats = this.defaults): Promise<GroupingStats> {
+  async reset(defaults: GroupingStats = this.defaults): Promise<StatsSnapshot> {
     const normalized = withStatsDefaults(defaults);
     const resetValue = await resetStats(normalized);
     this.cache = resetValue;
