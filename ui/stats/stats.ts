@@ -1,88 +1,111 @@
-import { getStats, resetStats } from "../../src/shared/stats";
-import type { GroupingStats } from "../../src/shared/types";
+import type { StatsSnapshot } from "../../src/shared/stats.js";
+import { getStats, resetStats } from "../../src/shared/stats.js";
+import { type StatsViewModel, buildStatsViewModel } from "./viewModel.js";
 
 /**
  * YouTube Tab Grouper - Statistics Page
  * Displays grouping analytics and usage statistics.
  */
 
-const totalTabsEl = document.getElementById("totalTabs");
-const totalCategoriesEl = document.getElementById("totalCategories");
-const topCategoryEl = document.getElementById("topCategory");
-const topCountEl = document.getElementById("topCount");
-const chartContainerEl = document.getElementById("categoryChart");
-const resetStatsBtn = document.getElementById("resetStats");
-const backBtn = document.getElementById("backBtn");
+export interface StatsElements {
+  totalTabsEl: HTMLElement | null;
+  totalCategoriesEl: HTMLElement | null;
+  topCategoryEl: HTMLElement | null;
+  topCountEl: HTMLElement | null;
+  chartContainerEl: HTMLElement | null;
+  resetStatsBtn: HTMLElement | null;
+  backBtn: HTMLElement | null;
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  void loadAndDisplayStats();
+const getStatsElements = (root: Document = document): StatsElements => ({
+  totalTabsEl: root.getElementById("totalTabs"),
+  totalCategoriesEl: root.getElementById("totalCategories"),
+  topCategoryEl: root.getElementById("topCategory"),
+  topCountEl: root.getElementById("topCount"),
+  chartContainerEl: root.getElementById("categoryChart"),
+  resetStatsBtn: root.getElementById("resetStats"),
+  backBtn: root.getElementById("backBtn")
 });
 
-resetStatsBtn?.addEventListener("click", () => {
-  void (async () => {
-    if (!confirm("Are you sure you want to reset all statistics?")) return;
+const { vitest: isTestEnv } = import.meta as ImportMeta & { vitest?: boolean };
+const isBrowser = typeof document !== "undefined";
 
-    await resetStats();
-    await loadAndDisplayStats();
-    alert("Statistics reset");
-  })();
-});
+if (isBrowser && !isTestEnv) {
+  document.addEventListener("DOMContentLoaded", () => {
+    void initializeStatsPage();
+  });
+}
 
-backBtn?.addEventListener("click", () => window.close());
+export async function initializeStatsPage(): Promise<void> {
+  const elements = getStatsElements();
+  attachHandlers(elements);
+  await loadAndDisplayStats(elements);
+}
 
-async function loadAndDisplayStats() {
+function attachHandlers(elements: StatsElements) {
+  elements.resetStatsBtn?.addEventListener("click", () => {
+    void handleReset(elements);
+  });
+
+  elements.backBtn?.addEventListener("click", () => window.close());
+}
+
+async function handleReset(elements: StatsElements): Promise<void> {
+  if (!confirm("Are you sure you want to reset all statistics?")) return;
+
+  await resetStats();
+  await loadAndDisplayStats(elements);
+  alert("Statistics reset");
+}
+
+export async function loadAndDisplayStats(elements: StatsElements): Promise<void> {
   try {
     const stats = await loadStats();
-
-    if (totalTabsEl) totalTabsEl.textContent = String(stats.totalTabs || 0);
-    const categoryCount = Object.keys(stats.categoryCount || {}).length;
-    if (totalCategoriesEl) totalCategoriesEl.textContent = String(categoryCount);
-
-    const topEntry = Object.entries(stats.categoryCount || {}).sort(([, a], [, b]) => b - a)[0];
-
-    if (topEntry) {
-      if (topCategoryEl) topCategoryEl.textContent = topEntry[0];
-      if (topCountEl) topCountEl.textContent = `${topEntry[1]} tabs`;
-    } else {
-      if (topCategoryEl) topCategoryEl.textContent = "-";
-      if (topCountEl) topCountEl.textContent = "0 tabs";
-    }
-
-    displayChart(stats.categoryCount || {});
+    const viewModel = buildStatsViewModel(stats);
+    renderStatsPage(viewModel, elements);
   } catch (error) {
     console.error("Error loading stats:", error);
     alert("Failed to load statistics");
   }
 }
 
-async function loadStats() {
+async function loadStats(): Promise<StatsSnapshot> {
   return getStats();
 }
 
-function displayChart(categoryCount: GroupingStats["categoryCount"]) {
-  if (!chartContainerEl) return;
-  if (!categoryCount || typeof categoryCount !== "object" || Object.keys(categoryCount).length === 0) {
-    chartContainerEl.innerHTML = '<p style="text-align: center; color: #999;">No data to display</p>';
+export function renderStatsPage(viewModel: StatsViewModel, elements: StatsElements): void {
+  if (elements.totalTabsEl) elements.totalTabsEl.textContent = String(viewModel.totalTabs);
+  if (elements.totalCategoriesEl) elements.totalCategoriesEl.textContent = String(viewModel.totalCategories);
+  if (elements.topCategoryEl)
+    elements.topCategoryEl.textContent = viewModel.hasCategoryData ? viewModel.topCategory : "-";
+  if (elements.topCountEl) elements.topCountEl.textContent = `${viewModel.topCategoryCount} tabs`;
+
+  renderCategoryChart(viewModel, elements.chartContainerEl);
+}
+
+export function renderCategoryChart(viewModel: StatsViewModel, container: HTMLElement | null): void {
+  if (!container) return;
+  if (!viewModel.hasCategoryData) {
+    container.innerHTML = '<p style="text-align: center; color: #999;">No data to display</p>';
     return;
   }
 
-  const maxCount = Math.max(...Object.values(categoryCount));
-  const chartHTML = Object.entries(categoryCount)
-    .sort(([, a], [, b]) => b - a)
-    .map(([category, count]) => {
-      const percentage = (count / maxCount) * 100;
-      return `
-                <div class="chart-bar">
-                    <div class="bar-label">${category}</div>
-                    <div class="bar-container">
-                        <div class="bar" style="width: ${percentage}%">
-                            <span class="bar-value">${count}</span>
-                        </div>
-                    </div>
+  const chartHTML = viewModel.categoryBreakdown
+    .map(
+      ({ category, count, percentage }) => `
+        <div class="chart-bar">
+            <div class="bar-label">${category}</div>
+            <div class="bar-container">
+                <div class="bar" style="width: ${percentage}%">
+                    <span class="bar-value">${count}</span>
                 </div>
-            `;
-    })
+            </div>
+        </div>
+    `
+    )
     .join("");
 
-  chartContainerEl.innerHTML = chartHTML;
+  container.innerHTML = chartHTML;
 }
+
+export { getStatsElements };
