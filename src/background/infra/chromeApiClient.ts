@@ -1,6 +1,5 @@
+import { toErrorEnvelope, toErrorMessage } from "../../shared/utils/errorUtils";
 import { logError } from "../logger";
-import { toErrorEnvelope } from "../logger";
-import { toErrorMessage } from "../../shared/utils/errorUtils";
 
 type ChromePromise<T> = Promise<T>;
 
@@ -121,14 +120,18 @@ export class ChromeApiClient {
   }
 
   private normalizeChromeError(context: string, runtimeError: chrome.runtime.LastError) {
-    const wrapped = toErrorEnvelope(runtimeError?.message || "Unknown Chrome runtime error", `${context} failed`);
+    const wrapped = toErrorEnvelope(runtimeError?.message || "Unknown Chrome runtime error", {
+      message: `${context} failed`,
+      domain: "tabs",
+      details: { context }
+    });
     logError(wrapped.message);
     return wrapped;
   }
 
   private wrapUnknown(context: string, error: unknown) {
     const message = toErrorMessage(error, context);
-    const wrapped = toErrorEnvelope(error, message);
+    const wrapped = toErrorEnvelope(error, { message, domain: "runtime", details: { context } });
     logError(message);
     return wrapped;
   }

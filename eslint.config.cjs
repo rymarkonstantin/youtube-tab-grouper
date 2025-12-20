@@ -3,8 +3,14 @@ const js = require("@eslint/js");
 const globals = require("globals");
 const tsParser = require("@typescript-eslint/parser");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const prettierConfig = require("eslint-config-prettier/flat");
-const prettierConfigs = Array.isArray(prettierConfig) ? prettierConfig : [prettierConfig];
+let prettierConfigs = [];
+try {
+  const prettierConfig = require("eslint-config-prettier/flat");
+  prettierConfigs = Array.isArray(prettierConfig) ? prettierConfig : [prettierConfig];
+} catch (error) {
+  // eslint-config-prettier is optional; proceed without it if unavailable
+  prettierConfigs = [];
+}
 
 module.exports = [
   {
