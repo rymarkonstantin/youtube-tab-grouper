@@ -8,6 +8,10 @@ export type StatsUpdate = Partial<GroupingStats> | ((current: StatsSnapshot) => 
 export const DEFAULT_STATS: GroupingStats = {
   totalTabs: 0,
   categoryCount: {},
+  groupingSuccesses: 0,
+  groupingFailures: 0,
+  totalGroupingDurationMs: 0,
+  lastGroupingDurationMs: 0,
   sessionsToday: 0,
   lastReset: new Date().toDateString(),
   version: STATS_VERSION
@@ -56,10 +60,34 @@ export function withStatsDefaults(value: Partial<GroupingStats> = {}): GroupingS
       ? Math.floor(Number(source.sessionsToday))
       : DEFAULT_STATS.sessionsToday;
 
+  const groupingSuccesses =
+    Number.isFinite(Number(source.groupingSuccesses)) && Number(source.groupingSuccesses) >= 0
+      ? Math.floor(Number(source.groupingSuccesses))
+      : DEFAULT_STATS.groupingSuccesses;
+
+  const groupingFailures =
+    Number.isFinite(Number(source.groupingFailures)) && Number(source.groupingFailures) >= 0
+      ? Math.floor(Number(source.groupingFailures))
+      : DEFAULT_STATS.groupingFailures;
+
+  const totalGroupingDurationMs =
+    Number.isFinite(Number(source.totalGroupingDurationMs)) && Number(source.totalGroupingDurationMs) >= 0
+      ? Math.floor(Number(source.totalGroupingDurationMs))
+      : DEFAULT_STATS.totalGroupingDurationMs;
+
+  const lastGroupingDurationMs =
+    Number.isFinite(Number(source.lastGroupingDurationMs)) && Number(source.lastGroupingDurationMs) >= 0
+      ? Math.floor(Number(source.lastGroupingDurationMs))
+      : DEFAULT_STATS.lastGroupingDurationMs;
+
   return {
     ...DEFAULT_STATS,
     ...source,
     totalTabs,
+    groupingSuccesses,
+    groupingFailures,
+    totalGroupingDurationMs,
+    lastGroupingDurationMs,
     sessionsToday,
     categoryCount: normalizeCategoryCount(source.categoryCount),
     lastReset:
@@ -182,6 +210,40 @@ export class StatsService {
           ...current.categoryCount,
           [categoryKey]: nextCount
         }
+      };
+    });
+  }
+
+  async recordGroupingResult({
+    category,
+    durationMs,
+    success
+  }: {
+    category?: string;
+    durationMs?: number;
+    success: boolean;
+  }): Promise<StatsSnapshot> {
+    const categoryKey = typeof category === "string" ? category.trim() : "";
+    const normalizedDuration =
+      Number.isFinite(durationMs) && Number(durationMs) > 0 ? Math.floor(Number(durationMs)) : 0;
+
+    return this.applyUpdate((current) => {
+      const nextCategoryCount =
+        success && categoryKey
+          ? {
+              ...current.categoryCount,
+              [categoryKey]: Math.max(0, (current.categoryCount[categoryKey] ?? 0) + 1)
+            }
+          : current.categoryCount;
+
+      return {
+        ...current,
+        totalTabs: success ? current.totalTabs + 1 : current.totalTabs,
+        groupingSuccesses: current.groupingSuccesses + (success ? 1 : 0),
+        groupingFailures: current.groupingFailures + (success ? 0 : 1),
+        totalGroupingDurationMs: current.totalGroupingDurationMs + normalizedDuration,
+        lastGroupingDurationMs: normalizedDuration,
+        categoryCount: nextCategoryCount
       };
     });
   }

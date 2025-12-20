@@ -59,6 +59,10 @@ export interface Settings {
 export interface GroupingStats {
   totalTabs: number;
   categoryCount: Record<string, number>;
+  groupingSuccesses: number;
+  groupingFailures: number;
+  totalGroupingDurationMs: number;
+  lastGroupingDurationMs: number;
   sessionsToday: number;
   lastReset: string;
   version?: number;

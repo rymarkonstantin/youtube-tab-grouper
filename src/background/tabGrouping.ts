@@ -5,13 +5,13 @@ import { AVAILABLE_COLORS } from "./constants";
 import { chromeTabGroupingAdapter } from "./infra/chromeTabGroupingAdapter";
 import { colorAssignerAdapter } from "./infra/colorAssignerAdapter";
 import { groupStateRepositoryAdapter } from "./repositories/groupStateRepositoryAdapter";
-import { statsRepositoryAdapter } from "./repositories/statsRepositoryAdapter";
 import { CleanupCoordinator } from "./services/cleanupCoordinator";
 import { GroupStateCoordinator } from "./services/groupStateCoordinator";
 import { InMemoryLockManager } from "./services/inMemoryLockManager";
 import { StatsTracker } from "./services/statsTracker";
 import { TabGroupingService } from "./services/tabGroupingService";
 import { getVideoMetadata } from "./metadataFetcher";
+import { statsService } from "../shared/stats";
 
 // TODO: remove this facade once all imports use TabGroupingService directly.
 
@@ -21,7 +21,7 @@ export const createTabGroupingService = () => {
     chrome: chromeTabGroupingAdapter,
     colorAssigner,
     groupState: new GroupStateCoordinator(groupStateRepositoryAdapter, colorAssigner),
-    stats: new StatsTracker(statsRepositoryAdapter),
+    stats: new StatsTracker(statsService),
     metadata: getVideoMetadata,
     categoryResolver: defaultCategoryResolver,
     lockManager: new InMemoryLockManager(),
