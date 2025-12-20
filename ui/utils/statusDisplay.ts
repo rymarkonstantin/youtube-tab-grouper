@@ -11,12 +11,12 @@ export interface StatusDisplayOptions {
 
 /**
  * Show a status message in a status element.
- * 
+ *
  * @param element - The HTML element to display the status in
  * @param message - The message to display
  * @param type - The status type (affects CSS class)
  * @param options - Display options (duration, auto-hide)
- * 
+ *
  * @example
  * const statusEl = document.getElementById("status");
  * showStatus(statusEl, "Settings saved!", "success");

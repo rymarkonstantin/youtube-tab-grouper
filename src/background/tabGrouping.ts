@@ -37,8 +37,7 @@ export const groupTab = (tab: chrome.tabs.Tab, category: string, enabledColors: 
   tabGroupingService.groupTab(tab, category, enabledColors);
 export const autoCleanupEmptyGroups = (graceMs?: number) => tabGroupingService.autoCleanupEmptyGroups(graceMs);
 export const handleGroupRemoved = (groupId: number) => tabGroupingService.handleGroupRemoved(groupId);
-export const handleGroupUpdated = (group: chrome.tabGroups.TabGroup) =>
-  tabGroupingService.handleGroupUpdated(group);
+export const handleGroupUpdated = (group: chrome.tabGroups.TabGroup) => tabGroupingService.handleGroupUpdated(group);
 
 export const getEnabledColors = (settings: Settings, fallbackColors: readonly string[] = AVAILABLE_COLORS) =>
   computeEnabledColors(settings, fallbackColors);

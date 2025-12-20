@@ -1,11 +1,11 @@
-import { buildErrorResponse } from '../shared/messageContracts';
+import { buildErrorResponse } from "../shared/messageContracts";
 
 const PREFIX = "[yt-grouper]";
 
 let debugEnabled = false;
 
 export function setDebugLogging(enabled: unknown) {
-    debugEnabled = Boolean(enabled);
+  debugEnabled = Boolean(enabled);
 }
 
 const emit = (method: "info" | "warn" | "error" | "debug", ...args: unknown[]) => {

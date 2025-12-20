@@ -89,11 +89,7 @@ export class MetadataService {
     timeoutMs: number,
     fallbackTitle: string
   ): Promise<Metadata> {
-    const response = await client.sendMessage(
-      MESSAGE_ACTIONS.GET_VIDEO_METADATA,
-      {},
-      { tabId, timeoutMs }
-    );
+    const response = await client.sendMessage(MESSAGE_ACTIONS.GET_VIDEO_METADATA, {}, { tabId, timeoutMs });
     return buildNormalizedMetadata(response as Partial<Metadata>, { title: fallbackTitle });
   }
 }

@@ -32,12 +32,10 @@ export const mapYouTubeCategory = (youtubeCategory: string | number | null) => {
 };
 
 export class CategoryResolver {
-  resolve({
-    metadata,
-    settings,
-    requestedCategory,
-    fallbackCategory
-  }: ResolveCategoryInput = {}, normalizeOptions: ResolveCategoryNormalizationOptions = {}): string {
+  resolve(
+    { metadata, settings, requestedCategory, fallbackCategory }: ResolveCategoryInput = {},
+    normalizeOptions: ResolveCategoryNormalizationOptions = {}
+  ): string {
     return resolveCategoryPipeline(
       {
         metadata,

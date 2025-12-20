@@ -61,9 +61,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => (typeof item === "string" ? item.trim() : ""))
-    .filter((item) => item.length > 0);
+  return value.map((item) => (typeof item === "string" ? item.trim() : "")).filter((item) => item.length > 0);
 };
 
 const normalizeEnabledColors = (value: unknown): Record<string, boolean> => {
@@ -120,8 +118,7 @@ const normalizeChannelCategoryMap = (value: unknown): ChannelCategoryMap => {
   const normalized: ChannelCategoryMap = {};
   for (const [channel, category] of Object.entries(value as ChannelCategoryMap)) {
     if (typeof channel === "string" && channel.trim()) {
-      normalized[channel.trim()] =
-        typeof category === "string" && category.trim() ? category.trim() : "Other";
+      normalized[channel.trim()] = typeof category === "string" && category.trim() ? category.trim() : "Other";
     }
   }
   return normalized;
@@ -134,9 +131,7 @@ export function withSettingsDefaults(value: Partial<Settings> = {}): Settings {
     ? Number(source.autoGroupDelayMs)
     : Number(source.autoGroupDelay);
 
-  const autoGroupDelay = Number.isFinite(rawDelay)
-    ? Math.max(0, rawDelay)
-    : DEFAULT_SETTINGS.autoGroupDelay;
+  const autoGroupDelay = Number.isFinite(rawDelay) ? Math.max(0, rawDelay) : DEFAULT_SETTINGS.autoGroupDelay;
 
   const rawCleanupGrace = Number.isFinite(Number(source.autoCleanupGraceMs))
     ? Number(source.autoCleanupGraceMs)
@@ -219,7 +214,10 @@ export async function updateSettings(update: SettingsUpdater): Promise<Settings>
   try {
     await scheduleSyncWrite(normalized);
   } catch (error) {
-    console.warn("settings:updateSettings failed to persist; will retry next session:", (error as Error)?.message || error);
+    console.warn(
+      "settings:updateSettings failed to persist; will retry next session:",
+      (error as Error)?.message || error
+    );
   }
   return normalized;
 }
@@ -229,7 +227,10 @@ export async function resetSettings(defaults: Settings = DEFAULT_SETTINGS): Prom
   try {
     await scheduleSyncWrite(normalized);
   } catch (error) {
-    console.warn("settings:resetSettings failed to persist; will retry next session:", (error as Error)?.message || error);
+    console.warn(
+      "settings:resetSettings failed to persist; will retry next session:",
+      (error as Error)?.message || error
+    );
   }
   return normalized;
 }
@@ -240,8 +241,10 @@ export async function resetSettings(defaults: Settings = DEFAULT_SETTINGS): Prom
 const SYNC_WRITE_DEBOUNCE_MS = 150;
 let pendingSyncPayload: Partial<Settings> | null = null;
 let pendingSyncSettings: Settings | null = null;
-let pendingSyncResolvers: { resolve: (value: Settings | PromiseLike<Settings>) => void; reject: (reason?: unknown) => void }[] =
-  [];
+let pendingSyncResolvers: {
+  resolve: (value: Settings | PromiseLike<Settings>) => void;
+  reject: (reason?: unknown) => void;
+}[] = [];
 let pendingSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 function sanitizeSettingsPayload(settings: Settings) {

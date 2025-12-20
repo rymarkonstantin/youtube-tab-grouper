@@ -16,15 +16,6 @@
     "types": ["chrome", "node"],
     "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": [
-    "src",
-    "ui",
-    "scripts",
-    "manifest.json",
-    "types"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules"
-  ]
+  "include": ["src", "ui", "scripts", "manifest.json", "types"],
+  "exclude": ["dist", "node_modules"]
 }

@@ -88,7 +88,11 @@ export class BackgroundApp {
     this.cleanupScheduler.stop();
   }
 
-  private handleMessage = (msg: unknown, sender: chrome.runtime.MessageSender, sendResponse: (value: unknown) => void) => {
+  private handleMessage = (
+    msg: unknown,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (value: unknown) => void
+  ) => {
     if (isLegacyGroupTab(msg)) {
       const baseMsg = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
       const translated = {
@@ -245,10 +249,7 @@ export class BackgroundApp {
       {}
     );
 
-    const middleware = [
-      this.buildSettingsMiddleware(routes),
-      this.buildLoggingMiddleware()
-    ];
+    const middleware = [this.buildSettingsMiddleware(routes), this.buildLoggingMiddleware()];
 
     return { handlers, middleware };
   }
@@ -313,8 +314,7 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Failed to load settings",
-        mapError: (error) =>
-          buildSettingsResponse({}, { error: toErrorMessage(error) || "Failed to load settings" })
+        mapError: (error) => buildSettingsResponse({}, { error: toErrorMessage(error) || "Failed to load settings" })
       }
     );
 
@@ -368,6 +368,5 @@ function isLegacyGroupTab(msg: unknown) {
     ((msg as { version?: unknown }).version === undefined || (msg as { requestId?: unknown }).requestId === undefined)
   );
 }
-
 
 // removed standalone handler functions; logic moved into BackgroundApp methods

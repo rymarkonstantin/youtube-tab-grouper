@@ -62,24 +62,16 @@ export class PopupController {
   ): Promise<GroupTabResponse & Record<string, unknown>> {
     const { timeoutMs } = options;
     try {
-      const response = await this.client.sendMessage(
-        action,
-        payload,
-        { timeoutMs, validateResponsePayload: true }
-      );
-      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(
-        action,
-        response,
-        null,
-        { timeoutMs, validateResponse: true }
-      );
+      const response = await this.client.sendMessage(action, payload, { timeoutMs, validateResponsePayload: true });
+      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(action, response, null, {
+        timeoutMs,
+        validateResponse: true
+      });
     } catch (error) {
-      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(
-        action,
-        null,
-        error,
-        { timeoutMs, validateResponse: false }
-      );
+      return handleMessageResponse<GroupTabResponse & Record<string, unknown>>(action, null, error, {
+        timeoutMs,
+        validateResponse: false
+      });
     }
   }
 

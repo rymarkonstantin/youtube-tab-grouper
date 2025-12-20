@@ -19,8 +19,7 @@ const normalizeCategoryCount = (value: unknown): Record<string, number> => {
   for (const [category, count] of Object.entries(value)) {
     if (typeof category === "string" && category.trim()) {
       const numericCount = Number(count);
-      normalized[category.trim()] =
-        Number.isFinite(numericCount) && numericCount > 0 ? Math.floor(numericCount) : 0;
+      normalized[category.trim()] = Number.isFinite(numericCount) && numericCount > 0 ? Math.floor(numericCount) : 0;
     }
   }
   return normalized;
@@ -45,9 +44,7 @@ export function withStatsDefaults(value: Partial<GroupingStats> = {}): GroupingS
     sessionsToday,
     categoryCount: normalizeCategoryCount(source.categoryCount),
     lastReset:
-      typeof source.lastReset === "string" && source.lastReset.trim()
-        ? source.lastReset
-        : DEFAULT_STATS.lastReset,
+      typeof source.lastReset === "string" && source.lastReset.trim() ? source.lastReset : DEFAULT_STATS.lastReset,
     version: STATS_VERSION
   };
 }
@@ -110,7 +107,10 @@ export async function updateStats(
     try {
       chrome.storage.local.set({ groupingStats: normalized }, () => {
         if (chrome.runtime.lastError) {
-          console.warn("stats:updateStats failed to persist; will retry next session:", chrome.runtime.lastError.message);
+          console.warn(
+            "stats:updateStats failed to persist; will retry next session:",
+            chrome.runtime.lastError.message
+          );
         } else {
           resolve(normalized);
         }
@@ -128,7 +128,10 @@ export async function resetStats(defaults: GroupingStats = DEFAULT_STATS): Promi
     try {
       chrome.storage.local.set({ groupingStats: normalized }, () => {
         if (chrome.runtime.lastError) {
-          console.warn("stats:resetStats failed to persist; will retry next session:", chrome.runtime.lastError.message);
+          console.warn(
+            "stats:resetStats failed to persist; will retry next session:",
+            chrome.runtime.lastError.message
+          );
         } else {
           resolve(normalized);
         }

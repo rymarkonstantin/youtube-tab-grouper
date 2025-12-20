@@ -72,11 +72,13 @@ Visit the Chrome Web Store and click "Add to Chrome"
 
 #### Development scripts
 
-- `npm run build` – bundle background, content, and UI scripts to `dist/`
-- `npm run build:watch` – rebuild on change for fast iteration
-- `npm run typecheck` – run `tsc --noEmit` (TS sources)
-- `npm run lint` – lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
-- `npm run smoke` – quick smoke checks for message validation and migrations
+- `npm run build` - bundle background, content, and UI scripts to `dist/`
+- `npm run build:watch` - rebuild on change for fast iteration
+- `npm run typecheck` - run `tsc --noEmit` (TS sources)
+- `npm run lint` - lint `src`, `ui`, and `scripts` with ESLint + TypeScript plugin
+- `npm run format` - format `src`, `ui`, `scripts`, and config files with Prettier
+- `npm run format:check` - verify formatting (CI-friendly)
+- `npm run smoke` - quick smoke checks for message validation and migrations
 
 Dist layout mirrors Manifest V3 modules:
 - `dist/background/index.js` – service worker (built from `src/background/index.ts`)

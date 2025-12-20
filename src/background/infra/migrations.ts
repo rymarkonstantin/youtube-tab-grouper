@@ -1,11 +1,5 @@
 import type { GroupingStats, Settings } from "../../shared/types";
-import {
-  DEFAULT_SETTINGS,
-  SETTINGS_VERSION,
-  STATS_VERSION,
-  migrateStatsV0ToV1,
-  withStatsDefaults
-} from "../constants";
+import { DEFAULT_SETTINGS, SETTINGS_VERSION, STATS_VERSION, migrateStatsV0ToV1, withStatsDefaults } from "../constants";
 import { SettingsService } from "../../shared/domain/settingsService";
 import { readAllChromeStorage } from "../repositories/repositoryUtils";
 import { settingsRepository } from "../repositories/settingsRepository";
@@ -98,4 +92,3 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
     };
   }
 }
-

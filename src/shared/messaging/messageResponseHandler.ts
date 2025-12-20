@@ -9,17 +9,17 @@ export interface MessageResponseOptions {
 
 /**
  * Handle message response with validation and error normalization.
- * 
+ *
  * This function standardizes error handling for message responses across
  * content scripts and UI pages, handling validation errors, timeouts,
  * and disabled extension states consistently.
- * 
+ *
  * @param action - The message action that was sent
  * @param response - The response received (or null if error occurred)
  * @param error - The error that occurred (if any)
  * @param options - Options for response handling
  * @returns A normalized response with success/error structure
- * 
+ *
  * @example
  * try {
  *   const response = await client.sendMessage(MESSAGE_ACTIONS.GROUP_TAB, {});
