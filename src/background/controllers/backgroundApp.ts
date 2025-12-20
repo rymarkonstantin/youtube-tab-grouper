@@ -11,7 +11,7 @@ import { MESSAGE_VERSION, generateRequestId } from "../../shared/messageTranspor
 import { HandlerContext, MessageRouter, RouterMiddleware } from "../../shared/messaging/messageRouter";
 import { computeEnabledColors } from "../../shared/settings";
 import type { GroupTabRequest, Settings } from "../../shared/types";
-import { toErrorMessage } from "../../shared/utils/errorUtils";
+import type { EnvelopedError } from "../../shared/utils/errorUtils";
 import { AVAILABLE_COLORS } from "../constants";
 import { chromeApiClient } from "../infra/chromeApiClient";
 import { runMigrations } from "../infra/migrations";
@@ -39,6 +39,11 @@ interface BackgroundAppDeps {
   cleanupScheduler?: typeof cleanupScheduler;
   chromeApi?: typeof chromeApiClient;
 }
+
+const withErrorEnvelope = <T extends Record<string, unknown>>(payload: T, error: EnvelopedError) => ({
+  ...payload,
+  errorEnvelope: error.envelope
+});
 
 export class BackgroundApp {
   private router: MessageRouter;
@@ -134,7 +139,13 @@ export class BackgroundApp {
           await this.batchGroupAllTabs(settings);
         }
       },
-      { fallbackMessage: "Context menu error", mapError: () => undefined }
+      {
+        fallbackMessage: "Context menu error",
+        mapError: (error) => {
+          void error;
+          return undefined;
+        }
+      }
     );
   };
 
@@ -162,7 +173,13 @@ export class BackgroundApp {
           await this.settingsRepo.save(settings);
         }
       },
-      { fallbackMessage: "Command error", mapError: () => undefined }
+      {
+        fallbackMessage: "Command error",
+        mapError: (error) => {
+          void error;
+          return undefined;
+        }
+      }
     );
   };
 
@@ -211,7 +228,7 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Batch grouping failed",
-        mapError: (error) => buildErrorResponse((error as Error)?.message || "Batch grouping failed")
+        mapError: (error) => withErrorEnvelope(buildErrorResponse(error.envelope.message), error)
       }
     );
   }
@@ -280,15 +297,21 @@ export class BackgroundApp {
         windowId: context.sender?.tab?.windowId
       };
 
-      logDebug("action:start", logContext);
-      try {
-        const result = await next();
-        logDebug("action:success", { ...logContext, result });
-        return result;
-      } catch (error) {
-        logDebug("action:error", { ...logContext, error: toErrorMessage(error) });
-        throw error;
-      }
+      return runWithErrorHandling(
+        "router:logging",
+        async () => {
+          logDebug("action:start", logContext);
+          const result = await next();
+          logDebug("action:success", { ...logContext, result });
+          return result;
+        },
+        {
+          mapError: (error) => {
+            logDebug("action:error", { ...logContext, error: error.envelope });
+            throw error;
+          }
+        }
+      );
     };
   }
 
@@ -301,7 +324,7 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Failed to check group state",
-        mapError: (error) => buildIsGroupedResponse(false, toErrorMessage(error))
+        mapError: (error) => withErrorEnvelope(buildIsGroupedResponse(false, error.envelope.message), error)
       }
     );
 
@@ -314,7 +337,11 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Failed to load settings",
-        mapError: (error) => buildSettingsResponse({}, { error: toErrorMessage(error) || "Failed to load settings" })
+        mapError: (error) =>
+          withErrorEnvelope(
+            { ...buildErrorResponse(error.envelope.message || "Failed to load settings"), settings: {} },
+            error
+          )
       }
     );
 
@@ -345,7 +372,7 @@ export class BackgroundApp {
       },
       {
         fallbackMessage: "Failed to group tab",
-        mapError: (error) => buildErrorResponse(toErrorMessage(error) || "Failed to group tab")
+        mapError: (error) => withErrorEnvelope(buildErrorResponse(error.envelope.message), error)
       }
     );
 
@@ -355,7 +382,7 @@ export class BackgroundApp {
       async () => this.batchGroupAllTabs(context.state.settings as Settings | undefined),
       {
         fallbackMessage: "Batch grouping failed",
-        mapError: (error) => buildErrorResponse((error as Error)?.message || "Batch grouping failed")
+        mapError: (error) => withErrorEnvelope(buildErrorResponse(error.envelope.message), error)
       }
     );
 }

@@ -1,9 +1,10 @@
+import type { EnvelopedError } from "../../shared/utils/errors";
 import { withErrorHandling } from "../../shared/utils/errors";
 import { logError } from "../logger";
 
 interface ErrorHandlingOptions<T> {
   fallbackMessage?: string;
-  mapError?: (error: unknown) => T;
+  mapError?: (error: EnvelopedError, originalError?: unknown) => T;
 }
 
 export async function runWithErrorHandling<T>(
@@ -19,7 +20,7 @@ export async function runWithErrorHandling<T>(
     domain: "runtime",
     mapError: mapError
       ? (wrapped, original) => {
-          return mapError(original ?? wrapped);
+          return mapError(wrapped, original);
         }
       : undefined
   });
