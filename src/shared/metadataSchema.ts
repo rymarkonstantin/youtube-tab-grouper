@@ -84,9 +84,9 @@ export function hasMetadataContent(metadata: Partial<Metadata> = {}): boolean {
   const normalized = normalizeVideoMetadata(metadata);
   return Boolean(
     normalized.title ||
-    normalized.channel ||
-    normalized.description ||
-    (normalized.keywords && normalized.keywords.length > 0) ||
-    normalized.youtubeCategory !== null
+      normalized.channel ||
+      normalized.description ||
+      (normalized.keywords && normalized.keywords.length > 0) ||
+      normalized.youtubeCategory !== null
   );
 }

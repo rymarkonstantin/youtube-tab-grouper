@@ -1,36 +1,23 @@
-import { buildErrorResponse } from "../shared/messageContracts";
+import { createLogger } from "../shared/logging/logger";
+import { type EnvelopedError, toErrorEnvelope as createErrorEnvelope } from "../shared/utils/errors";
 
 const PREFIX = "[yt-grouper]";
+const logger = createLogger({ prefix: PREFIX });
 
 let debugEnabled = false;
 
 export function setDebugLogging(enabled: unknown) {
   debugEnabled = Boolean(enabled);
+  logger.setLevel(debugEnabled ? "debug" : "info");
 }
 
-const emit = (method: "info" | "warn" | "error" | "debug", ...args: unknown[]) => {
-  if (typeof console?.[method] === "function") {
-    console[method](PREFIX, ...args);
-  }
-};
-
-export const logInfo = (...args: unknown[]) => emit("info", ...args);
-export const logWarn = (...args: unknown[]) => emit("warn", ...args);
-export const logError = (...args: unknown[]) => emit("error", ...args);
+export const logInfo = (...args: unknown[]) => logger.info(...args);
+export const logWarn = (...args: unknown[]) => logger.warn(...args);
+export const logError = (...args: unknown[]) => logger.error(...args);
 export const logDebug = (...args: unknown[]) => {
   if (!debugEnabled) return;
-  emit("debug", ...args);
+  logger.debug(...args);
 };
 
-type EnvelopedError = Error & { envelope?: ReturnType<typeof buildErrorResponse> };
-
-export function toErrorEnvelope(error: unknown, fallbackMessage = "Unknown error"): EnvelopedError {
-  const message =
-    typeof fallbackMessage === "string" && fallbackMessage
-      ? fallbackMessage
-      : (error as Error | undefined)?.message || "Unknown error";
-
-  const normalized: EnvelopedError = error instanceof Error ? error : new Error(message);
-  normalized.envelope = buildErrorResponse(message);
-  return normalized;
-}
+export const toErrorEnvelope = (error: unknown, fallbackMessage = "Unknown error"): EnvelopedError =>
+  createErrorEnvelope(error, { message: fallbackMessage, domain: "runtime" });

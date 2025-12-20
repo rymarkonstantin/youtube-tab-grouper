@@ -1,5 +1,5 @@
-import { toErrorMessage } from "../../shared/utils/errorUtils";
-import { logError, toErrorEnvelope } from "../logger";
+import { withErrorHandling } from "../../shared/utils/errors";
+import { logError } from "../logger";
 
 interface ErrorHandlingOptions<T> {
   fallbackMessage?: string;
@@ -13,16 +13,14 @@ export async function runWithErrorHandling<T>(
 ): Promise<T> {
   const { fallbackMessage, mapError } = options;
 
-  try {
-    return await operation();
-  } catch (error) {
-    const message = fallbackMessage ?? `${context} failed`;
-    logError(`[${context}]`, toErrorMessage(error, message));
-
-    if (mapError) {
-      return mapError(error);
-    }
-
-    throw toErrorEnvelope(error, message);
-  }
+  return withErrorHandling(context, operation, {
+    logger: { error: (...args: unknown[]) => logError(...args) },
+    message: fallbackMessage,
+    domain: "runtime",
+    mapError: mapError
+      ? (wrapped, original) => {
+          return mapError(original ?? wrapped);
+        }
+      : undefined
+  });
 }
