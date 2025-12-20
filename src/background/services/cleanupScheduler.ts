@@ -54,7 +54,10 @@ export class CleanupScheduler {
       () => tabGroupingService.handleGroupUpdated(group),
       {
         fallbackMessage: "Failed to handle cleanup scheduler group update",
-        mapError: () => undefined
+        mapError: (error) => {
+          void error;
+          return undefined;
+        }
       }
     );
   };
@@ -69,7 +72,13 @@ export class CleanupScheduler {
         const grace = typeof this.graceMs === "number" ? this.graceMs : settings.autoCleanupGraceMs;
         await tabGroupingService.autoCleanupEmptyGroups(grace);
       },
-      { fallbackMessage: "Failed to perform cleanup scheduler tick", mapError: () => undefined }
+      {
+        fallbackMessage: "Failed to perform cleanup scheduler tick",
+        mapError: (error) => {
+          void error;
+          return undefined;
+        }
+      }
     );
   }
 }

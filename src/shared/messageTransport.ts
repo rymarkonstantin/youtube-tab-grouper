@@ -6,6 +6,7 @@ import {
   validateIncomingResponse,
   validateOutgoingRequest
 } from "./messaging/validators";
+import { toErrorEnvelope } from "./utils/errorUtils";
 import type { HandleMessageOptions, MessageEnvelope, SendMessageOptions } from "./types";
 
 export const DEFAULT_MESSAGE_TIMEOUT_MS = 5000;
@@ -45,6 +46,28 @@ export function handleMessage(
     const requestValidation = validateIncomingRequest(payload, { requireVersion });
     const action = requestValidation.ok ? requestValidation.value.action : undefined;
     const requestId = typeof payload.requestId === "string" ? payload.requestId : generateRequestId("resp");
+    const wrapErrorPayload = (response: Record<string, unknown>, fallbackMessage = "Unknown error") => {
+      if ("errorEnvelope" in response) return response;
+      const normalizedMessage =
+        typeof response.error === "string" && response.error.trim() ? response.error : fallbackMessage;
+      const wrapped = toErrorEnvelope(normalizedMessage, {
+        domain: "messaging",
+        message: normalizedMessage,
+        details: { action, requestId }
+      });
+      return { ...response, errorEnvelope: wrapped.envelope };
+    };
+
+    const respondWithError = (error: unknown, fallbackMessage = "Unknown error") => {
+      const wrapped = toErrorEnvelope(error, {
+        domain: "messaging",
+        message: fallbackMessage,
+        details: { action, requestId }
+      });
+      sendResponse(
+        envelopeResponse(buildErrorResponse(wrapped.envelope.message, { errorEnvelope: wrapped.envelope }), requestId)
+      );
+    };
 
     if (!action || !(action in handlers)) {
       if (typeof onUnknown === "function") {
@@ -52,23 +75,21 @@ export function handleMessage(
           .then((result) => {
             if (result === false) return;
             const fallback = buildErrorResponse(`Unknown action "${action}"`);
-            sendResponse(envelopeResponse((result as Record<string, unknown>) ?? fallback, requestId));
+            const responsePayload = wrapErrorPayload((result as Record<string, unknown>) ?? fallback, fallback.error);
+            sendResponse(envelopeResponse(responsePayload, requestId));
           })
-          .catch((error) => {
-            const message = (error as Error)?.message ?? "Unknown error";
-            sendResponse(envelopeResponse(buildErrorResponse(message), requestId));
-          });
+          .catch((error) => respondWithError(error, `Unknown action "${action}"`));
         return true;
       }
       if (requestValidation.ok === false) {
-        sendResponse(envelopeResponse(requestValidation.response, requestId));
+        sendResponse(envelopeResponse(wrapErrorPayload(requestValidation.response), requestId));
         return true;
       }
       return false;
     }
 
     if (requestValidation.ok === false) {
-      sendResponse(envelopeResponse(requestValidation.response, requestId));
+      sendResponse(envelopeResponse(wrapErrorPayload(requestValidation.response), requestId));
       return true;
     }
 
@@ -88,17 +109,15 @@ export function handleMessage(
             validatePayload: true
           });
           if (responseValidation.ok === false) {
-            sendResponse(envelopeResponse(responseValidation.response, requestId));
+            const wrapped = wrapErrorPayload(responseValidation.response);
+            sendResponse(envelopeResponse(wrapped, requestId));
             return;
           }
         }
 
         sendResponse(envelopeResponse(responsePayload, requestId));
       })
-      .catch((error) => {
-        const message = (error as Error)?.message ?? "Unknown error";
-        sendResponse(envelopeResponse(buildErrorResponse(message), requestId));
-      });
+      .catch((error) => respondWithError(error, "Message handler failed"));
 
     return true;
   };

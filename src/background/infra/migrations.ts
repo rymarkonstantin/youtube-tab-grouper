@@ -4,6 +4,7 @@ import { SettingsService } from "../../shared/domain/settingsService";
 import { readAllChromeStorage } from "../repositories/repositoryUtils";
 import { settingsRepository } from "../repositories/settingsRepository";
 import { statsRepository } from "../repositories/statsRepository";
+import { logError } from "../logger";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -84,7 +85,7 @@ export async function runMigrations(defaults: Settings = DEFAULT_SETTINGS): Prom
       stats: migratedStats
     };
   } catch (error) {
-    console.error("Storage migrations failed", error);
+    logError("Storage migrations failed", error);
     return {
       ...results,
       settings: settingsService.getDefaults(),
