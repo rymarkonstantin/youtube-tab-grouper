@@ -1,23 +1,18 @@
 import { type MessageAction } from "../messageContracts";
 import { validateIncomingResponse } from "./validators";
-import {
-  ERROR_CODES,
-  type ErrorEnvelope,
-  toErrorEnvelope,
-  toErrorMessage
-} from "../utils/errorUtils";
+import { ERROR_CODES, type ErrorEnvelope, toErrorEnvelope, toErrorMessage } from "../utils/errorUtils";
 
 export interface MessageResponseOptions {
   timeoutMs?: number;
   validateResponse?: boolean;
 }
 
-export type ErrorishResponse = {
+export interface ErrorishResponse {
   success?: boolean;
   error?: string;
   errorEnvelope?: ErrorEnvelope;
   errors?: string[];
-};
+}
 
 /**
  * Handle message response with validation and error normalization.
@@ -54,7 +49,7 @@ export function handleMessageResponse<T extends ErrorishResponse>(
       error: message,
       ...(envelope ? { errorEnvelope: envelope } : {}),
       ...extras
-    } as T);
+    }) as T;
 
   // Handle thrown errors
   if (error) {

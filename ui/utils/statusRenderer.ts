@@ -5,7 +5,7 @@ import {
   toErrorEnvelope,
   toErrorMessage
 } from "../../src/shared/utils/errorUtils";
-import { showStatus, type StatusDisplayOptions, type StatusType } from "./statusDisplay";
+import { type StatusDisplayOptions, type StatusType, showStatus } from "./statusDisplay";
 
 export interface StatusLike {
   success?: boolean;

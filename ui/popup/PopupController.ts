@@ -1,6 +1,6 @@
 import { MessageClient, defaultMessageClient } from "../../src/shared/messaging/messageClient";
 import { MESSAGE_ACTIONS } from "../../src/shared/messageContracts";
-import { handleMessageResponse, type ErrorishResponse } from "../../src/shared/messaging/messageResponseHandler";
+import { type ErrorishResponse, handleMessageResponse } from "../../src/shared/messaging/messageResponseHandler";
 import type { GroupTabResponse } from "../../src/shared/types";
 import { PopupView } from "./PopupView";
 

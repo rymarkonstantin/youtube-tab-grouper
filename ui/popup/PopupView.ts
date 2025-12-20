@@ -1,5 +1,5 @@
 import { type StatusType } from "../utils/statusDisplay";
-import { createStatusRenderer, type StatusRenderOptions } from "../utils/statusRenderer";
+import { type StatusRenderOptions, createStatusRenderer } from "../utils/statusRenderer";
 
 export class PopupView {
   private groupButton = document.getElementById("groupButton") as HTMLButtonElement | null;
